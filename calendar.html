@@ -5,48 +5,59 @@
 const API = 'http://localhost:8000';
 
 // ── ThemeManager ─────────────────────────────────────────
-// Syncs across ALL open tabs via localStorage + storage event
+// Uses BroadcastChannel — syncs ALL open tabs instantly including current
 class ThemeManager {
   constructor() {
-    this.theme = localStorage.getItem('mp-theme') || 'dark';
-    this._apply();
+    this.theme   = localStorage.getItem('mp-theme') || 'dark';
+    this.channel = null;
 
-    // Fires in every OTHER open tab when localStorage changes
-    window.addEventListener('storage', (e) => {
-      if (e.key === 'mp-theme' && e.newValue) {
-        this.theme = e.newValue;
-        this._apply();
-      }
-    });
-    // Re-sync when user returns to this tab (e.g. toggled on another tab then came back)
-    window.addEventListener('focus', () => this.sync());
+    // BroadcastChannel works across all same-origin tabs simultaneously
+    try {
+      this.channel = new BroadcastChannel('mp-theme-sync');
+      this.channel.onmessage = (e) => {
+        if (e.data && e.data !== this.theme) {
+          this.theme = e.data;
+          this._apply(false); // false = don't re-broadcast
+        }
+      };
+    } catch(e) {
+      // Fallback: storage event for browsers without BroadcastChannel
+      window.addEventListener('storage', (e) => {
+        if (e.key === 'mp-theme' && e.newValue && e.newValue !== this.theme) {
+          this.theme = e.newValue;
+          this._apply(false);
+        }
+      });
+    }
+
+    // Sync when returning to tab
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden) this.sync();
     });
+
+    this._apply(false);
   }
 
-  _apply() {
+  _apply(broadcast = true) {
     document.documentElement.setAttribute('data-theme', this.theme);
-    // Sync every theme toggle button on the page
-    document.querySelectorAll('#themeToggle, .drawer-theme-btn').forEach(btn => {
-      if (btn.id === 'themeToggle') btn.innerHTML = this.theme === 'dark' ? '☀️' : '🌙';
+    document.querySelectorAll('#themeToggle').forEach(btn => {
+      btn.innerHTML = this.theme === 'dark' ? '☀️' : '🌙';
     });
+    if (broadcast && this.channel) {
+      this.channel.postMessage(this.theme);
+    }
   }
 
   toggle() {
     this.theme = this.theme === 'dark' ? 'light' : 'dark';
     localStorage.setItem('mp-theme', this.theme);
-    this._apply();
+    this._apply(true); // broadcast to all other tabs
     Toast.show(this.theme === 'dark' ? '🌙 Dark mode' : '☀️ Light mode', 'info', 1500);
   }
 
-  // Call this on every page load to ensure correct theme
   sync() {
     const stored = localStorage.getItem('mp-theme') || 'dark';
-    if (stored !== this.theme) {
-      this.theme = stored;
-      this._apply();
-    }
+    if (stored !== this.theme) { this.theme = stored; this._apply(false); }
   }
 }
 
@@ -157,6 +168,7 @@ class NavManager {
       { href: 'news.html',     icon: 'bi-newspaper',  label: 'News' },
       { href: 'youtube.html',  icon: 'bi-youtube',    label: 'Videos' },
       { href: 'calendar.html', icon: 'bi-calendar3',  label: 'Calendar' },
+      { href: 'tools.html',    icon: 'bi-tools',      label: 'Tools' },
       { href: 'search.html',   icon: 'bi-search',     label: 'Search' },
     ];
 

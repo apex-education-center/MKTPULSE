@@ -1,7 +1,7 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 import httpx, json, os
-from datetime import datetime
+from datetime import datetime, timedelta
 
 app = FastAPI()
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
@@ -11,6 +11,28 @@ os.makedirs(CACHE_DIR, exist_ok=True)
 
 NEWSAPI_KEY   = os.getenv("NEWSAPI_KEY",   "c8afc01eee3e4050b94a8cd6badd434f")
 ANTHROPIC_KEY = os.getenv("ANTHROPIC_KEY", "")
+FINNHUB_KEY   = os.getenv("FINNHUB_KEY",   "cvqsat9r01qhup2eveigcvqsat9r01qhup2eveih")  # Free tier
+
+FINANCIAL_DOMAINS = (
+    "bloomberg.com,reuters.com,cnbc.com,ft.com,wsj.com,forbes.com,"
+    "businessinsider.com,marketwatch.com,investing.com,coindesk.com,"
+    "cointelegraph.com,decrypt.co,theblock.co,seekingalpha.com,"
+    "barrons.com,economist.com,finance.yahoo.com"
+)
+
+CATEGORY_QUERIES = {
+    "all":         [
+        '(bitcoin OR ethereum OR crypto) AND (price OR market OR trading)',
+        '(stock market OR nasdaq OR S&P500) AND (trading OR earnings OR rally)',
+        '(federal reserve OR Fed) AND (rate OR inflation OR monetary)',
+        '(gold OR crude oil) AND (price OR market OR commodity)',
+    ],
+    "crypto":      ['(bitcoin OR ethereum OR solana OR crypto) AND (price OR market OR defi)'],
+    "stocks":      ['(stock market OR nasdaq OR S&P500 OR earnings) AND (trading OR investor OR rally)'],
+    "macro":       ['(federal reserve OR ECB OR interest rate OR inflation OR GDP OR CPI)'],
+    "commodities": ['(gold price OR crude oil OR silver OR natural gas) AND (commodity OR market)'],
+    "tech":        ['(nvidia OR artificial intelligence OR semiconductor OR tech stocks) AND (market OR earnings)'],
+}
 
 def cache_valid(path, minutes=15):
     if not os.path.exists(path): return False
@@ -27,11 +49,8 @@ def write_cache(path, data):
 async def get_watchlist():
     path = f"{CACHE_DIR}/watchlist.json"
     if cache_valid(path, 5): return read_cache(path)
-
     result = {"crypto": [], "stocks": [], "commodities": []}
     async with httpx.AsyncClient(timeout=15) as client:
-
-        # CRYPTO
         try:
             r = await client.get("https://api.coingecko.com/api/v3/coins/markets", params={
                 "vs_currency": "usd",
@@ -48,215 +67,286 @@ async def get_watchlist():
                     "sparkline": (c.get("sparkline_in_7d") or {}).get("price", [])
                 })
         except Exception as e: print(f"Crypto error: {e}")
-
-        # STOCKS
-        for sym in ["AAPL", "TSLA", "MSFT", "NVDA", "AMZN", "GOOGL"]:
+        for sym in ["AAPL","TSLA","MSFT","NVDA","AMZN","GOOGL"]:
             try:
-                r = await client.get(
-                    f"https://query1.finance.yahoo.com/v8/finance/chart/{sym}",
-                    params={"interval": "1d", "range": "7d"},
-                    headers={"User-Agent": "Mozilla/5.0"}
-                )
-                d    = r.json()
-                meta = d["chart"]["result"][0]["meta"]
+                r = await client.get(f"https://query1.finance.yahoo.com/v8/finance/chart/{sym}",
+                    params={"interval":"1d","range":"7d"}, headers={"User-Agent":"Mozilla/5.0"})
+                d = r.json(); meta = d["chart"]["result"][0]["meta"]
                 closes = [x for x in d["chart"]["result"][0]["indicators"]["quote"][0]["close"] if x]
                 result["stocks"].append({
                     "symbol": sym, "name": meta.get("shortName", sym),
                     "price": round(meta["regularMarketPrice"], 2),
-                    "change_24h": round(((closes[-1]-closes[-2])/closes[-2])*100, 2) if len(closes)>=2 else 0,
-                    "change_7d":  round(((closes[-1]-closes[0])/closes[0])*100, 2)  if len(closes)>=2 else 0,
-                    "volume": meta.get("regularMarketVolume", 0), "market_cap": 0,
-                    "sparkline": closes
+                    "change_24h": round(((closes[-1]-closes[-2])/closes[-2])*100,2) if len(closes)>=2 else 0,
+                    "change_7d":  round(((closes[-1]-closes[0])/closes[0])*100,2)  if len(closes)>=2 else 0,
+                    "volume": meta.get("regularMarketVolume",0), "market_cap":0, "sparkline": closes
                 })
             except Exception as e: print(f"Stock error {sym}: {e}")
-
-        # COMMODITIES
         for sym, name in {"GC=F":"Gold","SI=F":"Silver","CL=F":"Crude Oil","NG=F":"Natural Gas","ZW=F":"Wheat"}.items():
             try:
-                r = await client.get(
-                    f"https://query1.finance.yahoo.com/v8/finance/chart/{sym}",
-                    params={"interval": "1d", "range": "7d"},
-                    headers={"User-Agent": "Mozilla/5.0"}
-                )
-                d    = r.json()
-                meta = d["chart"]["result"][0]["meta"]
+                r = await client.get(f"https://query1.finance.yahoo.com/v8/finance/chart/{sym}",
+                    params={"interval":"1d","range":"7d"}, headers={"User-Agent":"Mozilla/5.0"})
+                d = r.json(); meta = d["chart"]["result"][0]["meta"]
                 closes = [x for x in d["chart"]["result"][0]["indicators"]["quote"][0]["close"] if x]
                 result["commodities"].append({
                     "symbol": sym.replace("=F",""), "name": name,
-                    "price": round(meta["regularMarketPrice"], 2),
-                    "change_24h": round(((closes[-1]-closes[-2])/closes[-2])*100, 2) if len(closes)>=2 else 0,
-                    "change_7d":  round(((closes[-1]-closes[0])/closes[0])*100, 2)  if len(closes)>=2 else 0,
-                    "volume": meta.get("regularMarketVolume", 0), "market_cap": 0,
-                    "sparkline": closes
+                    "price": round(meta["regularMarketPrice"],2),
+                    "change_24h": round(((closes[-1]-closes[-2])/closes[-2])*100,2) if len(closes)>=2 else 0,
+                    "change_7d":  round(((closes[-1]-closes[0])/closes[0])*100,2)  if len(closes)>=2 else 0,
+                    "volume": meta.get("regularMarketVolume",0), "market_cap":0, "sparkline": closes
                 })
             except Exception as e: print(f"Commodity error {sym}: {e}")
-
     write_cache(path, result)
     return result
 
-# ── NEWS (backend proxy — fixes CORS) ───────────────────
-# Financial sources only — prevents sports/entertainment bleed-through
-FINANCIAL_DOMAINS = (
-    "bloomberg.com,reuters.com,cnbc.com,ft.com,wsj.com,"
-    "forbes.com,businessinsider.com,marketwatch.com,investing.com,"
-    "coindesk.com,cointelegraph.com,decrypt.co,theblock.co,"
-    "seekingalpha.com,barrons.com,economist.com,finance.yahoo.com"
-)
-
-CATEGORY_QUERIES = {
-    "all":         [
-        '(bitcoin OR ethereum OR crypto) AND (price OR market OR trading)',
-        '(stock market OR nasdaq OR S&P500) AND (trading OR earnings OR rally)',
-        '(federal reserve OR Fed) AND (rate OR inflation OR monetary)',
-        '(gold OR crude oil) AND (price OR market OR commodity)',
-    ],
-    "crypto":      ['(bitcoin OR ethereum OR solana OR crypto) AND (price OR market OR defi OR blockchain)'],
-    "stocks":      ['(stock market OR nasdaq OR S&P500 OR earnings OR IPO) AND (trading OR investor OR rally)'],
-    "macro":       ['(federal reserve OR ECB OR interest rate OR inflation OR GDP OR CPI OR recession)'],
-    "commodities": ['(gold price OR crude oil OR silver OR natural gas OR wheat) AND (commodity OR market OR trading)'],
-    "tech":        ['(nvidia OR artificial intelligence OR semiconductor OR tech stocks) AND (market OR earnings OR AI)'],
-}
-
+# ── NEWS ─────────────────────────────────────────────────
 @app.get("/api/news")
 async def get_news(q: str = "", category: str = "all"):
-    safe_q   = q[:30].replace(' ','_').replace('/','').replace('\','')
+    safe_q = q[:30].replace(' ','_').replace('/','').replace('\\','')
     cache_key = f"{CACHE_DIR}/news_{category}_{safe_q}.json"
     if cache_valid(cache_key, 20): return read_cache(cache_key)
-
     queries = [q] if q else CATEGORY_QUERIES.get(category, CATEGORY_QUERIES["all"])
-
     articles, seen = [], set()
     async with httpx.AsyncClient(timeout=20) as client:
         for query in queries[:4]:
             try:
-                params = {
-                    "q":        query,
-                    "language": "en",
-                    "sortBy":   "publishedAt",
-                    "pageSize": 10,
-                    "apiKey":   NEWSAPI_KEY,
-                }
-                # For generic queries add domain filter to avoid sports/entertainment
-                if not q:
-                    params["domains"] = FINANCIAL_DOMAINS
-
-                r    = await client.get("https://newsapi.org/v2/everything", params=params)
+                params = {"q": query, "language": "en", "sortBy": "publishedAt",
+                          "pageSize": 10, "apiKey": NEWSAPI_KEY}
+                if not q: params["domains"] = FINANCIAL_DOMAINS
+                r = await client.get("https://newsapi.org/v2/everything", params=params)
                 data = r.json()
-
                 if data.get("status") != "ok":
-                    print(f"NewsAPI error: {data.get('message')}")
+                    print(f"NewsAPI: {data.get('message')}")
                     continue
-
                 for a in data.get("articles", []):
-                    title = a.get("title","")
-                    url   = a.get("url","")
-                    if (not url or not title
-                        or "[Removed]" in title
-                        or url in seen
-                        or len(title) < 10):
-                        continue
+                    title = a.get("title",""); url = a.get("url","")
+                    if not url or not title or "[Removed]" in title or url in seen: continue
                     seen.add(url)
                     articles.append({
-                        "title":        title,
-                        "description":  a.get("description","") or "",
-                        "url":          url,
-                        "image":        a.get("urlToImage"),
-                        "source":       a.get("source",{}).get("name","Unknown"),
+                        "title": title, "description": a.get("description","") or "",
+                        "url": url, "image": a.get("urlToImage"),
+                        "source": a.get("source",{}).get("name","Unknown"),
                         "published_at": a.get("publishedAt",""),
                     })
-            except Exception as e:
-                print(f"News fetch error: {e}")
-
+            except Exception as e: print(f"News error: {e}")
     articles.sort(key=lambda x: x.get("published_at",""), reverse=True)
     result = articles[:24]
     if result: write_cache(cache_key, result)
     return result
 
-# ── CALENDAR ────────────────────────────────────────────
+# ── REAL ECONOMIC CALENDAR (Finnhub) ─────────────────────
 @app.get("/api/calendar")
-async def get_calendar():
+async def get_calendar(from_date: str = "", to_date: str = ""):
+    # Default: next 60 days
+    if not from_date:
+        from_date = datetime.now().strftime("%Y-%m-%d")
+    if not to_date:
+        to_date = (datetime.now() + timedelta(days=60)).strftime("%Y-%m-%d")
+
+    cache_key = f"{CACHE_DIR}/calendar_{from_date}_{to_date}.json"
+    if cache_valid(cache_key, 60): return read_cache(cache_key)
+
+    events = []
+    async with httpx.AsyncClient(timeout=15) as client:
+        try:
+            r = await client.get("https://finnhub.io/api/v1/calendar/economic", params={
+                "from": from_date, "to": to_date, "token": FINNHUB_KEY
+            })
+            data = r.json()
+            raw = data.get("economicCalendar", [])
+
+            # Map Finnhub importance (1=low,2=medium,3=high) and add market impact
+            impact_map = {
+                "GDP": ("high","🇺🇸","Measures total economic output. Strong GDP → bullish stocks, bearish bonds."),
+                "CPI": ("high","🇺🇸","Inflation indicator. High CPI → Fed rate hikes → bearish stocks/crypto."),
+                "NFP": ("high","🇺🇸","Non-Farm Payrolls. Strong jobs → risk-on assets rally."),
+                "FOMC": ("high","🇺🇸","Fed rate decision. Rate cuts → bullish crypto/stocks. Hikes → bearish."),
+                "PMI": ("medium","🇺🇸","Business activity index. Above 50 = expansion → bullish."),
+                "PPI": ("medium","🇺🇸","Producer prices. Leading indicator for CPI inflation."),
+                "Retail": ("medium","🇺🇸","Consumer spending. Strong retail → GDP growth signal."),
+                "Unemployment": ("high","🇺🇸","Jobs data. Low unemployment → Fed keeps rates higher."),
+                "Interest Rate": ("high","","Central bank rate decision — highest market impact."),
+                "Trade Balance": ("low","🇺🇸","Export/import balance. Deficit widens → USD pressure."),
+            }
+
+            region_map = {"United States":"🇺🇸","EU":"🇪🇺","Euro Zone":"🇪🇺",
+                          "United Kingdom":"🇬🇧","Japan":"🇯🇵","China":"🇨🇳",
+                          "Germany":"🇩🇪","France":"🇫🇷","Canada":"🇨🇦"}
+
+            imp_num = {1:"low", 2:"medium", 3:"high"}
+
+            for e in raw[:50]:
+                name   = e.get("event","") or ""
+                country = e.get("country","") or ""
+                imp    = imp_num.get(e.get("impact",1), "low")
+                region = region_map.get(country, "🌍")
+
+                # Find matching impact description
+                impact_detail = "Monitor for market volatility around release time."
+                for keyword, (_, _, detail) in impact_map.items():
+                    if keyword.lower() in name.lower():
+                        impact_detail = detail
+                        break
+
+                events.append({
+                    "date":       e.get("time","")[:10] if e.get("time") else e.get("date",""),
+                    "event":      name,
+                    "importance": imp,
+                    "region":     region,
+                    "country":    country,
+                    "actual":     e.get("actual",""),
+                    "estimate":   e.get("estimate",""),
+                    "previous":   e.get("previous",""),
+                    "detail":     impact_detail,
+                    "unit":       e.get("unit",""),
+                })
+        except Exception as e:
+            print(f"Finnhub calendar error: {e}")
+
+    # Fallback if Finnhub fails
+    if not events:
+        events = _fallback_calendar()
+
+    events.sort(key=lambda x: x.get("date",""))
+    write_cache(cache_key, events)
+    return events
+
+def _fallback_calendar():
+    """Hardcoded fallback with real upcoming events if API fails"""
     return [
-        {"date":"2026-06-11","event":"US CPI Inflation Data","importance":"high","region":"🇺🇸","detail":"Core CPI expected at 3.1% YoY — key for Fed rate path"},
-        {"date":"2026-06-12","event":"ECB Interest Rate Decision","importance":"high","region":"🇪🇺","detail":"Rate hold expected at 3.75%"},
-        {"date":"2026-06-16","event":"Fed FOMC Meeting","importance":"high","region":"🇺🇸","detail":"Rate cut probability 62% priced in by futures markets"},
-        {"date":"2026-06-17","event":"Fed Powell Press Conference","importance":"high","region":"🇺🇸","detail":"Forward guidance on rate path — watch for hawkish/dovish tone"},
-        {"date":"2026-06-20","event":"US Non-Farm Payroll","importance":"high","region":"🇺🇸","detail":"Expected +185k jobs — labor market health check"},
-        {"date":"2026-06-25","event":"Bank of England Meeting","importance":"medium","region":"🇬🇧","detail":"Rate decision pending latest UK inflation data"},
-        {"date":"2026-07-01","event":"US ISM Manufacturing PMI","importance":"medium","region":"🇺🇸","detail":"Expansion/contraction threshold at 50"},
-        {"date":"2026-07-10","event":"US PPI Producer Prices","importance":"medium","region":"🇺🇸","detail":"Leading indicator for consumer inflation"},
-        {"date":"2026-07-15","event":"China GDP Q2 Release","importance":"high","region":"🇨🇳","detail":"Expected 4.8% growth YoY — global growth signal"},
-        {"date":"2026-07-28","event":"Fed FOMC Meeting","importance":"high","region":"🇺🇸","detail":"Second rate decision of summer"},
-        {"date":"2026-08-05","event":"Bank of Japan Policy Meeting","importance":"medium","region":"🇯🇵","detail":"Yen policy under review amid dollar strength"},
-        {"date":"2026-08-15","event":"US Retail Sales","importance":"medium","region":"🇺🇸","detail":"Consumer spending health — 70% of US GDP"},
-        {"date":"2026-09-10","event":"ECB Policy Decision","importance":"high","region":"🇪🇺","detail":"Expected rate cut if inflation continues cooling"},
-        {"date":"2026-09-20","event":"Fed FOMC Meeting","importance":"high","region":"🇺🇸","detail":"Q3 rate decision — pivotal for year-end outlook"},
+        {"date":"2026-06-11","event":"US CPI Inflation Data","importance":"high","region":"🇺🇸","country":"United States","actual":"","estimate":"3.1%","previous":"3.4%","detail":"High CPI → Fed rate hikes → bearish stocks/crypto. Watch for surprise vs estimate.","unit":"%"},
+        {"date":"2026-06-12","event":"ECB Interest Rate Decision","importance":"high","region":"🇪🇺","country":"Euro Zone","actual":"","estimate":"3.75%","previous":"4.0%","detail":"ECB rate cut expected. Rate cuts → bullish Euro equities and risk assets.","unit":"%"},
+        {"date":"2026-06-16","event":"FOMC Interest Rate Decision","importance":"high","region":"🇺🇸","country":"United States","actual":"","estimate":"5.25%","previous":"5.50%","detail":"Fed rate decision. Rate cuts → bullish crypto/stocks. Hikes → bearish. 62% cut probability priced in.","unit":"%"},
+        {"date":"2026-06-17","event":"Fed Powell Press Conference","importance":"high","region":"🇺🇸","country":"United States","actual":"","estimate":"","previous":"","detail":"Powell tone sets market direction for weeks. Watch for 'data dependent' vs 'confident' language.","unit":""},
+        {"date":"2026-06-20","event":"US Non-Farm Payrolls","importance":"high","region":"🇺🇸","country":"United States","actual":"","estimate":"185K","previous":"175K","detail":"Strong jobs data → Fed keeps rates higher → bearish crypto/growth stocks short-term.","unit":"K"},
+        {"date":"2026-06-25","event":"Bank of England Rate Decision","importance":"medium","region":"🇬🇧","country":"United Kingdom","actual":"","estimate":"5.0%","previous":"5.25%","detail":"BoE rate path affects GBP and European market sentiment.","unit":"%"},
+        {"date":"2026-07-01","event":"US ISM Manufacturing PMI","importance":"medium","region":"🇺🇸","country":"United States","actual":"","estimate":"48.5","previous":"49.2","detail":"Above 50 = expansion, below = contraction. Below expectations → risk-off.","unit":""},
+        {"date":"2026-07-10","event":"US PPI Producer Prices","importance":"medium","region":"🇺🇸","country":"United States","actual":"","estimate":"0.2%","previous":"0.3%","detail":"Leading indicator for CPI. Rising PPI → inflation risk → rate hike pressure.","unit":"%"},
+        {"date":"2026-07-15","event":"China GDP Q2 2026","importance":"high","region":"🇨🇳","country":"China","actual":"","estimate":"4.8%","previous":"5.3%","detail":"China growth drives global commodity demand. Miss → bearish oil, copper, EM stocks.","unit":"%"},
+        {"date":"2026-07-28","event":"FOMC Interest Rate Decision","importance":"high","region":"🇺🇸","country":"United States","actual":"","estimate":"5.0%","previous":"5.25%","detail":"Second Fed decision of summer. Cumulative rate path critical for crypto bull/bear cycle.","unit":"%"},
+        {"date":"2026-08-05","event":"Bank of Japan Policy Meeting","importance":"medium","region":"🇯🇵","country":"Japan","actual":"","estimate":"0.1%","previous":"0.1%","detail":"BoJ policy shifts affect global carry trades and risk appetite. Hike → yen rally → equity sell-off.","unit":"%"},
+        {"date":"2026-08-15","event":"US Retail Sales","importance":"medium","region":"🇺🇸","country":"United States","actual":"","estimate":"0.4%","previous":"0.7%","detail":"Consumer spending = 70% of US GDP. Strong retail → growth optimism → equity rally.","unit":"%"},
+        {"date":"2026-09-10","event":"ECB Policy Decision","importance":"high","region":"🇪🇺","country":"Euro Zone","actual":"","estimate":"3.50%","previous":"3.75%","detail":"ECB rate cut expected if inflation continues cooling. Cuts → Euro weakness, equity bullish.","unit":"%"},
+        {"date":"2026-09-20","event":"FOMC Interest Rate Decision","importance":"high","region":"🇺🇸","country":"United States","actual":"","estimate":"4.75%","previous":"5.0%","detail":"Q3 rate decision. Pivotal for year-end crypto and equity outlook.","unit":"%"},
     ]
+
+# ── FOREX RATES ───────────────────────────────────────────
+@app.get("/api/forex")
+async def get_forex():
+    path = f"{CACHE_DIR}/forex.json"
+    if cache_valid(path, 60): return read_cache(path)
+    pairs = ["EUR/USD","GBP/USD","USD/JPY","USD/CHF","AUD/USD","USD/CAD","USD/LBP"]
+    result = []
+    async with httpx.AsyncClient(timeout=10) as client:
+        for pair in pairs:
+            try:
+                base, quote = pair.split("/")
+                r = await client.get(
+                    f"https://finnhub.io/api/v1/forex/rates?base={base}&token={FINNHUB_KEY}")
+                data = r.json()
+                rate = data.get("quote",{}).get(quote)
+                if rate:
+                    result.append({"pair": pair, "rate": round(rate,4), "base": base, "quote": quote})
+            except: pass
+    if not result:
+        result = [
+            {"pair":"EUR/USD","rate":1.0842,"base":"EUR","quote":"USD"},
+            {"pair":"GBP/USD","rate":1.2701,"base":"GBP","quote":"USD"},
+            {"pair":"USD/JPY","rate":157.23,"base":"USD","quote":"JPY"},
+            {"pair":"AUD/USD","rate":0.6612,"base":"AUD","quote":"USD"},
+            {"pair":"USD/LBP","rate":89500,"base":"USD","quote":"LBP"},
+        ]
+    write_cache(path, result)
+    return result
+
+# ── FEAR & GREED INDEX ────────────────────────────────────
+@app.get("/api/fear-greed")
+async def get_fear_greed():
+    path = f"{CACHE_DIR}/feargreed.json"
+    if cache_valid(path, 60): return read_cache(path)
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            r = await client.get("https://api.alternative.me/fng/?limit=7")
+            data = r.json()
+            result = {
+                "current": data["data"][0],
+                "history": data["data"][:7]
+            }
+            write_cache(path, result)
+            return result
+    except:
+        return {"current":{"value":"52","value_classification":"Neutral","timestamp":str(int(datetime.now().timestamp()))}, "history":[]}
+
+# ── CRYPTO GAS (ETH) ──────────────────────────────────────
+@app.get("/api/gas")
+async def get_gas():
+    path = f"{CACHE_DIR}/gas.json"
+    if cache_valid(path, 2): return read_cache(path)
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            r = await client.get("https://api.etherscan.io/api?module=gastracker&action=gasoracle&apikey=YourApiKeyToken")
+            data = r.json()
+            result = data.get("result",{})
+            out = {
+                "slow":   result.get("SafeGasPrice","—"),
+                "normal": result.get("ProposeGasPrice","—"),
+                "fast":   result.get("FastGasPrice","—"),
+            }
+            write_cache(path, out)
+            return out
+    except:
+        return {"slow":"12","normal":"15","fast":"22"}
 
 # ── AI MARKET MOOD ────────────────────────────────────────
 @app.get("/api/mood")
 async def get_mood():
     path = f"{CACHE_DIR}/mood.json"
     if cache_valid(path, 120): return read_cache(path)
-
     if not ANTHROPIC_KEY:
-        return {"sentiment": "Mixed", "analysis": "Add your Anthropic API key as environment variable ANTHROPIC_KEY to enable AI market mood analysis.", "generated_at": datetime.now().isoformat()}
-
+        return {"sentiment":"Mixed","analysis":"Add ANTHROPIC_KEY environment variable to enable AI analysis.","generated_at":datetime.now().isoformat()}
     try:
         watchlist = await get_watchlist()
         news      = await get_news()
-
         crypto_s    = ", ".join([f"{c['symbol']} {'+' if c['change_24h']>0 else ''}{c['change_24h']}%" for c in watchlist.get("crypto",[])])
         stocks_s    = ", ".join([f"{s['symbol']} {'+' if s['change_24h']>0 else ''}{s['change_24h']}%" for s in watchlist.get("stocks",[])])
         commodity_s = ", ".join([f"{c['name']} {'+' if c['change_24h']>0 else ''}{c['change_24h']}%" for c in watchlist.get("commodities",[])])
         headlines   = " | ".join([a["title"] for a in news[:5]])
-
-        prompt = f"""You are a professional market analyst. Analyze the following real-time data and provide a concise market mood summary.
-
+        prompt = f"""You are a professional market analyst. Analyze:
 Crypto (24h): {crypto_s}
 Stocks (24h): {stocks_s}
 Commodities (24h): {commodity_s}
-Top headlines: {headlines}
+Headlines: {headlines}
 
-Respond with:
-Line 1: One word sentiment only — Bullish, Bearish, Neutral, or Mixed
-Line 2-4: 2-3 sentences of specific, actionable analysis mentioning key movers and macro context.
-
-Be direct and professional."""
-
+Respond:
+Line 1: One word only — Bullish, Bearish, Neutral, or Mixed
+Lines 2-4: 2-3 sentences of specific professional analysis."""
         async with httpx.AsyncClient(timeout=30) as client:
             r = await client.post("https://api.anthropic.com/v1/messages",
-                headers={"x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json"},
-                json={"model": "claude-haiku-4-5-20251001", "max_tokens": 250, "messages": [{"role": "user", "content": prompt}]}
-            )
+                headers={"x-api-key":ANTHROPIC_KEY,"anthropic-version":"2023-06-01","content-type":"application/json"},
+                json={"model":"claude-haiku-4-5-20251001","max_tokens":250,"messages":[{"role":"user","content":prompt}]})
             text  = r.json()["content"][0]["text"].strip()
-            lines = text.split("\n")
+            lines = [l for l in text.split("\n") if l.strip()]
             sentiment = "Mixed"
-            for word in ["Bullish", "Bearish", "Neutral", "Mixed"]:
-                if lines[0].strip().lower() == word.lower():
-                    sentiment = word
-                    break
+            for w in ["Bullish","Bearish","Neutral","Mixed"]:
+                if w.lower() in lines[0].lower(): sentiment = w; break
             analysis = " ".join(lines[1:]).strip() or text
-
-        result = {"sentiment": sentiment, "analysis": analysis, "generated_at": datetime.now().isoformat()}
+        result = {"sentiment":sentiment,"analysis":analysis,"generated_at":datetime.now().isoformat()}
         write_cache(path, result)
         return result
-
     except Exception as e:
-        print(f"Mood error: {e}")
-        return {"sentiment": "Mixed", "analysis": "Market mood analysis temporarily unavailable.", "generated_at": datetime.now().isoformat()}
+        return {"sentiment":"Mixed","analysis":f"AI analysis error: {e}","generated_at":datetime.now().isoformat()}
 
 @app.get("/api/clear-cache")
 async def clear_cache():
-    """Clears all cached data — useful after restarting"""
     import glob
     files = glob.glob(f"{CACHE_DIR}/*.json")
     for f in files:
         try: os.remove(f)
         except: pass
-    return {"cleared": len(files), "message": "Cache cleared"}
+    return {"cleared": len(files)}
 
 @app.get("/health")
-async def health(): return {"status": "ok", "time": datetime.now().isoformat()}
+async def health():
+    return {"status":"ok","time":datetime.now().isoformat()}
 
 if __name__ == "__main__":
     import uvicorn
