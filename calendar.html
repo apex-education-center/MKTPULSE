@@ -11,12 +11,17 @@ class ThemeManager {
     this.theme = localStorage.getItem('mp-theme') || 'dark';
     this._apply();
 
-    // ← This fires in every OTHER open tab when localStorage changes
+    // Fires in every OTHER open tab when localStorage changes
     window.addEventListener('storage', (e) => {
-      if (e.key === 'mp-theme' && e.newValue && e.newValue !== this.theme) {
+      if (e.key === 'mp-theme' && e.newValue) {
         this.theme = e.newValue;
         this._apply();
       }
+    });
+    // Re-sync when user returns to this tab (e.g. toggled on another tab then came back)
+    window.addEventListener('focus', () => this.sync());
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) this.sync();
     });
   }
 
@@ -30,10 +35,18 @@ class ThemeManager {
 
   toggle() {
     this.theme = this.theme === 'dark' ? 'light' : 'dark';
-    // Writing to localStorage triggers 'storage' event in all other open tabs
     localStorage.setItem('mp-theme', this.theme);
     this._apply();
     Toast.show(this.theme === 'dark' ? '🌙 Dark mode' : '☀️ Light mode', 'info', 1500);
+  }
+
+  // Call this on every page load to ensure correct theme
+  sync() {
+    const stored = localStorage.getItem('mp-theme') || 'dark';
+    if (stored !== this.theme) {
+      this.theme = stored;
+      this._apply();
+    }
   }
 }
 

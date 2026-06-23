@@ -95,53 +95,80 @@ async def get_watchlist():
     return result
 
 # ── NEWS (backend proxy — fixes CORS) ───────────────────
+# Financial sources only — prevents sports/entertainment bleed-through
+FINANCIAL_DOMAINS = (
+    "bloomberg.com,reuters.com,cnbc.com,ft.com,wsj.com,"
+    "forbes.com,businessinsider.com,marketwatch.com,investing.com,"
+    "coindesk.com,cointelegraph.com,decrypt.co,theblock.co,"
+    "seekingalpha.com,barrons.com,economist.com,finance.yahoo.com"
+)
+
+CATEGORY_QUERIES = {
+    "all":         [
+        '(bitcoin OR ethereum OR crypto) AND (price OR market OR trading)',
+        '(stock market OR nasdaq OR S&P500) AND (trading OR earnings OR rally)',
+        '(federal reserve OR Fed) AND (rate OR inflation OR monetary)',
+        '(gold OR crude oil) AND (price OR market OR commodity)',
+    ],
+    "crypto":      ['(bitcoin OR ethereum OR solana OR crypto) AND (price OR market OR defi OR blockchain)'],
+    "stocks":      ['(stock market OR nasdaq OR S&P500 OR earnings OR IPO) AND (trading OR investor OR rally)'],
+    "macro":       ['(federal reserve OR ECB OR interest rate OR inflation OR GDP OR CPI OR recession)'],
+    "commodities": ['(gold price OR crude oil OR silver OR natural gas OR wheat) AND (commodity OR market OR trading)'],
+    "tech":        ['(nvidia OR artificial intelligence OR semiconductor OR tech stocks) AND (market OR earnings OR AI)'],
+}
+
 @app.get("/api/news")
 async def get_news(q: str = "", category: str = "all"):
-    # Build cache key from query+category
-    cache_key = f"{CACHE_DIR}/news_{category}_{q[:20].replace(' ','_')}.json"
-    if cache_valid(cache_key, 30): return read_cache(cache_key)
+    safe_q   = q[:30].replace(' ','_').replace('/','').replace('\','')
+    cache_key = f"{CACHE_DIR}/news_{category}_{safe_q}.json"
+    if cache_valid(cache_key, 20): return read_cache(cache_key)
 
-    category_queries = {
-        "all":         ["bitcoin OR ethereum OR crypto", "stock market OR nasdaq", "federal reserve OR inflation", "gold OR oil commodity"],
-        "crypto":      ["bitcoin OR ethereum OR cryptocurrency OR blockchain OR defi"],
-        "stocks":      ["stock market OR nasdaq OR S&P500 OR wall street OR earnings"],
-        "macro":       ["federal reserve OR interest rate OR inflation OR GDP OR CPI"],
-        "commodities": ["gold price OR crude oil OR silver OR commodity market"],
-        "tech":        ["artificial intelligence OR nvidia OR semiconductor OR tech stocks"],
-    }
-
-    queries = category_queries.get(category, category_queries["all"])
-    if q: queries = [q]  # User search overrides category
+    queries = [q] if q else CATEGORY_QUERIES.get(category, CATEGORY_QUERIES["all"])
 
     articles, seen = [], set()
-    async with httpx.AsyncClient(timeout=15) as client:
-        for query in queries[:3]:
+    async with httpx.AsyncClient(timeout=20) as client:
+        for query in queries[:4]:
             try:
-                r = await client.get("https://newsapi.org/v2/everything", params={
-                    "q": query, "language": "en",
-                    "sortBy": "publishedAt", "pageSize": 10,
-                    "apiKey": NEWSAPI_KEY
-                })
+                params = {
+                    "q":        query,
+                    "language": "en",
+                    "sortBy":   "publishedAt",
+                    "pageSize": 10,
+                    "apiKey":   NEWSAPI_KEY,
+                }
+                # For generic queries add domain filter to avoid sports/entertainment
+                if not q:
+                    params["domains"] = FINANCIAL_DOMAINS
+
+                r    = await client.get("https://newsapi.org/v2/everything", params=params)
                 data = r.json()
+
                 if data.get("status") != "ok":
                     print(f"NewsAPI error: {data.get('message')}")
                     continue
+
                 for a in data.get("articles", []):
-                    if a.get("url") and a.get("title") and "[Removed]" not in a["title"] and a["url"] not in seen:
-                        seen.add(a["url"])
-                        articles.append({
-                            "title":        a["title"],
-                            "description":  a.get("description", ""),
-                            "url":          a["url"],
-                            "image":        a.get("urlToImage"),
-                            "source":       a.get("source", {}).get("name", "Unknown"),
-                            "published_at": a.get("publishedAt", ""),
-                        })
+                    title = a.get("title","")
+                    url   = a.get("url","")
+                    if (not url or not title
+                        or "[Removed]" in title
+                        or url in seen
+                        or len(title) < 10):
+                        continue
+                    seen.add(url)
+                    articles.append({
+                        "title":        title,
+                        "description":  a.get("description","") or "",
+                        "url":          url,
+                        "image":        a.get("urlToImage"),
+                        "source":       a.get("source",{}).get("name","Unknown"),
+                        "published_at": a.get("publishedAt",""),
+                    })
             except Exception as e:
                 print(f"News fetch error: {e}")
 
-    articles.sort(key=lambda x: x.get("published_at", ""), reverse=True)
-    result = articles[:20]
+    articles.sort(key=lambda x: x.get("published_at",""), reverse=True)
+    result = articles[:24]
     if result: write_cache(cache_key, result)
     return result
 
@@ -217,6 +244,16 @@ Be direct and professional."""
     except Exception as e:
         print(f"Mood error: {e}")
         return {"sentiment": "Mixed", "analysis": "Market mood analysis temporarily unavailable.", "generated_at": datetime.now().isoformat()}
+
+@app.get("/api/clear-cache")
+async def clear_cache():
+    """Clears all cached data — useful after restarting"""
+    import glob
+    files = glob.glob(f"{CACHE_DIR}/*.json")
+    for f in files:
+        try: os.remove(f)
+        except: pass
+    return {"cleared": len(files), "message": "Cache cleared"}
 
 @app.get("/health")
 async def health(): return {"status": "ok", "time": datetime.now().isoformat()}
