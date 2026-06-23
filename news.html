@@ -46,7 +46,7 @@
 .t-panel-head .p-link  { color: var(--blue); cursor: pointer; transition: color var(--transition); }
 .t-panel-head .p-link:hover { color: var(--amber); }
 
-.t-panel-body { padding: 10px; flex: 1; overflow: hidden; }
+.t-panel-body { padding: 10px; flex: 1; overflow: auto; min-height: 0; }
 
 /* ── HERO TICKER PANEL ── */
 .hero-ticker {
@@ -86,9 +86,9 @@
   transition: all var(--transition);
 }
 .lpb-item:hover { border-color: var(--amber); }
-.lpb-sym  { font-family: var(--font-mono); font-size: 0.65rem; color: var(--text3); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 2px; }
-.lpb-price { font-family: var(--font-mono); font-size: 1rem; font-weight: 600; }
-.lpb-chg  { font-family: var(--font-mono); font-size: 0.65rem; margin-top: 2px; }
+.lpb-sym  { font-family: var(--font-mono); font-size: 0.65rem; color: var(--text3); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 4px; display: block; }
+.lpb-price { font-family: var(--font-mono); font-size: 1.05rem; font-weight: 700; color: var(--text); display: block; margin-bottom: 3px; }
+.lpb-chg  { font-family: var(--font-mono); font-size: 0.68rem; margin-top: 2px; display: block; }
 
 /* ── FEATURED CAROUSEL ── */
 .carousel-item-inner {
@@ -120,12 +120,17 @@
 .carousel-control-prev-icon, .carousel-control-next-icon { width: 12px !important; height: 12px !important; }
 
 /* ── MINI TABLE ── */
-.mini-table { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 0.72rem; }
-.mini-table th { color: var(--text3); font-size: 0.58rem; letter-spacing: 0.1em; text-transform: uppercase; padding: 4px 6px; border-bottom: 1px solid var(--border); }
-.mini-table td { padding: 6px 6px; border-bottom: 1px solid var(--border); }
+.mini-table { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 0.78rem; table-layout: fixed; }
+.mini-table th { color: var(--text3); font-size: 0.6rem; letter-spacing: 0.08em; text-transform: uppercase; padding: 7px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: var(--bg3); }
+.mini-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text); vertical-align: middle; }
 .mini-table tr:last-child td { border-bottom: none; }
 .mini-table tr { cursor: pointer; transition: background var(--transition); }
 .mini-table tr:hover td { background: var(--bg3); }
+/* Fixed column widths for mini tables */
+.mini-table th:nth-child(1), .mini-table td:nth-child(1) { width: 32%; }
+.mini-table th:nth-child(2), .mini-table td:nth-child(2) { width: 26%; text-align: right; }
+.mini-table th:nth-child(3), .mini-table td:nth-child(3) { width: 22%; text-align: right; }
+.mini-table th:nth-child(4), .mini-table td:nth-child(4) { width: 20%; text-align: right; }
 
 /* ── NEWS MINI ── */
 .news-mini-item { padding: 8px 0; border-bottom: 1px solid var(--border); cursor: pointer; transition: all var(--transition); }
@@ -167,6 +172,41 @@
 
 @media (max-width: 1200px) { .terminal-grid { grid-template-columns: 1fr 1fr; } .span-3 { grid-column: span 2; } }
 @media (max-width: 768px)  { .terminal-grid { grid-template-columns: 1fr; } .span-2,.span-3 { grid-column: span 1; } }
+
+/* ── LIVE TV PANEL ── */
+.live-tv-wrap { display: flex; flex-direction: column; height: 100%; min-height: 360px; }
+.tv-channel-bar {
+  display: flex; flex-wrap: wrap; gap: 4px; padding: 8px 10px;
+  background: var(--bg3); border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.tv-channel-btn {
+  font-family: var(--font-mono); font-size: 0.6rem; font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 3px 10px; border-radius: 2px; border: 1px solid var(--border2);
+  background: var(--bg4); color: var(--text3); cursor: pointer; transition: all .15s;
+}
+.tv-channel-btn:hover { border-color: var(--amber); color: var(--amber); }
+.tv-channel-btn.active { background: var(--red); border-color: var(--red); color: #fff; }
+.tv-embed-wrap { flex: 1; position: relative; overflow: hidden; background: #000; min-height: 280px; }
+.tv-embed-wrap iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: none; }
+.tv-placeholder {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; background: var(--bg3);
+  gap: 10px; color: var(--text3); font-family: var(--font-mono); font-size: .72rem;
+  text-align: center; padding: 20px;
+}
+.tv-placeholder i { font-size: 2.5rem; color: var(--red); opacity: .6; }
+.tv-controls {
+  display: flex; align-items: center; gap: 10px; padding: 6px 10px;
+  background: var(--bg3); border-top: 1px solid var(--border); flex-shrink: 0;
+}
+.tv-live-badge {
+  display: flex; align-items: center; gap: 5px;
+  font-family: var(--font-mono); font-size: .6rem; font-weight: 700;
+  color: var(--red); letter-spacing: .1em;
+}
+.tv-channel-name { font-family: var(--font-mono); font-size: .68rem; color: var(--amber); font-weight: 600; flex: 1; letter-spacing: .06em; }
+.tv-viewers { font-family: var(--font-mono); font-size: .6rem; color: var(--text3); }
 </style>
 </head>
 <body>
@@ -371,6 +411,53 @@
     </div>
   </div>
 
+
+  <!-- LIVE TV NEWS PANEL -->
+  <div class="t-panel span-3">
+    <div class="t-panel-head">
+      <span class="p-title">
+        <span style="width:7px;height:7px;border-radius:50%;background:var(--red);box-shadow:0 0 6px var(--red);display:inline-block;animation:livePulse 1.5s ease-in-out infinite"></span>
+        LIVE NEWS CHANNELS
+      </span>
+      <span class="p-meta" id="tvViewers"></span>
+    </div>
+    <div class="live-tv-wrap">
+      <!-- Channel selector -->
+      <div class="tv-channel-bar" id="tvChannelBar">
+        <button class="tv-channel-btn active" onclick="liveTv.setChannel('bloomberg')"    data-ch="bloomberg">BLOOMBERG</button>
+        <button class="tv-channel-btn" onclick="liveTv.setChannel('skynews')"    data-ch="skynews">SKY NEWS</button>
+        <button class="tv-channel-btn" onclick="liveTv.setChannel('euronews')"   data-ch="euronews">EURONEWS</button>
+        <button class="tv-channel-btn" onclick="liveTv.setChannel('dw')"         data-ch="dw">DW</button>
+        <button class="tv-channel-btn" onclick="liveTv.setChannel('cnbc')"       data-ch="cnbc">CNBC</button>
+        <button class="tv-channel-btn" onclick="liveTv.setChannel('cnn')"        data-ch="cnn">CNN</button>
+        <button class="tv-channel-btn" onclick="liveTv.setChannel('france24')"   data-ch="france24">FRANCE 24</button>
+        <button class="tv-channel-btn" onclick="liveTv.setChannel('alarabiya')"  data-ch="alarabiya">AL ARABIYA</button>
+        <button class="tv-channel-btn" onclick="liveTv.setChannel('aljazeera')"  data-ch="aljazeera">AL JAZEERA</button>
+      </div>
+
+      <!-- Video embed area -->
+      <div class="tv-embed-wrap" id="tvEmbed">
+        <div class="tv-placeholder" id="tvPlaceholder">
+          <i class="bi bi-play-circle"></i>
+          <div>Click a channel above to start watching</div>
+          <div style="font-size:.62rem;color:var(--text3)">Live streams via YouTube · Requires internet connection</div>
+        </div>
+      </div>
+
+      <!-- Controls bar -->
+      <div class="tv-controls">
+        <div class="tv-live-badge">
+          <span style="width:6px;height:6px;border-radius:50%;background:var(--red);animation:livePulse 1.5s ease-in-out infinite"></span>
+          LIVE
+        </div>
+        <div class="tv-channel-name" id="tvChannelName">SELECT A CHANNEL</div>
+        <button class="btn-terminal" onclick="liveTv.stop()" style="padding:3px 10px;font-size:.6rem">■ STOP</button>
+        <button class="btn-terminal" onclick="liveTv.toggleMute()" id="tvMuteBtn" style="padding:3px 10px;font-size:.6rem">🔊 AUDIO</button>
+        <button class="btn-terminal" onclick="liveTv.fullscreen()" style="padding:3px 10px;font-size:.6rem">⛶ FULLSCREEN</button>
+      </div>
+    </div>
+  </div>
+
 </div><!-- terminal-grid -->
 
 <!-- FOOTER -->
@@ -449,14 +536,17 @@ class HomePage {
     if (!tbody) return;
     tbody.innerHTML = assets.map(a => {
       const cells = cols.map(col => {
-        if (col==='price')      return `<td class="price-cell">${Fmt.price(a.price)}</td>`;
-        if (col==='change_24h') return `<td>${Fmt.pct(a.change_24h)}</td>`;
-        if (col==='change_7d')  return `<td>${Fmt.pct(a.change_7d)}</td>`;
-        if (col==='volume')     return `<td class="muted-cell">${Fmt.large(a.volume)}</td>`;
-        if (col==='symbol')     return `<td><span style="color:var(--amber);font-family:var(--font-mono);font-size:.72rem;font-weight:600">${a.symbol}</span></td>`;
-        return `<td>${a[col]||'—'}</td>`;
+        if (col==='price')      return `<td style="text-align:right;font-family:var(--font-mono);font-weight:600;color:var(--text)">${Fmt.price(a.price)}</td>`;
+        if (col==='change_24h') return `<td style="text-align:right">${Fmt.pct(a.change_24h)}</td>`;
+        if (col==='change_7d')  return `<td style="text-align:right">${Fmt.pct(a.change_7d)}</td>`;
+        if (col==='volume')     return `<td style="text-align:right;font-family:var(--font-mono);font-size:.7rem;color:var(--text2)">${Fmt.large(a.volume)}</td>`;
+        if (col==='symbol')     return `<td><div style="display:flex;align-items:center;gap:6px">
+          ${a.image?`<img src="${a.image}" style="width:18px;height:18px;border-radius:50%" onerror="this.style.display='none'">`:``}
+          <div><div style="color:var(--amber);font-family:var(--font-mono);font-size:.72rem;font-weight:700">${a.symbol}</div>
+          <div style="color:var(--text3);font-size:.6rem">${a.name.length>10?a.name.substring(0,10)+'..':a.name}</div></div></div></td>`;
+        return `<td style="color:var(--text)">${a[col]||'—'}</td>`;
       }).join('');
-      return `<tr class="row" onclick="window.location.href='markets.html'">${cells}</tr>`;
+      return `<tr class="row" onclick="window.location.href='markets.html'" style="transition:background .15s">${cells}</tr>`;
     }).join('');
   }
 
@@ -651,6 +741,73 @@ document.addEventListener('DOMContentLoaded', () => {
   window.homePage = new HomePage();
   initStatusBar();
 });
+
+// ── LIVE TV CLASS ─────────────────────────────────────────
+class LiveTV {
+  constructor() {
+    this.currentChannel = null;
+    this.muted = false;
+    this.channels = {
+      bloomberg:  { name:'BLOOMBERG TV',  id:'dp8PhrniqFc' },
+      skynews:    { name:'SKY NEWS',      id:'qEJkLkF33-E' },
+      euronews:   { name:'EURONEWS',      id:'CHqCpxvKcS4' },
+      dw:         { name:'DW ENGLISH',    id:'mGHHkltgwIw' },
+      cnbc:       { name:'CNBC LIVE',     id:'y-HKI0wFaDs' },
+      cnn:        { name:'CNN LIVE',      id:'pHBHVpuAHUo' },
+      france24:   { name:'FRANCE 24',     id:'l7ExV4cx2Mg' },
+      alarabiya:  { name:'AL ARABIYA',    id:'S1SaO1BPPCA' },
+      aljazeera:  { name:'AL JAZEERA',    id:'B6buJNDO3bg' },
+    };
+  }
+  setChannel(ch) {
+    const channel = this.channels[ch];
+    if (!channel) return;
+    this.currentChannel = ch;
+    document.querySelectorAll('.tv-channel-btn').forEach(b=>b.classList.toggle('active',b.dataset.ch===ch));
+    const nameEl=document.getElementById('tvChannelName');
+    if(nameEl) nameEl.textContent=channel.name;
+    const params=`autoplay=1&mute=${this.muted?1:0}&controls=1&modestbranding=1&rel=0`;
+    const wrap=document.getElementById('tvEmbed');
+    if(!wrap) return;
+    const placeholder=document.getElementById('tvPlaceholder');
+    if(placeholder) placeholder.style.display='none';
+    // Remove old iframe if exists
+    const old=wrap.querySelector('iframe');
+    if(old) old.remove();
+    const iframe=document.createElement('iframe');
+    iframe.src=`https://www.youtube.com/embed/${channel.id}?${params}`;
+    iframe.allow='autoplay; encrypted-media; fullscreen';
+    iframe.allowFullscreen=true;
+    iframe.style.cssText='position:absolute;inset:0;width:100%;height:100%;border:none';
+    wrap.appendChild(iframe);
+    Toast.show(`${channel.name} — LIVE`,'success',2000);
+  }
+  stop() {
+    const wrap=document.getElementById('tvEmbed');
+    const iframe=wrap?.querySelector('iframe');
+    if(iframe) iframe.remove();
+    const ph=document.getElementById('tvPlaceholder');
+    if(ph) ph.style.display='flex';
+    document.querySelectorAll('.tv-channel-btn').forEach(b=>b.classList.remove('active'));
+    const nameEl=document.getElementById('tvChannelName');
+    if(nameEl) nameEl.textContent='SELECT A CHANNEL';
+    this.currentChannel=null;
+  }
+  toggleMute() {
+    this.muted=!this.muted;
+    const btn=document.getElementById('tvMuteBtn');
+    if(btn) btn.textContent=this.muted?'🔇 MUTED':'🔊 AUDIO';
+    if(this.currentChannel) this.setChannel(this.currentChannel);
+    Toast.show(this.muted?'MUTED':'AUDIO ON','info',1500);
+  }
+  fullscreen() {
+    const iframe=document.querySelector('#tvEmbed iframe');
+    if(!iframe){Toast.show('START A CHANNEL FIRST','warning');return;}
+    if(iframe.requestFullscreen) iframe.requestFullscreen();
+    else if(iframe.webkitRequestFullscreen) iframe.webkitRequestFullscreen();
+  }
+}
+window.liveTv = new LiveTV();
 </script>
 </body>
 </html>

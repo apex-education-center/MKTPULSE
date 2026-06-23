@@ -960,7 +960,7 @@ body, .panel, .kpi-cell, .news-card, .video-card, .cal-event, .chip, .btn-termin
 .cal-day:hover { background: var(--bg3); }
 .cal-day.other-month { color: var(--text4); }
 .cal-day.today { background: var(--amber-dim); color: var(--amber); font-weight: 700; border: 1px solid rgba(240,165,0,0.3); }
-.cal-day.selected { background: var(--amber); color: #000; font-weight: 700; }
+.cal-day.selected { background: var(--amber); color: #000 !important; font-weight: 700; border: 2px solid var(--amber); box-shadow: 0 0 8px rgba(240,165,0,0.4); }
 .cal-day.has-event::after { content: ''; position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%); width: 4px; height: 4px; border-radius: 50%; }
 .cal-day.has-high::after   { background: var(--red); }
 .cal-day.has-medium::after { background: var(--amber); }
