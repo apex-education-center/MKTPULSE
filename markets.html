@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Economic Calendar — MarketPulse</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<link href="assets/css/main.css" rel="stylesheet">
+<style>
+.page-hero { padding: 48px 0 36px; border-bottom: 1px solid var(--border); margin-bottom: 40px; }
+.page-hero h1 { font-size: 2.2rem; font-weight: 800; letter-spacing: -0.02em; }
+.page-hero p  { color: var(--text2); margin-top: 8px; }
+
+/* ── AI MOOD CARD ── */
+.mood-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 32px;
+  margin-bottom: 40px;
+  position: relative;
+  overflow: hidden;
+}
+
+.mood-card::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse 60% 80% at 0% 50%, rgba(245,200,66,0.05) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+.mood-header {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  margin-bottom: 20px; flex-wrap: wrap; gap: 16px;
+}
+
+.mood-title { font-family: 'Syne', sans-serif; font-size: 1.3rem; font-weight: 700; }
+.mood-subtitle { color: var(--text3); font-size: 0.83rem; margin-top: 4px; }
+
+.mood-badge {
+  padding: 10px 22px;
+  border-radius: var(--radius-sm);
+  font-family: 'Syne', sans-serif;
+  font-size: 1.2rem;
+  font-weight: 800;
+  border: 1px solid;
+  flex-shrink: 0;
+}
+
+.mood-badge.bullish  { color: var(--green); border-color: rgba(32,224,138,0.4); background: rgba(32,224,138,0.08); }
+.mood-badge.bearish  { color: var(--red);   border-color: rgba(255,61,90,0.4);  background: rgba(255,61,90,0.08); }
+.mood-badge.neutral  { color: var(--blue);  border-color: rgba(77,166,255,0.4); background: rgba(77,166,255,0.08); }
+.mood-badge.mixed    { color: var(--accent);border-color: rgba(245,200,66,0.4); background: rgba(245,200,66,0.08); }
+
+.mood-analysis {
+  font-size: 0.95rem;
+  line-height: 1.75;
+  color: var(--text2);
+  margin-bottom: 20px;
+  border-left: 3px solid var(--accent);
+  padding-left: 16px;
+}
+
+.mood-footer {
+  display: flex; justify-content: space-between; align-items: center;
+  flex-wrap: wrap; gap: 12px;
+}
+
+.mood-timestamp {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.72rem;
+  color: var(--text3);
+}
+
+/* ── CALENDAR LAYOUT ── */
+.cal-layout {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 28px;
+  align-items: start;
+}
+
+/* ── UPCOMING EVENTS (right sidebar) ── */
+.upcoming-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  position: sticky;
+  top: 80px;
+}
+
+.upcoming-card h3 {
+  font-family: 'Syne', sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 16px;
+  color: var(--accent);
+}
+
+.upcoming-item {
+  display: flex; gap: 14px; align-items: flex-start;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.upcoming-item:last-child { border-bottom: none; }
+
+.upcoming-date-block {
+  text-align: center;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  min-width: 46px;
+  flex-shrink: 0;
+}
+
+.upcoming-month { font-size: 0.55rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); }
+.upcoming-day   { font-family: 'Syne', sans-serif; font-size: 1.2rem; font-weight: 800; line-height: 1; }
+
+.upcoming-info { flex: 1; }
+.upcoming-event { font-size: 0.83rem; font-weight: 600; margin-bottom: 3px; }
+.upcoming-detail { font-size: 0.72rem; color: var(--text3); }
+
+/* ── MAIN CALENDAR ── */
+.cal-group { margin-bottom: 32px; }
+
+.cal-group-header {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text3);
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 14px;
+}
+
+.cal-event {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  margin-bottom: 12px;
+  display: grid;
+  grid-template-columns: 64px 1fr auto;
+  gap: 16px;
+  align-items: center;
+  transition: all var(--transition);
+  cursor: default;
+}
+
+.cal-event:hover {
+  border-color: var(--border2);
+  transform: translateX(4px);
+  box-shadow: var(--shadow);
+}
+
+.cal-event.high    { border-left: 3px solid var(--red);   }
+.cal-event.medium  { border-left: 3px solid var(--accent); }
+.cal-event.low     { border-left: 3px solid var(--blue);  }
+
+.cal-day-block {
+  text-align: center;
+}
+
+.cal-day-num {
+  font-family: 'Syne', sans-serif;
+  font-size: 1.8rem;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--text);
+}
+
+.cal-day-mo {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.cal-main { }
+.cal-region { font-size: 0.85rem; margin-bottom: 3px; }
+.cal-event-name { font-size: 0.95rem; font-weight: 600; margin-bottom: 4px; }
+.cal-detail { font-size: 0.8rem; color: var(--text3); }
+
+.imp-badge {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.imp-badge.high   { background: rgba(255,61,90,0.15);   color: var(--red); }
+.imp-badge.medium { background: rgba(245,200,66,0.15);  color: var(--accent); }
+.imp-badge.low    { background: rgba(77,166,255,0.15);  color: var(--blue); }
+
+@media (max-width: 992px) {
+  .cal-layout { grid-template-columns: 1fr; }
+  .upcoming-card { position: static; }
+}
+
+@media (max-width: 576px) {
+  .cal-event { grid-template-columns: 50px 1fr; }
+  .cal-event > :last-child { display: none; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+<nav class="navbar navbar-expand-lg">
+  <div class="container-fluid px-4">
+    <a class="navbar-brand" href="index.html">Market<span class="accent">Pulse</span></a>
+    <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu" style="color:var(--text2)">
+      <i class="bi bi-list" style="font-size:1.4rem"></i>
+    </button>
+    <div class="collapse navbar-collapse" id="navMenu">
+      <ul class="navbar-nav ms-auto align-items-center gap-1">
+        <li class="nav-item"><a class="nav-link" href="index.html"><i class="bi bi-house me-1"></i>Home</a></li>
+        <li class="nav-item"><a class="nav-link" href="markets.html"><i class="bi bi-graph-up me-1"></i>Markets</a></li>
+        <li class="nav-item"><a class="nav-link" href="news.html"><i class="bi bi-newspaper me-1"></i>News</a></li>
+        <li class="nav-item"><a class="nav-link" href="youtube.html"><i class="bi bi-youtube me-1"></i>Videos</a></li>
+        <li class="nav-item"><a class="nav-link" href="calendar.html"><i class="bi bi-calendar3 me-1"></i>Calendar</a></li>
+        <li class="nav-item"><a class="nav-link" href="search.html"><i class="bi bi-search me-1"></i>Search</a></li>
+        <li class="nav-item ms-2"><span class="nav-dot me-1"></span><span class="mono" id="navClock" style="font-size:0.75rem;color:var(--text3)"></span></li>
+        <li class="nav-item ms-2"><button class="theme-toggle" id="themeToggle">🌙</button></li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<main>
+  <div class="container-fluid px-4">
+
+    <div class="page-hero fade-up">
+      <h1><i class="bi bi-calendar3 me-3" style="color:var(--purple)"></i>Economic Calendar</h1>
+      <p>Upcoming macro events, Fed meetings, rate decisions, and AI-powered market sentiment analysis.</p>
+    </div>
+
+    <!-- AI MOOD -->
+    <div class="mood-card fade-up">
+      <div class="mood-header">
+        <div>
+          <div class="mood-title"><i class="bi bi-robot me-2" style="color:var(--accent)"></i>AI Market Mood Analysis</div>
+          <div class="mood-subtitle">Powered by Claude AI · Updates every 2 hours</div>
+        </div>
+        <div class="mood-badge mixed skeleton" id="moodBadge" style="min-width:100px;min-height:44px">&nbsp;</div>
+      </div>
+      <div class="mood-analysis skeleton" id="moodAnalysis" style="min-height:60px">&nbsp;</div>
+      <div class="mood-footer">
+        <div class="mood-timestamp" id="moodTimestamp">—</div>
+        <div class="d-flex gap-2">
+          <button class="btn-mp btn-mp-ghost" onclick="refreshMood()" style="font-size:0.8rem;padding:7px 14px">
+            <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- CALENDAR + SIDEBAR -->
+    <div class="cal-layout">
+
+      <!-- MAIN EVENTS -->
+      <div>
+        <div class="section-heading fade-up">
+          <h2><i class="bi bi-calendar-event me-2" style="color:var(--purple)"></i>Upcoming Events</h2>
+          <div class="line"></div>
+        </div>
+
+        <!-- FILTER -->
+        <div class="filter-chips fade-up">
+          <span class="chip active" onclick="setCalFilter('all',this)">All Events</span>
+          <span class="chip" onclick="setCalFilter('high',this)"><span style="color:var(--red)">⬤</span> High Impact</span>
+          <span class="chip" onclick="setCalFilter('medium',this)"><span style="color:var(--accent)">⬤</span> Medium</span>
+          <span class="chip" onclick="setCalFilter('US',this)">🇺🇸 US</span>
+          <span class="chip" onclick="setCalFilter('EU',this)">🇪🇺 EU</span>
+        </div>
+
+        <div id="calendarEvents">
+          <div class="text-center py-5" style="color:var(--text3)">
+            <div class="spinner-border spinner-border-sm me-2" style="color:var(--accent)"></div>
+            Loading events...
+          </div>
+        </div>
+      </div>
+
+      <!-- UPCOMING SIDEBAR -->
+      <div>
+        <div class="upcoming-card fade-up">
+          <h3><i class="bi bi-alarm me-2"></i>Next 5 Events</h3>
+          <div id="upcomingList">
+            ${Array(5).fill('<div class="upcoming-item"><div class="upcoming-date-block skeleton" style="min-height:46px"></div><div class="upcoming-info"><div class="skeleton" style="height:12px;margin-bottom:6px"></div><div class="skeleton" style="height:10px;width:70%"></div></div></div>').join('')}
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</main>
+
+<footer>
+  <div class="container-fluid px-4">
+    <div class="row align-items-center">
+      <div class="col-md-6"><div class="footer-brand">Market<span class="accent">Pulse</span></div><p class="mt-1">Financial intelligence for modern investors.</p></div>
+      <div class="col-md-6 text-md-end mt-3 mt-md-0"><p>AI Analysis by Claude · MarketPulse 2026</p></div>
+    </div>
+    <hr style="border-color:var(--border);margin:20px 0">
+    <p class="text-center" style="font-size:0.78rem">© 2026 MarketPulse. University Project.</p>
+  </div>
+</footer>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="assets/js/app.js"></script>
+<script src="assets/js/calendar.js"></script>
+<script>
+class CalendarPage {
+  constructor() {
+    this.events = [];
+    this.filter = 'all';
+    this.init();
+  }
+
+  async init() {
+    await Promise.all([this.loadCalendar(), this.loadMood()]);
+  }
+
+  async loadCalendar() {
+    try {
+      this.events = await window.apiClient.get('/api/calendar');
+      this.render();
+      this.renderUpcoming();
+    } catch(e) {
+      document.getElementById('calendarEvents').innerHTML =
+        `<div style="color:var(--text3);padding:20px">⚠ Could not load calendar. Start the backend.</div>`;
+    }
+  }
+
+  async loadMood() {
+    try {
+      const data = await window.apiClient.get('/api/mood', 2 * 60 * 60 * 1000);
+      const badge    = document.getElementById('moodBadge');
+      const analysis = document.getElementById('moodAnalysis');
+      const ts       = document.getElementById('moodTimestamp');
+
+      badge.className = `mood-badge ${data.sentiment.toLowerCase()}`;
+      badge.textContent = data.sentiment;
+      analysis.className = 'mood-analysis';
+      analysis.textContent = data.analysis;
+      if (data.generated_at) ts.textContent = `Last updated: ${new Date(data.generated_at).toLocaleString()}`;
+    } catch(e) {
+      document.getElementById('moodBadge').className = 'mood-badge neutral';
+      document.getElementById('moodBadge').textContent = 'Offline';
+      document.getElementById('moodAnalysis').className = 'mood-analysis';
+      document.getElementById('moodAnalysis').textContent = 'Add Anthropic API key to backend for AI market mood analysis.';
+    }
+  }
+
+  async refreshMood() {
+    document.getElementById('moodBadge').className = 'mood-badge mixed skeleton';
+    document.getElementById('moodBadge').textContent = '\u00a0';
+    document.getElementById('moodAnalysis').className = 'mood-analysis skeleton';
+    document.getElementById('moodAnalysis').textContent = '\u00a0';
+    // Clear cache
+    window.apiClient._cache.delete('/api/mood');
+    await this.loadMood();
+    Toast.show('Market mood refreshed', 'success');
+  }
+
+  setFilter(f, el) {
+    document.querySelectorAll('.filter-chips .chip').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    this.filter = f;
+    this.render();
+  }
+
+  getFiltered() {
+    if (this.filter === 'all') return this.events;
+    if (this.filter === 'high' || this.filter === 'medium') {
+      return this.events.filter(e => e.importance === this.filter);
+    }
+    // Region filter
+    const regionMap = { US: '🇺🇸', EU: '🇪🇺', UK: '🇬🇧', JP: '🇯🇵', CN: '🇨🇳' };
+    return this.events.filter(e => e.region === regionMap[this.filter]);
+  }
+
+  render() {
+    const filtered = this.getFiltered();
+    const container = document.getElementById('calendarEvents');
+
+    if (!filtered.length) {
+      container.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text3)">No events match this filter.</div>`;
+      return;
+    }
+
+    // Group by month
+    const grouped = {};
+    filtered.forEach(e => {
+      const d = new Date(e.date);
+      const key = d.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+      if (!grouped[key]) grouped[key] = [];
+      grouped[key].push(e);
+    });
+
+    container.innerHTML = Object.entries(grouped).map(([month, events]) => `
+      <div class="cal-group fade-up">
+        <div class="cal-group-header">${month}</div>
+        ${events.map(e => {
+          const d = new Date(e.date);
+          return `
+          <div class="cal-event ${e.importance}">
+            <div class="cal-day-block">
+              <div class="cal-day-num">${d.getDate()}</div>
+              <div class="cal-day-mo">${d.toLocaleString('en-US',{month:'short'})}</div>
+            </div>
+            <div class="cal-main">
+              <div class="cal-region">${e.region}</div>
+              <div class="cal-event-name">${e.event}</div>
+              <div class="cal-detail">${e.detail}</div>
+            </div>
+            <div>
+              <span class="imp-badge ${e.importance}">${e.importance}</span>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>`).join('');
+
+    setTimeout(() => new ScrollAnimator(), 50);
+  }
+
+  renderUpcoming() {
+    const next5 = this.events
+      .filter(e => new Date(e.date) >= new Date())
+      .sort((a, b) => new Date(a.date) - new Date(b.date))
+      .slice(0, 5);
+
+    document.getElementById('upcomingList').innerHTML = next5.map(e => {
+      const d = new Date(e.date);
+      return `
+        <div class="upcoming-item">
+          <div class="upcoming-date-block">
+            <div class="upcoming-month">${d.toLocaleString('en-US',{month:'short'})}</div>
+            <div class="upcoming-day">${d.getDate()}</div>
+          </div>
+          <div class="upcoming-info">
+            <div class="upcoming-event">${e.event}</div>
+            <div class="upcoming-detail">${e.region} · <span class="imp-badge ${e.importance}" style="font-size:0.6rem">${e.importance}</span></div>
+          </div>
+        </div>`;
+    }).join('');
+  }
+}
+
+window.calendarPage = new CalendarPage();
+</script>
+</body>
+</html>

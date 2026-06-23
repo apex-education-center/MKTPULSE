@@ -1,0 +1,267 @@
+// ═══════════════════════════════════════════════════════
+// MARKETPULSE — NEWS PAGE LOGIC
+// NewsAPI key: c8afc01eee3e4050b94a8cd6badd434f
+// ═══════════════════════════════════════════════════════
+
+const NEWS_API_KEY = 'c8afc01eee3e4050b94a8cd6badd434f';
+const NEWS_BASE    = 'https://newsapi.org/v2';
+
+class NewsManager {
+  constructor() {
+    this.allArticles = [];
+    this.category    = 'all';
+    this.sortBy      = 'date';
+    this.query       = '';
+    this.page        = 1;
+    this.perPage     = 9;
+    this.loading     = false;
+
+    this.categoryQueries = {
+      crypto:      'bitcoin OR ethereum OR cryptocurrency OR blockchain',
+      stocks:      'stock market OR nasdaq OR S&P500 OR wall street OR equity',
+      macro:       'federal reserve OR interest rate OR inflation OR GDP OR CPI',
+      commodities: 'gold price OR crude oil OR silver OR commodity market',
+      tech:        'artificial intelligence OR semiconductor OR tech stocks OR nvidia',
+    };
+
+    this.init();
+  }
+
+  async init() {
+    await this.fetchNews('financial markets OR crypto OR stocks OR economy');
+  }
+
+  async fetchNews(query) {
+    this.loading = true;
+    this.showSkeletons();
+
+    try {
+      // Fetch from multiple queries in parallel for rich results
+      const queries = [
+        'bitcoin OR ethereum OR crypto',
+        'stock market OR nasdaq OR earnings',
+        'federal reserve OR inflation OR economy',
+        'gold oil commodity',
+      ];
+
+      const responses = await Promise.allSettled(
+        queries.map(q =>
+          fetch(`${NEWS_BASE}/everything?q=${encodeURIComponent(q)}&language=en&sortBy=publishedAt&pageSize=8&apiKey=${NEWS_API_KEY}`)
+            .then(r => r.json())
+        )
+      );
+
+      const articles = [];
+      const seen = new Set();
+
+      for (const res of responses) {
+        if (res.status === 'fulfilled' && res.value.articles) {
+          for (const a of res.value.articles) {
+            if (a.url && !seen.has(a.url) && a.title && !a.title.includes('[Removed]')) {
+              seen.add(a.url);
+              articles.push({
+                title:        a.title,
+                description:  a.description || '',
+                url:          a.url,
+                image:        a.urlToImage,
+                source:       a.source?.name || 'Unknown',
+                published_at: a.publishedAt,
+              });
+            }
+          }
+        }
+      }
+
+      // Sort by date descending
+      articles.sort((a, b) => new Date(b.published_at) - new Date(a.published_at));
+
+      this.allArticles = articles;
+      this.loading = false;
+      this.buildBreakingCarousel();
+      this.render();
+
+    } catch(e) {
+      console.error('NewsAPI error:', e);
+      this.loading = false;
+      this.showError(`NewsAPI error: ${e.message}`);
+    }
+  }
+
+  async fetchByCategory(category) {
+    if (category === 'all') {
+      await this.fetchNews('financial markets OR crypto OR stocks');
+      return;
+    }
+
+    this.showSkeletons();
+    try {
+      const q = this.categoryQueries[category] || category;
+      const res = await fetch(
+        `${NEWS_BASE}/everything?q=${encodeURIComponent(q)}&language=en&sortBy=publishedAt&pageSize=20&apiKey=${NEWS_API_KEY}`
+      );
+      const data = await res.json();
+
+      this.allArticles = (data.articles || [])
+        .filter(a => a.url && a.title && !a.title.includes('[Removed]'))
+        .map(a => ({
+          title:        a.title,
+          description:  a.description || '',
+          url:          a.url,
+          image:        a.urlToImage,
+          source:       a.source?.name || 'Unknown',
+          published_at: a.publishedAt,
+        }));
+
+      this.render();
+    } catch(e) {
+      this.showError('Could not fetch news for this category.');
+    }
+  }
+
+  buildBreakingCarousel() {
+    const top        = this.allArticles.slice(0, 5);
+    const indicators = document.getElementById('breakingIndicators');
+    const inner      = document.getElementById('breakingInner');
+    if (!indicators || !inner) return;
+
+    indicators.innerHTML = top.map((_, i) =>
+      `<button type="button" data-bs-target="#breakingCarousel" data-bs-slide-to="${i}" ${i === 0 ? 'class="active"' : ''}></button>`
+    ).join('');
+
+    inner.innerHTML = top.map((a, i) => `
+      <div class="carousel-item ${i === 0 ? 'active' : ''}" onclick="window.open('${a.url}','_blank')" style="cursor:pointer">
+        <div class="carousel-item-inner">
+          ${a.image ? `<img class="carousel-bg" src="${a.image}" alt="" onerror="this.style.display='none'">` : ''}
+          <div class="carousel-bg-gradient"></div>
+          <div class="carousel-content">
+            <span class="breaking-tag">Breaking</span>
+            <div class="breaking-title">${a.title}</div>
+            <div class="breaking-meta">${a.source} · ${Fmt.timeAgo(a.published_at)}</div>
+          </div>
+        </div>
+      </div>`).join('');
+  }
+
+  getFiltered() {
+    let articles = [...this.allArticles];
+
+    if (this.query) {
+      const q = this.query.toLowerCase();
+      articles = articles.filter(a =>
+        (a.title || '').toLowerCase().includes(q) ||
+        (a.description || '').toLowerCase().includes(q) ||
+        (a.source || '').toLowerCase().includes(q)
+      );
+    }
+
+    if (this.sortBy === 'source') {
+      articles.sort((a, b) => (a.source || '').localeCompare(b.source || ''));
+    } else {
+      articles.sort((a, b) => new Date(b.published_at) - new Date(a.published_at));
+    }
+
+    return articles;
+  }
+
+  render() {
+    const articles  = this.getFiltered();
+    const paginated = articles.slice(0, this.page * this.perPage);
+
+    const countEl = document.getElementById('articleCount');
+    if (countEl) countEl.textContent = articles.length;
+
+    const loadMore = document.getElementById('loadMoreWrap');
+    if (loadMore) loadMore.style.display = articles.length > paginated.length ? 'block' : 'none';
+
+    const grid = document.getElementById('newsGrid');
+    if (!grid) return;
+
+    if (!articles.length) {
+      grid.innerHTML = `
+        <div class="empty-state">
+          <div class="icon">🔍</div>
+          <h3>No articles found</h3>
+          <p>Try a different category or search term.</p>
+        </div>`;
+      return;
+    }
+
+    grid.innerHTML = paginated.map(a => `
+      <div class="news-card fade-up" onclick="window.open('${a.url}','_blank')">
+        <div class="news-img">
+          ${a.image
+            ? `<img src="${a.image}" alt="" loading="lazy" onerror="this.parentElement.innerHTML='<div class=news-img-placeholder>📰</div>'">`
+            : '<div class="news-img-placeholder">📰</div>'}
+        </div>
+        <div class="news-body">
+          <div class="news-source-row">
+            <span class="news-source">${a.source}</span>
+            <span class="news-date">${Fmt.timeAgo(a.published_at)}</span>
+          </div>
+          <div class="news-title">${a.title}</div>
+          <div class="news-desc">${a.description || ''}</div>
+          <div class="news-footer">
+            <span class="news-read">Read article →</span>
+            <button class="news-fav" onclick="event.stopPropagation();this.textContent=this.textContent==='☆'?'⭐':'☆';this.classList.toggle('active')">☆</button>
+          </div>
+        </div>
+      </div>`).join('');
+
+    setTimeout(() => {
+      document.querySelectorAll('.fade-up').forEach(el => {
+        if (!el.classList.contains('visible')) el.classList.add('visible');
+      });
+    }, 50);
+  }
+
+  setCategory(cat, el) {
+    document.querySelectorAll('.filter-chips .chip').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    this.category = cat;
+    this.page     = 1;
+    this.fetchByCategory(cat);
+  }
+
+  setSort(val) { this.sortBy = val; this.render(); }
+
+  search(q) { this.query = q; this.page = 1; this.render(); }
+
+  loadMore() { this.page++; this.render(); Toast.show('More articles loaded'); }
+
+  showSkeletons() {
+    const grid = document.getElementById('newsGrid');
+    if (!grid) return;
+    grid.innerHTML = Array(9).fill(`
+      <div class="news-card">
+        <div class="news-img skeleton"></div>
+        <div class="news-body">
+          <div class="skeleton" style="height:10px;width:40%;margin-bottom:10px"></div>
+          <div class="skeleton" style="height:14px;margin-bottom:6px"></div>
+          <div class="skeleton" style="height:14px;width:75%;margin-bottom:6px"></div>
+          <div class="skeleton" style="height:14px;width:55%"></div>
+        </div>
+      </div>`).join('');
+  }
+
+  showError(msg) {
+    const grid = document.getElementById('newsGrid');
+    if (!grid) return;
+    grid.innerHTML = `
+      <div class="empty-state" style="grid-column:1/-1">
+        <div class="icon">⚠️</div>
+        <h3>Could not load news</h3>
+        <p>${msg || 'Please check your API key.'}</p>
+      </div>`;
+  }
+}
+
+// Boot
+document.addEventListener('DOMContentLoaded', () => {
+  window.newsManager = new NewsManager();
+});
+
+// Global helpers called from HTML
+function setNewsCategory(cat, el) { window.newsManager?.setCategory(cat, el); }
+function setNewsSort(val)         { window.newsManager?.setSort(val); }
+function searchNews(q)            { window.newsManager?.search(q); }
+function loadMoreNews()           { window.newsManager?.loadMore(); }
