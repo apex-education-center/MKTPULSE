@@ -1,6 +1,6 @@
 # MarketPulse v10
 
-A Bloomberg-inspired **financial intelligence terminal** — real-time markets, news, macro calendar, trading tools, and live TV. Built as a university project; all data is for **educational use**.
+A Bloomberg-inspired **financial intelligence terminal** real-time markets, news, macro calendar, trading tools, and live TV. Built as a university project; all data is for **educational use**.
 
 ![Stack](https://img.shields.io/badge/FastAPI-009688?style=flat&logo=fastapi&logoColor=white)
 ![JavaScript](https://img.shields.io/badge/Vanilla_JS-F7DF1E?style=flat&logo=javascript&logoColor=black)
