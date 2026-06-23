@@ -1,10 +1,7 @@
 // ═══════════════════════════════════════════════════════
-// MARKETPULSE — NEWS PAGE LOGIC
-// NewsAPI key: c8afc01eee3e4050b94a8cd6badd434f
+// MARKETPULSE — NEWS PAGE LOGIC v2
+// Calls backend proxy — fixes NewsAPI CORS issue
 // ═══════════════════════════════════════════════════════
-
-const NEWS_API_KEY = 'c8afc01eee3e4050b94a8cd6badd434f';
-const NEWS_BASE    = 'https://newsapi.org/v2';
 
 class NewsManager {
   constructor() {
@@ -14,107 +11,34 @@ class NewsManager {
     this.query       = '';
     this.page        = 1;
     this.perPage     = 9;
-    this.loading     = false;
-
-    this.categoryQueries = {
-      crypto:      'bitcoin OR ethereum OR cryptocurrency OR blockchain',
-      stocks:      'stock market OR nasdaq OR S&P500 OR wall street OR equity',
-      macro:       'federal reserve OR interest rate OR inflation OR GDP OR CPI',
-      commodities: 'gold price OR crude oil OR silver OR commodity market',
-      tech:        'artificial intelligence OR semiconductor OR tech stocks OR nvidia',
-    };
-
+    this._debounce   = null;
     this.init();
   }
 
   async init() {
-    await this.fetchNews('financial markets OR crypto OR stocks OR economy');
+    await this.fetchFromBackend('all', '');
   }
 
-  async fetchNews(query) {
-    this.loading = true;
+  // ── FETCH via backend proxy (fixes CORS) ─────────────
+  async fetchFromBackend(category = 'all', q = '') {
     this.showSkeletons();
-
     try {
-      // Fetch from multiple queries in parallel for rich results
-      const queries = [
-        'bitcoin OR ethereum OR crypto',
-        'stock market OR nasdaq OR earnings',
-        'federal reserve OR inflation OR economy',
-        'gold oil commodity',
-      ];
+      let url = `${window.apiClient.base}/api/news?category=${category}`;
+      if (q) url += `&q=${encodeURIComponent(q)}`;
 
-      const responses = await Promise.allSettled(
-        queries.map(q =>
-          fetch(`${NEWS_BASE}/everything?q=${encodeURIComponent(q)}&language=en&sortBy=publishedAt&pageSize=8&apiKey=${NEWS_API_KEY}`)
-            .then(r => r.json())
-        )
-      );
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`Backend returned ${res.status}`);
+      const articles = await res.json();
 
-      const articles = [];
-      const seen = new Set();
-
-      for (const res of responses) {
-        if (res.status === 'fulfilled' && res.value.articles) {
-          for (const a of res.value.articles) {
-            if (a.url && !seen.has(a.url) && a.title && !a.title.includes('[Removed]')) {
-              seen.add(a.url);
-              articles.push({
-                title:        a.title,
-                description:  a.description || '',
-                url:          a.url,
-                image:        a.urlToImage,
-                source:       a.source?.name || 'Unknown',
-                published_at: a.publishedAt,
-              });
-            }
-          }
-        }
-      }
-
-      // Sort by date descending
-      articles.sort((a, b) => new Date(b.published_at) - new Date(a.published_at));
+      if (!Array.isArray(articles)) throw new Error('Invalid response');
 
       this.allArticles = articles;
-      this.loading = false;
       this.buildBreakingCarousel();
       this.render();
 
     } catch(e) {
-      console.error('NewsAPI error:', e);
-      this.loading = false;
-      this.showError(`NewsAPI error: ${e.message}`);
-    }
-  }
-
-  async fetchByCategory(category) {
-    if (category === 'all') {
-      await this.fetchNews('financial markets OR crypto OR stocks');
-      return;
-    }
-
-    this.showSkeletons();
-    try {
-      const q = this.categoryQueries[category] || category;
-      const res = await fetch(
-        `${NEWS_BASE}/everything?q=${encodeURIComponent(q)}&language=en&sortBy=publishedAt&pageSize=20&apiKey=${NEWS_API_KEY}`
-      );
-      const data = await res.json();
-
-      this.allArticles = (data.articles || [])
-        .filter(a => a.url && a.title && !a.title.includes('[Removed]'))
-        .map(a => ({
-          title:        a.title,
-          description:  a.description || '',
-          url:          a.url,
-          image:        a.urlToImage,
-          source:       a.source?.name || 'Unknown',
-          published_at: a.publishedAt,
-        }));
-
-      this.render();
-    } catch(e) {
-      this.showError('Could not fetch news for this category.');
+      console.error('News fetch error:', e);
+      this.showError(e.message);
     }
   }
 
@@ -122,16 +46,19 @@ class NewsManager {
     const top        = this.allArticles.slice(0, 5);
     const indicators = document.getElementById('breakingIndicators');
     const inner      = document.getElementById('breakingInner');
-    if (!indicators || !inner) return;
+    if (!indicators || !inner || !top.length) return;
 
     indicators.innerHTML = top.map((_, i) =>
-      `<button type="button" data-bs-target="#breakingCarousel" data-bs-slide-to="${i}" ${i === 0 ? 'class="active"' : ''}></button>`
+      `<button type="button" data-bs-target="#breakingCarousel"
+        data-bs-slide-to="${i}" ${i === 0 ? 'class="active"' : ''}></button>`
     ).join('');
 
     inner.innerHTML = top.map((a, i) => `
-      <div class="carousel-item ${i === 0 ? 'active' : ''}" onclick="window.open('${a.url}','_blank')" style="cursor:pointer">
+      <div class="carousel-item ${i === 0 ? 'active' : ''}"
+        onclick="window.open('${a.url}','_blank')" style="cursor:pointer">
         <div class="carousel-item-inner">
-          ${a.image ? `<img class="carousel-bg" src="${a.image}" alt="" onerror="this.style.display='none'">` : ''}
+          ${a.image ? `<img class="carousel-bg" src="${a.image}" alt=""
+            onerror="this.style.display='none'">` : ''}
           <div class="carousel-bg-gradient"></div>
           <div class="carousel-content">
             <span class="breaking-tag">Breaking</span>
@@ -145,6 +72,7 @@ class NewsManager {
   getFiltered() {
     let articles = [...this.allArticles];
 
+    // Client-side search filter on top of what backend returned
     if (this.query) {
       const q = this.query.toLowerCase();
       articles = articles.filter(a =>
@@ -178,10 +106,10 @@ class NewsManager {
 
     if (!articles.length) {
       grid.innerHTML = `
-        <div class="empty-state">
+        <div class="news-offline">
           <div class="icon">🔍</div>
           <h3>No articles found</h3>
-          <p>Try a different category or search term.</p>
+          <p>Try a different search term or category.</p>
         </div>`;
       return;
     }
@@ -190,41 +118,72 @@ class NewsManager {
       <div class="news-card fade-up" onclick="window.open('${a.url}','_blank')">
         <div class="news-img">
           ${a.image
-            ? `<img src="${a.image}" alt="" loading="lazy" onerror="this.parentElement.innerHTML='<div class=news-img-placeholder>📰</div>'">`
+            ? `<img src="${a.image}" alt="" loading="lazy"
+                onerror="this.parentElement.innerHTML='<div class=news-img-placeholder>📰</div>'">`
             : '<div class="news-img-placeholder">📰</div>'}
         </div>
         <div class="news-body">
           <div class="news-source-row">
-            <span class="news-source">${a.source}</span>
+            <span class="news-source">${a.source || 'Unknown'}</span>
             <span class="news-date">${Fmt.timeAgo(a.published_at)}</span>
           </div>
-          <div class="news-title">${a.title}</div>
+          <div class="news-title">${a.title || 'Untitled'}</div>
           <div class="news-desc">${a.description || ''}</div>
           <div class="news-footer">
             <span class="news-read">Read article →</span>
-            <button class="news-fav" onclick="event.stopPropagation();this.textContent=this.textContent==='☆'?'⭐':'☆';this.classList.toggle('active')">☆</button>
+            <button class="news-fav"
+              onclick="event.stopPropagation();
+                       this.textContent=this.textContent==='☆'?'⭐':'☆';
+                       this.classList.toggle('active')">☆</button>
           </div>
         </div>
       </div>`).join('');
 
-    setTimeout(() => {
-      document.querySelectorAll('.fade-up').forEach(el => {
-        if (!el.classList.contains('visible')) el.classList.add('visible');
-      });
-    }, 50);
+    window.scrollAnimator?.refresh();
   }
 
+  // Category — fetch new data from backend
   setCategory(cat, el) {
     document.querySelectorAll('.filter-chips .chip').forEach(c => c.classList.remove('active'));
     el.classList.add('active');
     this.category = cat;
     this.page     = 1;
-    this.fetchByCategory(cat);
+    this.query    = '';
+    const searchEl = document.getElementById('newsSearch');
+    if (searchEl) searchEl.value = '';
+    this.fetchFromBackend(cat, '');
   }
 
+  // Sort — client-side only
   setSort(val) { this.sortBy = val; this.render(); }
 
-  search(q) { this.query = q; this.page = 1; this.render(); }
+  // Search — debounced, calls backend for new results
+  search(q) {
+    this.query = q;
+    this.page  = 1;
+
+    // Update clear button visibility
+    const bar = document.querySelector('.search-bar');
+    if (bar) bar.classList.toggle('has-value', q.length > 0);
+
+    clearTimeout(this._debounce);
+    this._debounce = setTimeout(() => {
+      if (q.length === 0) {
+        this.fetchFromBackend(this.category, '');
+      } else if (q.length >= 2) {
+        this.fetchFromBackend('all', q);
+      }
+    }, 400);
+  }
+
+  clearSearch() {
+    this.query = '';
+    const el = document.getElementById('newsSearch');
+    if (el) { el.value = ''; el.focus(); }
+    const bar = document.querySelector('.search-bar');
+    if (bar) bar.classList.remove('has-value');
+    this.fetchFromBackend(this.category, '');
+  }
 
   loadMore() { this.page++; this.render(); Toast.show('More articles loaded'); }
 
@@ -247,21 +206,21 @@ class NewsManager {
     const grid = document.getElementById('newsGrid');
     if (!grid) return;
     grid.innerHTML = `
-      <div class="empty-state" style="grid-column:1/-1">
+      <div class="news-offline">
         <div class="icon">⚠️</div>
-        <h3>Could not load news</h3>
-        <p>${msg || 'Please check your API key.'}</p>
+        <h3>News unavailable</h3>
+        <p>Make sure the backend is running: <code>uvicorn main:app --port 8000</code><br>
+        ${msg ? `<small style="color:var(--text3)">${msg}</small>` : ''}</p>
       </div>`;
   }
 }
 
-// Boot
 document.addEventListener('DOMContentLoaded', () => {
   window.newsManager = new NewsManager();
 });
 
-// Global helpers called from HTML
-function setNewsCategory(cat, el) { window.newsManager?.setCategory(cat, el); }
-function setNewsSort(val)         { window.newsManager?.setSort(val); }
-function searchNews(q)            { window.newsManager?.search(q); }
-function loadMoreNews()           { window.newsManager?.loadMore(); }
+function setNewsCategory(cat, el)  { window.newsManager?.setCategory(cat, el); }
+function setNewsSort(val)          { window.newsManager?.setSort(val); }
+function searchNews(q)             { window.newsManager?.search(q); }
+function clearNewsSearch()         { window.newsManager?.clearSearch(); }
+function loadMoreNews()            { window.newsManager?.loadMore(); }

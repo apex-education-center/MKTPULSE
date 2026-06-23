@@ -1,288 +1,226 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-import httpx
-import json
-import os
+import httpx, json, os
 from datetime import datetime
 
 app = FastAPI()
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 CACHE_DIR = "cache"
 os.makedirs(CACHE_DIR, exist_ok=True)
 
-NEWSAPI_KEY = os.getenv("NEWSAPI_KEY", "c8afc01eee3e4050b94a8cd6badd434f")
-ANTHROPIC_KEY = os.getenv("ANTHROPIC_KEY", "YOUR_ANTHROPIC_KEY")  # Add your key here
+NEWSAPI_KEY   = os.getenv("NEWSAPI_KEY",   "c8afc01eee3e4050b94a8cd6badd434f")
+ANTHROPIC_KEY = os.getenv("ANTHROPIC_KEY", "")
 
-def is_cache_valid(path, minutes=15):
-    if not os.path.exists(path):
-        return False
-    age = (datetime.now().timestamp() - os.path.getmtime(path)) / 60
-    return age < minutes
+def cache_valid(path, minutes=15):
+    if not os.path.exists(path): return False
+    return (datetime.now().timestamp() - os.path.getmtime(path)) / 60 < minutes
 
 def read_cache(path):
-    with open(path) as f:
-        return json.load(f)
+    with open(path) as f: return json.load(f)
 
 def write_cache(path, data):
-    with open(path, "w") as f:
-        json.dump(data, f)
+    with open(path, "w") as f: json.dump(data, f)
 
-# ─── WATCHLIST ────────────────────────────────────────────────────────────────
-
+# ── WATCHLIST ────────────────────────────────────────────
 @app.get("/api/watchlist")
 async def get_watchlist():
-    cache_path = f"{CACHE_DIR}/watchlist.json"
-    if is_cache_valid(cache_path, minutes=5):
-        return read_cache(cache_path)
+    path = f"{CACHE_DIR}/watchlist.json"
+    if cache_valid(path, 5): return read_cache(path)
 
     result = {"crypto": [], "stocks": [], "commodities": []}
-
     async with httpx.AsyncClient(timeout=15) as client:
-        # CRYPTO — CoinGecko (free, no key)
+
+        # CRYPTO
         try:
-            r = await client.get(
-                "https://api.coingecko.com/api/v3/coins/markets",
-                params={
-                    "vs_currency": "usd",
-                    "ids": "bitcoin,ethereum,solana,cardano,ripple,binancecoin",
-                    "sparkline": True,
-                    "price_change_percentage": "24h,7d"
-                }
-            )
+            r = await client.get("https://api.coingecko.com/api/v3/coins/markets", params={
+                "vs_currency": "usd",
+                "ids": "bitcoin,ethereum,solana,cardano,ripple,binancecoin",
+                "sparkline": True, "price_change_percentage": "24h,7d"
+            })
             for c in r.json():
                 result["crypto"].append({
-                    "symbol": c["symbol"].upper(),
-                    "name": c["name"],
-                    "price": c["current_price"],
+                    "symbol": c["symbol"].upper(), "name": c["name"],
+                    "price": c["current_price"], "market_cap": c["market_cap"],
                     "change_24h": round(c.get("price_change_percentage_24h") or 0, 2),
-                    "change_7d": round(c.get("price_change_percentage_7d_in_currency") or 0, 2),
-                    "market_cap": c["market_cap"],
-                    "volume": c["total_volume"],
-                    "sparkline": (c.get("sparkline_in_7d") or {}).get("price", []),
-                    "image": c["image"]
+                    "change_7d":  round(c.get("price_change_percentage_7d_in_currency") or 0, 2),
+                    "volume": c["total_volume"], "image": c["image"],
+                    "sparkline": (c.get("sparkline_in_7d") or {}).get("price", [])
                 })
-        except Exception as e:
-            print(f"Crypto fetch error: {e}")
+        except Exception as e: print(f"Crypto error: {e}")
 
-        # STOCKS — Yahoo Finance (free, no key via yfinance proxy)
-        stock_symbols = ["AAPL", "TSLA", "MSFT", "NVDA", "AMZN", "GOOGL"]
-        for sym in stock_symbols:
+        # STOCKS
+        for sym in ["AAPL", "TSLA", "MSFT", "NVDA", "AMZN", "GOOGL"]:
             try:
                 r = await client.get(
                     f"https://query1.finance.yahoo.com/v8/finance/chart/{sym}",
                     params={"interval": "1d", "range": "7d"},
                     headers={"User-Agent": "Mozilla/5.0"}
                 )
-                data = r.json()
-                meta = data["chart"]["result"][0]["meta"]
-                closes = data["chart"]["result"][0]["indicators"]["quote"][0]["close"]
-                closes = [x for x in closes if x is not None]
-                change_24h = round(((closes[-1] - closes[-2]) / closes[-2]) * 100, 2) if len(closes) >= 2 else 0
-                change_7d = round(((closes[-1] - closes[0]) / closes[0]) * 100, 2) if len(closes) >= 2 else 0
+                d    = r.json()
+                meta = d["chart"]["result"][0]["meta"]
+                closes = [x for x in d["chart"]["result"][0]["indicators"]["quote"][0]["close"] if x]
                 result["stocks"].append({
-                    "symbol": sym,
-                    "name": meta.get("shortName", sym),
+                    "symbol": sym, "name": meta.get("shortName", sym),
                     "price": round(meta["regularMarketPrice"], 2),
-                    "change_24h": change_24h,
-                    "change_7d": change_7d,
-                    "volume": meta.get("regularMarketVolume", 0),
+                    "change_24h": round(((closes[-1]-closes[-2])/closes[-2])*100, 2) if len(closes)>=2 else 0,
+                    "change_7d":  round(((closes[-1]-closes[0])/closes[0])*100, 2)  if len(closes)>=2 else 0,
+                    "volume": meta.get("regularMarketVolume", 0), "market_cap": 0,
                     "sparkline": closes
                 })
-            except Exception as e:
-                print(f"Stock fetch error {sym}: {e}")
+            except Exception as e: print(f"Stock error {sym}: {e}")
 
-        # COMMODITIES — Yahoo Finance
-        commodity_map = {
-            "GC=F": "Gold",
-            "SI=F": "Silver",
-            "CL=F": "Crude Oil (WTI)",
-            "NG=F": "Natural Gas",
-            "ZW=F": "Wheat"
-        }
-        for sym, name in commodity_map.items():
+        # COMMODITIES
+        for sym, name in {"GC=F":"Gold","SI=F":"Silver","CL=F":"Crude Oil","NG=F":"Natural Gas","ZW=F":"Wheat"}.items():
             try:
                 r = await client.get(
                     f"https://query1.finance.yahoo.com/v8/finance/chart/{sym}",
                     params={"interval": "1d", "range": "7d"},
                     headers={"User-Agent": "Mozilla/5.0"}
                 )
-                data = r.json()
-                meta = data["chart"]["result"][0]["meta"]
-                closes = data["chart"]["result"][0]["indicators"]["quote"][0]["close"]
-                closes = [x for x in closes if x is not None]
-                change_24h = round(((closes[-1] - closes[-2]) / closes[-2]) * 100, 2) if len(closes) >= 2 else 0
-                change_7d = round(((closes[-1] - closes[0]) / closes[0]) * 100, 2) if len(closes) >= 2 else 0
+                d    = r.json()
+                meta = d["chart"]["result"][0]["meta"]
+                closes = [x for x in d["chart"]["result"][0]["indicators"]["quote"][0]["close"] if x]
                 result["commodities"].append({
-                    "symbol": sym.replace("=F", ""),
-                    "name": name,
+                    "symbol": sym.replace("=F",""), "name": name,
                     "price": round(meta["regularMarketPrice"], 2),
-                    "change_24h": change_24h,
-                    "change_7d": change_7d,
-                    "volume": meta.get("regularMarketVolume", 0),
-                    "sparkline": closes,
-                    "unit": "USD/oz" if sym in ["GC=F", "SI=F"] else "USD/bbl" if sym == "CL=F" else "USD"
+                    "change_24h": round(((closes[-1]-closes[-2])/closes[-2])*100, 2) if len(closes)>=2 else 0,
+                    "change_7d":  round(((closes[-1]-closes[0])/closes[0])*100, 2)  if len(closes)>=2 else 0,
+                    "volume": meta.get("regularMarketVolume", 0), "market_cap": 0,
+                    "sparkline": closes
                 })
-            except Exception as e:
-                print(f"Commodity fetch error {sym}: {e}")
+            except Exception as e: print(f"Commodity error {sym}: {e}")
 
-    write_cache(cache_path, result)
+    write_cache(path, result)
     return result
 
-
-# ─── NEWS ─────────────────────────────────────────────────────────────────────
-
+# ── NEWS (backend proxy — fixes CORS) ───────────────────
 @app.get("/api/news")
-async def get_news():
-    cache_path = f"{CACHE_DIR}/news.json"
-    if is_cache_valid(cache_path, minutes=30):
-        return read_cache(cache_path)
+async def get_news(q: str = "", category: str = "all"):
+    # Build cache key from query+category
+    cache_key = f"{CACHE_DIR}/news_{category}_{q[:20].replace(' ','_')}.json"
+    if cache_valid(cache_key, 30): return read_cache(cache_key)
 
-    articles = []
-    queries = ["financial markets", "cryptocurrency", "oil commodities", "federal reserve", "stock market"]
+    category_queries = {
+        "all":         ["bitcoin OR ethereum OR crypto", "stock market OR nasdaq", "federal reserve OR inflation", "gold OR oil commodity"],
+        "crypto":      ["bitcoin OR ethereum OR cryptocurrency OR blockchain OR defi"],
+        "stocks":      ["stock market OR nasdaq OR S&P500 OR wall street OR earnings"],
+        "macro":       ["federal reserve OR interest rate OR inflation OR GDP OR CPI"],
+        "commodities": ["gold price OR crude oil OR silver OR commodity market"],
+        "tech":        ["artificial intelligence OR nvidia OR semiconductor OR tech stocks"],
+    }
 
+    queries = category_queries.get(category, category_queries["all"])
+    if q: queries = [q]  # User search overrides category
+
+    articles, seen = [], set()
     async with httpx.AsyncClient(timeout=15) as client:
-        for q in queries[:3]:
+        for query in queries[:3]:
             try:
-                r = await client.get(
-                    "https://newsapi.org/v2/everything",
-                    params={
-                        "q": q,
-                        "language": "en",
-                        "sortBy": "publishedAt",
-                        "pageSize": 5,
-                        "apiKey": NEWSAPI_KEY
-                    }
-                )
-                for a in r.json().get("articles", [])[:3]:
-                    if a.get("title") and a.get("url"):
+                r = await client.get("https://newsapi.org/v2/everything", params={
+                    "q": query, "language": "en",
+                    "sortBy": "publishedAt", "pageSize": 10,
+                    "apiKey": NEWSAPI_KEY
+                })
+                data = r.json()
+                if data.get("status") != "ok":
+                    print(f"NewsAPI error: {data.get('message')}")
+                    continue
+                for a in data.get("articles", []):
+                    if a.get("url") and a.get("title") and "[Removed]" not in a["title"] and a["url"] not in seen:
+                        seen.add(a["url"])
                         articles.append({
-                            "title": a["title"],
-                            "description": a.get("description", ""),
-                            "url": a["url"],
-                            "image": a.get("urlToImage"),
-                            "source": a.get("source", {}).get("name", "Unknown"),
-                            "published_at": a.get("publishedAt", "")
+                            "title":        a["title"],
+                            "description":  a.get("description", ""),
+                            "url":          a["url"],
+                            "image":        a.get("urlToImage"),
+                            "source":       a.get("source", {}).get("name", "Unknown"),
+                            "published_at": a.get("publishedAt", ""),
                         })
             except Exception as e:
                 print(f"News fetch error: {e}")
 
-    # Deduplicate by URL
-    seen = set()
-    unique = []
-    for a in articles:
-        if a["url"] not in seen:
-            seen.add(a["url"])
-            unique.append(a)
+    articles.sort(key=lambda x: x.get("published_at", ""), reverse=True)
+    result = articles[:20]
+    if result: write_cache(cache_key, result)
+    return result
 
-    write_cache(cache_path, unique[:12])
-    return unique[:12]
-
-
-# ─── ECONOMIC CALENDAR ────────────────────────────────────────────────────────
-
+# ── CALENDAR ────────────────────────────────────────────
 @app.get("/api/calendar")
 async def get_calendar():
     return [
-        {"date": "2026-06-11", "event": "US CPI Inflation Data", "importance": "high", "region": "🇺🇸", "detail": "Core CPI expected at 3.1% YoY"},
-        {"date": "2026-06-12", "event": "ECB Interest Rate Decision", "importance": "high", "region": "🇪🇺", "detail": "Rate hold expected at 3.75%"},
-        {"date": "2026-06-16", "event": "Fed FOMC Meeting", "importance": "high", "region": "🇺🇸", "detail": "Rate cut probability 62% priced in"},
-        {"date": "2026-06-17", "event": "Fed Powell Press Conference", "importance": "high", "region": "🇺🇸", "detail": "Forward guidance on rate path"},
-        {"date": "2026-06-20", "event": "US Non-Farm Payroll", "importance": "high", "region": "🇺🇸", "detail": "Expected +185k jobs added"},
-        {"date": "2026-06-25", "event": "Bank of England Meeting", "importance": "medium", "region": "🇬🇧", "detail": "Rate decision pending inflation data"},
-        {"date": "2026-07-01", "event": "US ISM Manufacturing PMI", "importance": "medium", "region": "🇺🇸", "detail": "Expansion/contraction threshold at 50"},
-        {"date": "2026-07-10", "event": "US PPI Producer Prices", "importance": "medium", "region": "🇺🇸", "detail": "Leading indicator for CPI"},
-        {"date": "2026-07-15", "event": "China GDP Q2 Release", "importance": "high", "region": "🇨🇳", "detail": "Expected 4.8% growth YoY"},
-        {"date": "2026-07-28", "event": "Fed FOMC Meeting", "importance": "high", "region": "🇺🇸", "detail": "Second rate decision of summer"},
-        {"date": "2026-08-05", "event": "Bank of Japan Policy Meeting", "importance": "medium", "region": "🇯🇵", "detail": "Yen policy under review"},
-        {"date": "2026-08-15", "event": "US Retail Sales", "importance": "medium", "region": "🇺🇸", "detail": "Consumer spending health check"},
+        {"date":"2026-06-11","event":"US CPI Inflation Data","importance":"high","region":"🇺🇸","detail":"Core CPI expected at 3.1% YoY — key for Fed rate path"},
+        {"date":"2026-06-12","event":"ECB Interest Rate Decision","importance":"high","region":"🇪🇺","detail":"Rate hold expected at 3.75%"},
+        {"date":"2026-06-16","event":"Fed FOMC Meeting","importance":"high","region":"🇺🇸","detail":"Rate cut probability 62% priced in by futures markets"},
+        {"date":"2026-06-17","event":"Fed Powell Press Conference","importance":"high","region":"🇺🇸","detail":"Forward guidance on rate path — watch for hawkish/dovish tone"},
+        {"date":"2026-06-20","event":"US Non-Farm Payroll","importance":"high","region":"🇺🇸","detail":"Expected +185k jobs — labor market health check"},
+        {"date":"2026-06-25","event":"Bank of England Meeting","importance":"medium","region":"🇬🇧","detail":"Rate decision pending latest UK inflation data"},
+        {"date":"2026-07-01","event":"US ISM Manufacturing PMI","importance":"medium","region":"🇺🇸","detail":"Expansion/contraction threshold at 50"},
+        {"date":"2026-07-10","event":"US PPI Producer Prices","importance":"medium","region":"🇺🇸","detail":"Leading indicator for consumer inflation"},
+        {"date":"2026-07-15","event":"China GDP Q2 Release","importance":"high","region":"🇨🇳","detail":"Expected 4.8% growth YoY — global growth signal"},
+        {"date":"2026-07-28","event":"Fed FOMC Meeting","importance":"high","region":"🇺🇸","detail":"Second rate decision of summer"},
+        {"date":"2026-08-05","event":"Bank of Japan Policy Meeting","importance":"medium","region":"🇯🇵","detail":"Yen policy under review amid dollar strength"},
+        {"date":"2026-08-15","event":"US Retail Sales","importance":"medium","region":"🇺🇸","detail":"Consumer spending health — 70% of US GDP"},
+        {"date":"2026-09-10","event":"ECB Policy Decision","importance":"high","region":"🇪🇺","detail":"Expected rate cut if inflation continues cooling"},
+        {"date":"2026-09-20","event":"Fed FOMC Meeting","importance":"high","region":"🇺🇸","detail":"Q3 rate decision — pivotal for year-end outlook"},
     ]
 
-
-# ─── AI MARKET MOOD ───────────────────────────────────────────────────────────
-
+# ── AI MARKET MOOD ────────────────────────────────────────
 @app.get("/api/mood")
-async def get_market_mood():
-    cache_path = f"{CACHE_DIR}/mood.json"
-    if is_cache_valid(cache_path, minutes=120):
-        return read_cache(cache_path)
+async def get_mood():
+    path = f"{CACHE_DIR}/mood.json"
+    if cache_valid(path, 120): return read_cache(path)
+
+    if not ANTHROPIC_KEY:
+        return {"sentiment": "Mixed", "analysis": "Add your Anthropic API key as environment variable ANTHROPIC_KEY to enable AI market mood analysis.", "generated_at": datetime.now().isoformat()}
 
     try:
         watchlist = await get_watchlist()
-        news = await get_news()
+        news      = await get_news()
 
-        crypto_summary = ", ".join([
-            f"{c['symbol']} {'+' if c['change_24h'] > 0 else ''}{c['change_24h']}%"
-            for c in watchlist.get("crypto", [])
-        ])
-        stock_summary = ", ".join([
-            f"{s['symbol']} {'+' if s['change_24h'] > 0 else ''}{s['change_24h']}%"
-            for s in watchlist.get("stocks", [])
-        ])
-        commodity_summary = ", ".join([
-            f"{c['name']} {'+' if c['change_24h'] > 0 else ''}{c['change_24h']}%"
-            for c in watchlist.get("commodities", [])
-        ])
-        news_headlines = " | ".join([a["title"] for a in news[:5]])
+        crypto_s    = ", ".join([f"{c['symbol']} {'+' if c['change_24h']>0 else ''}{c['change_24h']}%" for c in watchlist.get("crypto",[])])
+        stocks_s    = ", ".join([f"{s['symbol']} {'+' if s['change_24h']>0 else ''}{s['change_24h']}%" for s in watchlist.get("stocks",[])])
+        commodity_s = ", ".join([f"{c['name']} {'+' if c['change_24h']>0 else ''}{c['change_24h']}%" for c in watchlist.get("commodities",[])])
+        headlines   = " | ".join([a["title"] for a in news[:5]])
 
-        prompt = f"""You are a professional market analyst. Based on the following real-time market data, provide a brief, insightful market mood summary in 3-4 sentences. Be specific, mention key movers, and give a clear overall sentiment (Bullish / Bearish / Neutral / Mixed).
+        prompt = f"""You are a professional market analyst. Analyze the following real-time data and provide a concise market mood summary.
 
-Crypto (24h): {crypto_summary}
-Stocks (24h): {stock_summary}
-Commodities (24h): {commodity_summary}
-Latest headlines: {news_headlines}
+Crypto (24h): {crypto_s}
+Stocks (24h): {stocks_s}
+Commodities (24h): {commodity_s}
+Top headlines: {headlines}
 
 Respond with:
-1. Overall sentiment label (one word: Bullish/Bearish/Neutral/Mixed)
-2. 3-4 sentence analysis
-Keep it professional, specific, and actionable."""
+Line 1: One word sentiment only — Bullish, Bearish, Neutral, or Mixed
+Line 2-4: 2-3 sentences of specific, actionable analysis mentioning key movers and macro context.
+
+Be direct and professional."""
 
         async with httpx.AsyncClient(timeout=30) as client:
-            r = await client.post(
-                "https://api.anthropic.com/v1/messages",
-                headers={
-                    "x-api-key": ANTHROPIC_KEY,
-                    "anthropic-version": "2023-06-01",
-                    "content-type": "application/json"
-                },
-                json={
-                    "model": "claude-haiku-4-5-20251001",
-                    "max_tokens": 300,
-                    "messages": [{"role": "user", "content": prompt}]
-                }
+            r = await client.post("https://api.anthropic.com/v1/messages",
+                headers={"x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json"},
+                json={"model": "claude-haiku-4-5-20251001", "max_tokens": 250, "messages": [{"role": "user", "content": prompt}]}
             )
-            text = r.json()["content"][0]["text"]
-            lines = text.strip().split("\n")
+            text  = r.json()["content"][0]["text"].strip()
+            lines = text.split("\n")
             sentiment = "Mixed"
             for word in ["Bullish", "Bearish", "Neutral", "Mixed"]:
-                if word.lower() in text.lower()[:50]:
+                if lines[0].strip().lower() == word.lower():
                     sentiment = word
                     break
+            analysis = " ".join(lines[1:]).strip() or text
 
-            result = {"sentiment": sentiment, "analysis": text, "generated_at": datetime.now().isoformat()}
-            write_cache(cache_path, result)
-            return result
+        result = {"sentiment": sentiment, "analysis": analysis, "generated_at": datetime.now().isoformat()}
+        write_cache(path, result)
+        return result
 
     except Exception as e:
-        print(f"AI mood error: {e}")
-        return {
-            "sentiment": "Mixed",
-            "analysis": "Market mood analysis temporarily unavailable. Please check back shortly.",
-            "generated_at": datetime.now().isoformat()
-        }
-
+        print(f"Mood error: {e}")
+        return {"sentiment": "Mixed", "analysis": "Market mood analysis temporarily unavailable.", "generated_at": datetime.now().isoformat()}
 
 @app.get("/health")
-async def health():
-    return {"status": "ok", "time": datetime.now().isoformat()}
-
+async def health(): return {"status": "ok", "time": datetime.now().isoformat()}
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run(app, host="0.0.0.0", port=8000, reload=False)

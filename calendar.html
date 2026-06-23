@@ -1,18 +1,31 @@
 // ═══════════════════════════════════════════════════════
-// MARKETPULSE — CORE ES6 CLASSES
+// MARKETPULSE — CORE ES6 CLASSES v2
 // ═══════════════════════════════════════════════════════
 
-const API = 'http://localhost:8000'; // Update after deploy
+const API = 'http://localhost:8000';
 
-// ── ThemeManager ────────────────────────────────────────
+// ── THEME: apply immediately to prevent flash ────────────
+(function() {
+  const t = localStorage.getItem('mp-theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+})();
+
+// ── ThemeManager ─────────────────────────────────────────
 class ThemeManager {
   constructor() {
     this.theme = localStorage.getItem('mp-theme') || 'dark';
-    this.apply();
+    this._syncBtn();
+    // Listen for changes from other tabs/pages
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'mp-theme' && e.newValue) {
+        this.theme = e.newValue;
+        document.documentElement.setAttribute('data-theme', this.theme);
+        this._syncBtn();
+      }
+    });
   }
 
-  apply() {
-    document.documentElement.setAttribute('data-theme', this.theme);
+  _syncBtn() {
     const btn = document.getElementById('themeToggle');
     if (btn) btn.innerHTML = this.theme === 'dark' ? '☀️' : '🌙';
   }
@@ -20,8 +33,9 @@ class ThemeManager {
   toggle() {
     this.theme = this.theme === 'dark' ? 'light' : 'dark';
     localStorage.setItem('mp-theme', this.theme);
-    this.apply();
-    Toast.show(this.theme === 'dark' ? '🌙 Dark mode' : '☀️ Light mode');
+    document.documentElement.setAttribute('data-theme', this.theme);
+    this._syncBtn();
+    Toast.show(this.theme === 'dark' ? '🌙 Dark mode' : '☀️ Light mode', 'info', 1500);
   }
 }
 
@@ -34,13 +48,11 @@ class Toast {
       container.className = 'toast-container';
       document.body.appendChild(container);
     }
-
     const icons = { info: 'ℹ️', success: '✅', error: '❌', warning: '⚠️' };
     const toast = document.createElement('div');
     toast.className = 'toast-mp';
-    toast.innerHTML = `<span>${icons[type]}</span><span>${msg}</span>`;
+    toast.innerHTML = `<span>${icons[type] || 'ℹ️'}</span><span>${msg}</span>`;
     container.appendChild(toast);
-
     setTimeout(() => {
       toast.style.opacity = '0';
       toast.style.transform = 'translateX(30px)';
@@ -53,45 +65,33 @@ class Toast {
 // ── FavoritesManager ─────────────────────────────────────
 class FavoritesManager {
   constructor() {
-    this.key = 'mp-favorites';
+    this.key  = 'mp-favorites';
     this.data = JSON.parse(localStorage.getItem(this.key) || '{}');
   }
-
   toggle(id, meta = {}) {
-    if (this.data[id]) {
-      delete this.data[id];
-      Toast.show('Removed from favorites', 'info');
-    } else {
-      this.data[id] = { ...meta, savedAt: Date.now() };
-      Toast.show('Added to favorites ⭐', 'success');
-    }
+    if (this.data[id]) { delete this.data[id]; Toast.show('Removed from favorites', 'info'); }
+    else { this.data[id] = { ...meta, savedAt: Date.now() }; Toast.show('Added to favorites ⭐', 'success'); }
     localStorage.setItem(this.key, JSON.stringify(this.data));
     return !!this.data[id];
   }
-
-  has(id) { return !!this.data[id]; }
-
-  getAll() { return Object.entries(this.data).map(([id, meta]) => ({ id, ...meta })); }
-
-  count() { return Object.keys(this.data).length; }
+  has(id)    { return !!this.data[id]; }
+  getAll()   { return Object.entries(this.data).map(([id, meta]) => ({ id, ...meta })); }
+  count()    { return Object.keys(this.data).length; }
 }
 
 // ── APIClient ─────────────────────────────────────────────
 class APIClient {
   constructor(baseUrl = API) {
-    this.base = baseUrl;
+    this.base   = baseUrl;
     this._cache = new Map();
   }
-
   async get(endpoint, ttlMs = 5 * 60 * 1000) {
-    const key = endpoint;
-    const cached = this._cache.get(key);
-    if (cached && Date.now() - cached.ts < ttlMs) return cached.data;
-
+    const cached = this._cache.get(endpoint);
+    if (cached && ttlMs > 0 && Date.now() - cached.ts < ttlMs) return cached.data;
     const res = await fetch(`${this.base}${endpoint}`);
-    if (!res.ok) throw new Error(`API error ${res.status}`);
+    if (!res.ok) throw new Error(`API ${res.status}`);
     const data = await res.json();
-    this._cache.set(key, { data, ts: Date.now() });
+    this._cache.set(endpoint, { data, ts: Date.now() });
     return data;
   }
 }
@@ -100,44 +100,122 @@ class APIClient {
 class ScrollAnimator {
   constructor() {
     this.observer = new IntersectionObserver(
-      (entries) => entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); }),
-      { threshold: 0.1, rootMargin: '0px 0px -40px 0px' }
+      entries => entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); }),
+      { threshold: 0.08, rootMargin: '0px 0px -30px 0px' }
     );
-    document.querySelectorAll('.fade-up').forEach(el => this.observer.observe(el));
+    this._observe();
   }
+  _observe() {
+    document.querySelectorAll('.fade-up:not(.visible)').forEach(el => this.observer.observe(el));
+  }
+  refresh() { this._observe(); }
 }
 
-// ── Navbar active link ────────────────────────────────────
+// ── NavManager ────────────────────────────────────────────
 class NavManager {
   constructor() {
-    const path = window.location.pathname.split('/').pop() || 'index.html';
-    document.querySelectorAll('.nav-link').forEach(link => {
-      const href = link.getAttribute('href');
-      if (href === path || (path === '' && href === 'index.html')) {
-        link.classList.add('active');
-      }
-    });
-
-    // Clock
-    this._updateClock();
-    setInterval(() => this._updateClock(), 1000);
+    this._setActive();
+    this._buildDrawer();
+    this._startClock();
   }
 
-  _updateClock() {
-    const el = document.getElementById('navClock');
-    if (el) el.textContent = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  _setActive() {
+    const path = window.location.pathname.split('/').pop() || 'index.html';
+    document.querySelectorAll('.nav-link').forEach(link => {
+      const href = link.getAttribute('href') || '';
+      link.classList.toggle('active', href === path || (path === '' && href === 'index.html'));
+    });
+  }
+
+  _buildDrawer() {
+    // Build slide-in mobile drawer
+    if (document.getElementById('mpDrawer')) return;
+
+    const overlay = document.createElement('div');
+    overlay.id        = 'drawerOverlay';
+    overlay.className = 'drawer-overlay';
+    overlay.onclick   = () => this.closeDrawer();
+
+    const drawer = document.createElement('div');
+    drawer.id        = 'mpDrawer';
+    drawer.className = 'nav-drawer';
+
+    const pages = [
+      { href: 'index.html',    icon: 'bi-house',      label: 'Home' },
+      { href: 'markets.html',  icon: 'bi-graph-up',   label: 'Markets' },
+      { href: 'news.html',     icon: 'bi-newspaper',  label: 'News' },
+      { href: 'youtube.html',  icon: 'bi-youtube',    label: 'Videos' },
+      { href: 'calendar.html', icon: 'bi-calendar3',  label: 'Calendar' },
+      { href: 'search.html',   icon: 'bi-search',     label: 'Search' },
+    ];
+
+    const path = window.location.pathname.split('/').pop() || 'index.html';
+
+    drawer.innerHTML = `
+      <div class="drawer-header">
+        <span class="drawer-brand">Market<span class="accent">Pulse</span></span>
+        <button class="drawer-close" onclick="window.navManager.closeDrawer()">✕</button>
+      </div>
+      <nav class="drawer-nav">
+        ${pages.map(p => `
+          <a href="${p.href}" class="drawer-link ${p.href === path ? 'active' : ''}">
+            <i class="bi ${p.icon}"></i>
+            <span>${p.label}</span>
+            ${p.href === path ? '<span class="drawer-active-dot"></span>' : ''}
+          </a>`).join('')}
+      </nav>
+      <div class="drawer-footer">
+        <button class="drawer-theme-btn" onclick="window.themeManager.toggle()">
+          <i class="bi bi-circle-half"></i> Toggle Theme
+        </button>
+        <div class="drawer-clock" id="drawerClock"></div>
+      </div>`;
+
+    document.body.appendChild(overlay);
+    document.body.appendChild(drawer);
+
+    // Wire hamburger button
+    const toggler = document.querySelector('.navbar-toggler');
+    if (toggler) {
+      toggler.removeAttribute('data-bs-toggle');
+      toggler.removeAttribute('data-bs-target');
+      toggler.onclick = () => this.openDrawer();
+    }
+  }
+
+  openDrawer() {
+    document.getElementById('mpDrawer')?.classList.add('open');
+    document.getElementById('drawerOverlay')?.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  closeDrawer() {
+    document.getElementById('mpDrawer')?.classList.remove('open');
+    document.getElementById('drawerOverlay')?.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  _startClock() {
+    const update = () => {
+      const t = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const el = document.getElementById('navClock');
+      const de = document.getElementById('drawerClock');
+      if (el) el.textContent = t;
+      if (de) de.textContent = t;
+    };
+    update();
+    setInterval(update, 1000);
   }
 }
 
 // ── Format Helpers ────────────────────────────────────────
 class Fmt {
-  static price(p, decimals = 2) {
-    if (!p && p !== 0) return '—';
+  static price(p) {
+    if (p === null || p === undefined) return '—';
     if (p >= 1000) return '$' + p.toLocaleString('en-US', { maximumFractionDigits: 2 });
-    if (p >= 1)    return '$' + p.toFixed(decimals);
+    if (p >= 1)    return '$' + p.toFixed(2);
     return '$' + p.toFixed(4);
   }
-
   static large(v) {
     if (!v) return '—';
     if (v >= 1e12) return '$' + (v / 1e12).toFixed(2) + 'T';
@@ -145,20 +223,18 @@ class Fmt {
     if (v >= 1e6)  return '$' + (v / 1e6).toFixed(1) + 'M';
     return '$' + (v / 1e3).toFixed(0) + 'K';
   }
-
   static pct(v) {
     if (v === null || v === undefined) return '—';
     const cls = v >= 0 ? 'up' : 'down';
     const arrow = v >= 0 ? '▲' : '▼';
     return `<span class="pill pill-${cls}">${arrow} ${Math.abs(v).toFixed(2)}%</span>`;
   }
-
   static date(str) {
     if (!str) return '—';
     return new Date(str).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   }
-
   static timeAgo(str) {
+    if (!str) return '—';
     const diff = Date.now() - new Date(str).getTime();
     const m = Math.floor(diff / 60000);
     if (m < 1)  return 'just now';
@@ -174,43 +250,39 @@ class Sparkline {
   static draw(canvasId, prices, positive) {
     const canvas = document.getElementById(canvasId);
     if (!canvas || !prices?.length) return;
-    const ctx = canvas.getContext('2d');
     const color = positive ? '#20e08a' : '#ff3d5a';
-
-    new Chart(ctx, {
+    new Chart(canvas.getContext('2d'), {
       type: 'line',
       data: {
         labels: prices.map((_, i) => i),
-        datasets: [{
-          data: prices,
-          borderColor: color,
-          borderWidth: 1.5,
-          fill: true,
+        datasets: [{ data: prices, borderColor: color, borderWidth: 1.5, fill: true,
           backgroundColor: positive ? 'rgba(32,224,138,0.07)' : 'rgba(255,61,90,0.07)',
-          tension: 0.4,
-          pointRadius: 0,
-        }]
+          tension: 0.4, pointRadius: 0 }]
       },
-      options: {
-        responsive: false, animation: false,
+      options: { responsive: false, animation: false,
         plugins: { legend: { display: false }, tooltip: { enabled: false } },
-        scales: { x: { display: false }, y: { display: false } }
-      }
+        scales: { x: { display: false }, y: { display: false } } }
     });
   }
 }
 
-// ── Init on load ──────────────────────────────────────────
-window.themeManager    = new ThemeManager();
+// ── Boot ──────────────────────────────────────────────────
+window.themeManager     = new ThemeManager();
 window.favoritesManager = new FavoritesManager();
-window.apiClient       = new APIClient();
-window.Fmt             = Fmt;
-window.Sparkline       = Sparkline;
-window.Toast           = Toast;
+window.apiClient        = new APIClient();
+window.Fmt              = Fmt;
+window.Sparkline        = Sparkline;
+window.Toast            = Toast;
 
 document.addEventListener('DOMContentLoaded', () => {
-  new NavManager();
-  new ScrollAnimator();
+  window.navManager      = new NavManager();
+  window.scrollAnimator  = new ScrollAnimator();
+
   const toggle = document.getElementById('themeToggle');
   if (toggle) toggle.onclick = () => window.themeManager.toggle();
+
+  // Close drawer on ESC
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') window.navManager?.closeDrawer();
+  });
 });
