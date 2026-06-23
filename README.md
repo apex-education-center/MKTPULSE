@@ -73,7 +73,7 @@ Use **localhost** (not `file://`) so theme sync, API calls, and Google Sign-In w
 - CSV / Excel export + **daily PDF report**
 
 ### Alerts & calendar
-- **Price alerts** — browser notifications + optional **Telegram** push
+- **Price alerts** browser notifications + optional **Telegram** push
 - **Macro calendar alerts** — notify ~1h before Fed, CPI, NFP (Telegram)
 - Economic calendar with impact analysis
 
@@ -83,7 +83,7 @@ Use **localhost** (not `file://`) so theme sync, API calls, and Google Sign-In w
 - Guest session restored on logout
 
 ### Other
-- **Asset detail modal** — chart, news, calendar, videos per symbol
+- **Asset detail modal** chart, news, calendar, videos per symbol
 - **Compare mode** — side-by-side asset comparison on Markets
 - Dark / light theme
 - Mobile hamburger navigation
@@ -217,8 +217,8 @@ V10/
 
 ## License & disclaimer
 
-University project — **not financial advice**. Market data from third-party APIs (CoinGecko, Yahoo Finance, NewsAPI, Finnhub, etc.). Use at your own risk.
+University project **not financial advice**. Market data from third-party APIs (CoinGecko, Yahoo Finance, NewsAPI, Finnhub, etc.). Use at your own risk.
 
 ---
 
-**MarketPulse v10** — Financial Intelligence Terminal
+**MarketPulse v10** Financial Intelligence Terminal
