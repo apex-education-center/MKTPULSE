@@ -4,37 +4,35 @@
 
 const API = 'http://localhost:8000';
 
-// ── THEME: apply immediately to prevent flash ────────────
-(function() {
-  const t = localStorage.getItem('mp-theme') || 'dark';
-  document.documentElement.setAttribute('data-theme', t);
-})();
-
 // ── ThemeManager ─────────────────────────────────────────
+// Syncs across ALL open tabs via localStorage + storage event
 class ThemeManager {
   constructor() {
     this.theme = localStorage.getItem('mp-theme') || 'dark';
-    this._syncBtn();
-    // Listen for changes from other tabs/pages
+    this._apply();
+
+    // ← This fires in every OTHER open tab when localStorage changes
     window.addEventListener('storage', (e) => {
-      if (e.key === 'mp-theme' && e.newValue) {
+      if (e.key === 'mp-theme' && e.newValue && e.newValue !== this.theme) {
         this.theme = e.newValue;
-        document.documentElement.setAttribute('data-theme', this.theme);
-        this._syncBtn();
+        this._apply();
       }
     });
   }
 
-  _syncBtn() {
-    const btn = document.getElementById('themeToggle');
-    if (btn) btn.innerHTML = this.theme === 'dark' ? '☀️' : '🌙';
+  _apply() {
+    document.documentElement.setAttribute('data-theme', this.theme);
+    // Sync every theme toggle button on the page
+    document.querySelectorAll('#themeToggle, .drawer-theme-btn').forEach(btn => {
+      if (btn.id === 'themeToggle') btn.innerHTML = this.theme === 'dark' ? '☀️' : '🌙';
+    });
   }
 
   toggle() {
     this.theme = this.theme === 'dark' ? 'light' : 'dark';
+    // Writing to localStorage triggers 'storage' event in all other open tabs
     localStorage.setItem('mp-theme', this.theme);
-    document.documentElement.setAttribute('data-theme', this.theme);
-    this._syncBtn();
+    this._apply();
     Toast.show(this.theme === 'dark' ? '🌙 Dark mode' : '☀️ Light mode', 'info', 1500);
   }
 }
