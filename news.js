@@ -1,6 +1,6 @@
 // ═══════════════════════════════════════════════════════
-// MARKETPULSE — CALENDAR PAGE LOGIC v3
-// Real Finnhub API + Date Picker + Market Impact Analysis
+// MARKETPULSE — CALENDAR PAGE v8
+// Real Finnhub API + Past & Future Events + DeepSeek Analysis
 // ═══════════════════════════════════════════════════════
 
 class CalendarManager {
@@ -9,41 +9,38 @@ class CalendarManager {
     this.filter      = 'all';
     this.pickerDate  = new Date();
     this.selectedDay = null;
+    this.today       = new Date().toISOString().split('T')[0];
 
-    // Set default date range inputs
-    const today  = new Date();
-    const future = new Date(); future.setDate(today.getDate() + 60);
+    // Default: past 30 days + next 90 days
+    const past   = new Date(); past.setDate(past.getDate() - 30);
+    const future = new Date(); future.setDate(future.getDate() + 90);
     const fmt    = d => d.toISOString().split('T')[0];
 
     const fromEl = document.getElementById('fromDate');
     const toEl   = document.getElementById('toDate');
-    if (fromEl) fromEl.value = fmt(today);
+    if (fromEl) fromEl.value = fmt(past);
     if (toEl)   toEl.value   = fmt(future);
 
     this.init();
   }
 
   async init() {
-    await Promise.all([
-      this.fetchRange(),
-      this.loadMood(),
-      this.loadFearGreed(),
-    ]);
+    await Promise.all([this.fetchRange(), this.loadMood()]);
     this.renderPicker();
   }
 
-  // ── DATE RANGE FETCH ─────────────────────────────────
+  // ── FETCH ──────────────────────────────────────────────
   async fetchRange() {
     const fromEl = document.getElementById('fromDate');
     const toEl   = document.getElementById('toDate');
-    const from   = fromEl?.value || new Date().toISOString().split('T')[0];
-    const to     = toEl?.value   || (() => { const d=new Date(); d.setDate(d.getDate()+60); return d.toISOString().split('T')[0]; })();
+    const from   = fromEl?.value || (() => { const d=new Date(); d.setDate(d.getDate()-30); return d.toISOString().split('T')[0]; })();
+    const to     = toEl?.value   || (() => { const d=new Date(); d.setDate(d.getDate()+90); return d.toISOString().split('T')[0]; })();
 
     const container = document.getElementById('calendarEvents');
     if (container) container.innerHTML = `
-      <div class="text-center py-5" style="color:var(--text3)">
-        <div class="spinner-border spinner-border-sm me-2" style="color:var(--accent)"></div>
-        Fetching events from Finnhub...
+      <div style="text-align:center;padding:40px;color:var(--text-muted);font-family:var(--font-mono);font-size:.72rem">
+        <div class="spinner-border spinner-border-sm me-2" style="color:var(--amber)"></div>
+        FETCHING EVENTS FROM FINNHUB...
       </div>`;
 
     try {
@@ -56,24 +53,24 @@ class CalendarManager {
       if (countEl) countEl.textContent = this.events.length;
     } catch(e) {
       if (container) container.innerHTML = `
-        <div style="color:var(--text3);padding:20px;text-align:center">
-          ⚠ Could not load calendar. Start backend: <code>uvicorn main:app --port 8000</code>
+        <div style="text-align:center;padding:40px;color:var(--text-muted);font-family:var(--font-mono);font-size:.72rem">
+          ⚠ BACKEND OFFLINE — RUN: uvicorn main:app --port 8000
         </div>`;
     }
   }
 
   resetRange() {
-    const today  = new Date();
-    const future = new Date(); future.setDate(today.getDate() + 60);
+    const past   = new Date(); past.setDate(past.getDate() - 30);
+    const future = new Date(); future.setDate(future.getDate() + 90);
     const fmt    = d => d.toISOString().split('T')[0];
     const fromEl = document.getElementById('fromDate');
     const toEl   = document.getElementById('toDate');
-    if (fromEl) fromEl.value = fmt(today);
+    if (fromEl) fromEl.value = fmt(past);
     if (toEl)   toEl.value   = fmt(future);
     this.fetchRange();
   }
 
-  // ── MINI DATE PICKER ──────────────────────────────────
+  // ── CALENDAR PICKER ────────────────────────────────────
   renderPicker() {
     const d     = this.pickerDate;
     const year  = d.getFullYear();
@@ -84,7 +81,7 @@ class CalendarManager {
 
     title.textContent = d.toLocaleString('en-US', { month: 'long', year: 'numeric' });
 
-    // Build set of dates with events
+    // Map dates → importance
     const eventDates = {};
     this.events.forEach(e => {
       const key = e.date?.substring(0, 10);
@@ -93,27 +90,36 @@ class CalendarManager {
       }
     });
 
-    const today    = new Date();
     const firstDay = new Date(year, month, 1).getDay();
     const daysIn   = new Date(year, month + 1, 0).getDate();
-    const days     = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+    const dayNames = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
 
-    let html = days.map(d => `<div class="cal-day-header">${d}</div>`).join('');
+    let html = dayNames.map(d => `<div class="cal-day-header">${d}</div>`).join('');
 
     // Empty cells before first day
-    for (let i = 0; i < firstDay; i++) html += '<div class="cal-day other-month"></div>';
+    for (let i = 0; i < firstDay; i++) {
+      html += '<div class="cal-day other-month"></div>';
+    }
+
+    const todayStr = this.today;
 
     for (let day = 1; day <= daysIn; day++) {
-      const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-      const isToday = today.getFullYear()===year && today.getMonth()===month && today.getDate()===day;
-      const isSel   = this.selectedDay === dateStr;
-      const hasEv   = eventDates[dateStr];
-      let cls = 'cal-day';
-      if (isToday)      cls += ' today';
-      if (isSel)        cls += ' selected';
-      if (hasEv)        cls += ` has-event has-${hasEv}`;
+      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const isToday    = dateStr === todayStr;
+      const isSelected = this.selectedDay === dateStr;
+      const isPast     = dateStr < todayStr;
+      const hasEv      = eventDates[dateStr];
 
-      html += `<div class="${cls}" onclick="calendarPage.selectDay('${dateStr}')">${day}</div>`;
+      let cls = 'cal-day';
+      if (isPast && !isToday) cls += ' past-day';
+      if (isToday)    cls += ' today';
+      if (isSelected) cls += ' selected';
+      if (hasEv)      cls += ` has-event has-${hasEv}`;
+
+      // Always show the number (no hiding)
+      html += `<div class="${cls}" onclick="calendarPage.selectDay('${dateStr}')">
+        <span class="cal-day-num-inner">${day}</span>
+      </div>`;
     }
 
     grid.innerHTML = html;
@@ -123,14 +129,14 @@ class CalendarManager {
     this.selectedDay = this.selectedDay === dateStr ? null : dateStr;
     this.renderPicker();
 
-    // Filter events to that day or clear
     if (this.selectedDay) {
       const dayEvents = this.events.filter(e => e.date?.startsWith(dateStr));
       if (dayEvents.length) {
         this.renderEvents(dayEvents);
-        Toast.show(`${dayEvents.length} event(s) on ${Fmt.date(dateStr)}`);
+        const d = new Date(dateStr + 'T00:00:00');
+        Toast.show(`${dayEvents.length} EVENT(S) — ${d.toLocaleDateString('en-US', {month:'short',day:'numeric',year:'numeric'}).toUpperCase()}`, 'info');
       } else {
-        Toast.show('No events on this date', 'info');
+        Toast.show('NO EVENTS ON THIS DATE', 'info');
         this.renderEvents();
       }
     } else {
@@ -139,18 +145,18 @@ class CalendarManager {
   }
 
   prevMonth() {
-    this.pickerDate.setMonth(this.pickerDate.getMonth() - 1);
+    this.pickerDate = new Date(this.pickerDate.getFullYear(), this.pickerDate.getMonth() - 1, 1);
     this.renderPicker();
   }
 
   nextMonth() {
-    this.pickerDate.setMonth(this.pickerDate.getMonth() + 1);
+    this.pickerDate = new Date(this.pickerDate.getFullYear(), this.pickerDate.getMonth() + 1, 1);
     this.renderPicker();
   }
 
-  // ── FILTER ────────────────────────────────────────────
+  // ── FILTER ─────────────────────────────────────────────
   setFilter(f, el) {
-    document.querySelectorAll('.filter-chips .chip').forEach(c => c.classList.remove('active'));
+    document.querySelectorAll('.chip-row .chip, .chip-row .chip').forEach(c => c.classList.remove('active'));
     el.classList.add('active');
     this.filter = f;
     this.selectedDay = null;
@@ -159,69 +165,74 @@ class CalendarManager {
   }
 
   getFiltered(override) {
-    let events = override || [...this.events];
-    if (this.filter === 'all')    return events;
-    if (['high','medium','low'].includes(this.filter)) return events.filter(e => e.importance === this.filter);
-    const regionMap = { US:'🇺🇸', EU:'🇪🇺', UK:'🇬🇧', CN:'🇨🇳', JP:'🇯🇵' };
+    let events = override ? [...override] : [...this.events];
+    if (this.filter === 'all') return events;
+    if (['high', 'medium', 'low'].includes(this.filter))
+      return events.filter(e => e.importance === this.filter);
+    const regionMap = { US: '🇺🇸', EU: '🇪🇺', UK: '🇬🇧', CN: '🇨🇳', JP: '🇯🇵' };
     return events.filter(e => e.region === regionMap[this.filter]);
   }
 
-  // ── RENDER EVENTS ─────────────────────────────────────
+  // ── RENDER EVENTS ───────────────────────────────────────
   renderEvents(override) {
     const filtered  = this.getFiltered(override);
     const container = document.getElementById('calendarEvents');
+    const countEl   = document.getElementById('eventCount');
     if (!container) return;
-
-    const countEl = document.getElementById('eventCount');
     if (countEl) countEl.textContent = filtered.length;
 
     if (!filtered.length) {
-      container.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text3)">No events match this filter.</div>`;
+      container.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text-muted);font-family:var(--font-mono);font-size:.72rem">NO EVENTS MATCH THIS FILTER</div>`;
       return;
     }
 
-    // Group by month
+    // Group by month-year
     const grouped = {};
     filtered.forEach(e => {
-      const d   = new Date(e.date + 'T00:00:00');
-      const key = isNaN(d) ? 'Unknown' : d.toLocaleString('en-US', { month:'long', year:'numeric' });
+      const d   = new Date((e.date || '').substring(0, 10) + 'T00:00:00');
+      const key = isNaN(d) ? 'UNKNOWN' : d.toLocaleString('en-US', { month: 'long', year: 'numeric' }).toUpperCase();
       if (!grouped[key]) grouped[key] = [];
       grouped[key].push(e);
     });
 
     container.innerHTML = Object.entries(grouped).map(([month, evts]) => `
       <div class="cal-group fade-up">
-        <div class="cal-group-header">${month}</div>
+        <div class="cal-group-header">
+          ${month}
+          ${month.includes(new Date().toLocaleString('en-US',{month:'long',year:'numeric'}).toUpperCase()) ? '<span style="color:var(--amber);margin-left:8px;font-size:.58rem">← CURRENT MONTH</span>' : ''}
+        </div>
         ${evts.map((e, idx) => {
-          const d      = new Date(e.date + 'T00:00:00');
+          const d      = new Date((e.date || '').substring(0, 10) + 'T00:00:00');
           const dayNum = isNaN(d) ? '?' : d.getDate();
-          const dayMo  = isNaN(d) ? '' : d.toLocaleString('en-US', { month:'short' });
-          const uid    = `ev-${month.replace(/\s/g,'')}-${idx}`;
+          const dayMo  = isNaN(d) ? '' : d.toLocaleString('en-US', { month: 'short' }).toUpperCase();
+          const isPast = e.date < this.today;
+          const uid    = `ev-${month.replace(/\s/g, '')}-${idx}`;
           const hasData = e.actual || e.estimate || e.previous;
 
           return `
-          <div class="cal-event ${e.importance}" onclick="calendarPage.toggleImpact('${uid}')">
-            <div class="cal-day-block">
-              <div class="cal-day-num">${dayNum}</div>
+          <div class="cal-event ${e.importance} ${isPast ? 'past-event' : ''}" onclick="calendarPage.toggleImpact('${uid}')">
+            <div class="cal-date-block">
+              <div class="cal-day-num" style="${isPast ? 'color:var(--text-muted)' : ''}">${dayNum}</div>
               <div class="cal-day-mo">${dayMo}</div>
+              ${isPast ? '<div style="font-size:.5rem;color:var(--text-muted);letter-spacing:.06em">PAST</div>' : ''}
             </div>
             <div>
-              <div class="cal-region">${e.region} <span style="color:var(--text3);font-size:.75rem">${e.country||''}</span></div>
-              <div class="cal-event-name">${e.event}</div>
+              <div class="cal-region">${e.region} <span style="color:var(--text-muted);font-size:.72rem">${e.country || ''}</span></div>
+              <div class="cal-event-name" style="${isPast ? 'color:var(--text-secondary)' : ''}">${e.event}</div>
               ${hasData ? `
               <div class="cal-stats">
-                ${e.actual   ? `<div class="cal-stat-item"><div class="cal-stat-label">Actual</div><div class="cal-stat-val" style="color:var(--green)">${e.actual}${e.unit||''}</div></div>` : ''}
-                ${e.estimate ? `<div class="cal-stat-item"><div class="cal-stat-label">Estimate</div><div class="cal-stat-val">${e.estimate}${e.unit||''}</div></div>` : ''}
-                ${e.previous ? `<div class="cal-stat-item"><div class="cal-stat-label">Previous</div><div class="cal-stat-val" style="color:var(--text3)">${e.previous}${e.unit||''}</div></div>` : ''}
+                ${e.actual   ? `<div class="cal-stat"><span class="lbl">ACTUAL</span><span class="val" style="color:var(--green)">${e.actual}${e.unit || ''}</span></div>` : ''}
+                ${e.estimate ? `<div class="cal-stat"><span class="lbl">EST</span><span class="val">${e.estimate}${e.unit || ''}</span></div>` : ''}
+                ${e.previous ? `<div class="cal-stat"><span class="lbl">PREV</span><span class="val" style="color:var(--text-muted)">${e.previous}${e.unit || ''}</span></div>` : ''}
               </div>` : ''}
               <div class="event-impact" id="${uid}">
-                <div class="impact-title">📊 Market Impact Analysis</div>
+                <div class="impact-title">📊 MARKET IMPACT ANALYSIS</div>
                 ${e.detail}
               </div>
             </div>
-            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
-              <span class="imp-badge ${e.importance}">${e.importance}</span>
-              <span style="font-size:.68rem;color:var(--text3)">Click for impact</span>
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+              <span class="imp-badge ${e.importance}">${e.importance.toUpperCase()}</span>
+              <span style="font-size:.6rem;color:var(--text-muted);font-family:var(--font-mono)">${e.date?.substring(0, 10) || ''}</span>
             </div>
           </div>`;
         }).join('')}
@@ -236,86 +247,81 @@ class CalendarManager {
     el.classList.toggle('open');
   }
 
+  // ── UPCOMING SIDEBAR ────────────────────────────────────
   renderUpcoming() {
     const list = document.getElementById('upcomingList');
     if (!list) return;
-    const today = new Date().toISOString().split('T')[0];
     const next5 = this.events
-      .filter(e => e.date >= today)
-      .sort((a,b) => a.date.localeCompare(b.date))
+      .filter(e => e.date >= this.today)
+      .sort((a, b) => a.date.localeCompare(b.date))
       .slice(0, 5);
 
     list.innerHTML = next5.map(e => {
-      const d = new Date(e.date + 'T00:00:00');
+      const d = new Date(e.date.substring(0, 10) + 'T00:00:00');
       return `
-        <div class="upcoming-item">
-          <div class="upcoming-date-block">
-            <div class="upcoming-month">${isNaN(d)?'':d.toLocaleString('en-US',{month:'short'})}</div>
-            <div class="upcoming-day">${isNaN(d)?'?':d.getDate()}</div>
+        <div class="up-item">
+          <div class="up-date">
+            <div class="up-mo">${isNaN(d) ? '' : d.toLocaleString('en-US', { month: 'short' }).toUpperCase()}</div>
+            <div class="up-day">${isNaN(d) ? '?' : d.getDate()}</div>
           </div>
-          <div class="upcoming-info">
-            <div class="upcoming-event">${e.event}</div>
-            <div class="upcoming-detail">${e.region} · <span class="imp-badge ${e.importance}" style="font-size:.6rem;padding:2px 6px">${e.importance}</span></div>
+          <div class="up-info">
+            <div class="up-ev">${e.event}</div>
+            <div class="up-sub">${e.region} · <span class="imp-badge ${e.importance}" style="font-size:.58rem;padding:1px 5px">${e.importance.toUpperCase()}</span></div>
           </div>
         </div>`;
     }).join('');
   }
 
-  // ── FEAR & GREED ──────────────────────────────────────
-  async loadFearGreed() {
-    try {
-      const data    = await window.apiClient.get('/api/fear-greed', 60 * 60 * 1000);
-      const current = data.current || {};
-      const val     = parseInt(current.value || 50);
-      const label   = current.value_classification || 'Neutral';
-
-      const fgColors = {
-        'Extreme Fear': 'var(--red)', 'Fear': '#ff8c00',
-        'Neutral': 'var(--accent)', 'Greed': '#90ee90',
-        'Extreme Greed': 'var(--green)'
-      };
-      const color = fgColors[label] || 'var(--accent)';
-
-      const valEl  = document.getElementById('fgValue');
-      const lblEl  = document.getElementById('fgLabel');
-      const indEl  = document.getElementById('fgIndicator');
-      const histEl = document.getElementById('fgHistory');
-
-      if (valEl)  { valEl.textContent = val; valEl.style.color = color; }
-      if (lblEl)  { lblEl.textContent = label; lblEl.style.color = color; }
-      if (indEl)  indEl.style.left = `${val}%`;
-
-      if (histEl && data.history) {
-        histEl.innerHTML = data.history.slice(0,7).reverse().map(h => {
-          const hv = parseInt(h.value);
-          const hc = fgColors[h.value_classification] || 'var(--accent)';
-          const hd = new Date(parseInt(h.timestamp)*1000).toLocaleDateString('en-US',{month:'short',day:'numeric'});
-          return `<div class="fg-hist-item">
-            <div class="fg-hist-val" style="color:${hc}">${hv}</div>
-            <div class="fg-hist-date">${hd}</div>
-          </div>`;
-        }).join('');
-      }
-    } catch(e) {
-      console.warn('Fear & Greed error:', e);
-    }
+  // ── CSV EXPORT WITH DATES ───────────────────────────────
+  exportCSV() {
+    if (!this.events.length) { Toast.show('NO EVENTS TO EXPORT', 'warning'); return; }
+    const rows = [
+      ['Date', 'Day', 'Event', 'Region', 'Country', 'Importance', 'Actual', 'Estimate', 'Previous', 'Unit', 'Market Impact']
+    ];
+    this.events.forEach(e => {
+      const d = new Date((e.date || '').substring(0, 10) + 'T00:00:00');
+      const dayName = isNaN(d) ? '' : d.toLocaleDateString('en-US', { weekday: 'long' });
+      const dateFormatted = isNaN(d) ? e.date || '' : d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+      rows.push([
+        dateFormatted,
+        dayName,
+        e.event || '',
+        e.region || '',
+        e.country || '',
+        e.importance || '',
+        e.actual || '',
+        e.estimate || '',
+        e.previous || '',
+        e.unit || '',
+        (e.detail || '').replace(/,/g, ';'),
+      ]);
+    });
+    const csv  = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' }); // BOM for Excel
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url;
+    a.download = `economic_calendar_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    Toast.show(`EXPORTED ${this.events.length} EVENTS TO CSV`, 'success');
   }
 
-  // ── AI MOOD ───────────────────────────────────────────
+  // ── AI MOOD ─────────────────────────────────────────────
   async loadMood() {
     try {
-      const data     = await window.apiClient.get('/api/mood', 2*60*60*1000);
+      const data     = await window.apiClient.get('/api/mood', 2 * 60 * 60 * 1000);
       const badge    = document.getElementById('moodBadge');
       const analysis = document.getElementById('moodAnalysis');
       const ts       = document.getElementById('moodTimestamp');
-      if (badge)    { badge.className = `mood-badge ${(data.sentiment||'mixed').toLowerCase()}`; badge.textContent = data.sentiment||'Mixed'; }
-      if (analysis) { analysis.className = 'mood-analysis'; analysis.textContent = data.analysis||'No analysis.'; }
-      if (ts && data.generated_at) ts.textContent = `Last updated: ${new Date(data.generated_at).toLocaleString()}`;
+      if (badge)    { badge.className = `mood-badge ${(data.sentiment || 'mixed').toLowerCase()}`; badge.textContent = data.sentiment || 'MIXED'; }
+      if (analysis) { analysis.className = 'mood-analysis'; analysis.textContent = data.analysis || 'No analysis.'; }
+      if (ts && data.generated_at) ts.textContent = `UPDATED: ${new Date(data.generated_at).toLocaleString()}`;
     } catch(e) {
-      const badge = document.getElementById('moodBadge');
+      const badge    = document.getElementById('moodBadge');
       const analysis = document.getElementById('moodAnalysis');
-      if (badge)    { badge.className = 'mood-badge neutral'; badge.textContent = 'Offline'; }
-      if (analysis) { analysis.className = 'mood-analysis'; analysis.textContent = 'Add ANTHROPIC_KEY environment variable to enable AI mood analysis.'; }
+      if (badge)    { badge.className = 'mood-badge neutral'; badge.textContent = 'OFFLINE'; }
+      if (analysis) { analysis.className = 'mood-analysis'; analysis.textContent = 'Backend offline or API key missing.'; }
     }
   }
 
@@ -324,9 +330,9 @@ class CalendarManager {
     const analysis = document.getElementById('moodAnalysis');
     if (badge)    { badge.className = 'mood-badge mixed skeleton'; badge.textContent = '\u00a0'; }
     if (analysis) { analysis.className = 'mood-analysis skeleton'; analysis.textContent = '\u00a0'; }
-    window.apiClient._cache.delete('/api/mood');
+    window.apiClient.invalidate('/api/mood');
     await this.loadMood();
-    Toast.show('Market mood refreshed', 'success');
+    Toast.show('MOOD REFRESHED', 'success');
   }
 }
 
@@ -336,3 +342,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function setCalFilter(f, el) { window.calendarPage?.setFilter(f, el); }
 function refreshMood()       { window.calendarPage?.refreshMood(); }
+function exportCalendarCSV() { window.calendarPage?.exportCSV(); }

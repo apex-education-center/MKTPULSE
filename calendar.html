@@ -1,237 +1,246 @@
 // ═══════════════════════════════════════════════════════
-// MARKETPULSE — CORE v6 (Bloomberg Terminal Edition)
+// MARKETPULSE — NEWS PAGE v9
+// Real NewsAPI + time filters (Today/Week/Month/All)
 // ═══════════════════════════════════════════════════════
 
-const API = 'http://localhost:8000';
-
-// ── ThemeManager ─────────────────────────────────────────
-class ThemeManager {
+class NewsManager {
   constructor() {
-    this.theme   = localStorage.getItem('mp-theme') || 'dark';
-    this.channel = null;
+    this.allArticles = [];
+    this.category    = 'all';
+    this.timeFilter  = 'all';   // today | week | month | all
+    this.sortBy      = 'date';
+    this.query       = '';
+    this.page        = 1;
+    this.perPage     = 12;
+    this._debounce   = null;
+    this.init();
+  }
+
+  async init() {
+    await this.fetch('all', '');
+  }
+
+  // ── FETCH ────────────────────────────────────────────
+  async fetch(category = 'all', q = '') {
+    this._showSkeletons();
     try {
-      this.channel = new BroadcastChannel('mp-theme-sync');
-      this.channel.onmessage = (e) => {
-        if (e.data && e.data !== this.theme) { this.theme = e.data; this._apply(false); }
-      };
+      let url = `${window.apiClient.base}/api/news?category=${category}`;
+      if (q) url += `&q=${encodeURIComponent(q)}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const articles = await res.json();
+      if (!Array.isArray(articles)) throw new Error('Bad response');
+      this.allArticles = articles;
+      this._buildCarousel();
+      this.render();
     } catch(e) {
-      window.addEventListener('storage', (e) => {
-        if (e.key === 'mp-theme' && e.newValue) { this.theme = e.newValue; this._apply(false); }
-      });
+      this._showError(e.message);
     }
-    document.addEventListener('visibilitychange', () => { if (!document.hidden) this.sync(); });
-    this._apply(false);
   }
-  _apply(broadcast = true) {
-    document.documentElement.setAttribute('data-theme', this.theme);
-    document.querySelectorAll('#themeToggle').forEach(b => { b.innerHTML = this.theme === 'dark' ? '☀' : '☾'; });
-    if (broadcast && this.channel) this.channel.postMessage(this.theme);
-  }
-  toggle() {
-    this.theme = this.theme === 'dark' ? 'light' : 'dark';
-    localStorage.setItem('mp-theme', this.theme);
-    this._apply(true);
-    Toast.show(this.theme === 'dark' ? 'DARK MODE' : 'LIGHT MODE', 'info', 1500);
-  }
-  sync() {
-    const s = localStorage.getItem('mp-theme') || 'dark';
-    if (s !== this.theme) { this.theme = s; this._apply(false); }
-  }
-}
 
-// ── Toast ─────────────────────────────────────────────────
-class Toast {
-  static show(msg, type = 'info', duration = 3000) {
-    let c = document.querySelector('.toast-container');
-    if (!c) { c = document.createElement('div'); c.className = 'toast-container'; document.body.appendChild(c); }
-    const icons = { info:'[INFO]', success:'[OK]', error:'[ERR]', warning:'[WARN]' };
-    const t = document.createElement('div');
-    t.className = 'toast-mp';
-    t.innerHTML = `<span style="color:var(--amber)">${icons[type]||'[INFO]'}</span><span>${msg}</span>`;
-    c.appendChild(t);
-    setTimeout(() => { t.style.opacity='0'; t.style.transform='translateX(20px)'; t.style.transition='0.25s ease'; setTimeout(()=>t.remove(),250); }, duration);
+  // ── CAROUSEL (breaking news — capped height) ─────────
+  _buildCarousel() {
+    const top   = this.allArticles.slice(0, 5);
+    const ind   = document.getElementById('breakingIndicators');
+    const inner = document.getElementById('breakingInner');
+    if (!ind || !inner || !top.length) return;
+
+    ind.innerHTML = top.map((_,i) =>
+      `<button type="button" data-bs-target="#breakingCarousel" data-bs-slide-to="${i}" ${i===0?'class="active"':''}></button>`
+    ).join('');
+
+    inner.innerHTML = top.map((a,i) => `
+      <div class="carousel-item ${i===0?'active':''}" onclick="window.open('${a.url}','_blank')" style="cursor:pointer">
+        <div class="breaking-slide">
+          ${a.image ? `<img class="bs-bg" src="${a.image}" alt="" onerror="this.style.display='none'">` : ''}
+          <div class="bs-gradient"></div>
+          <div class="bs-content">
+            <span class="bs-tag">BREAKING</span>
+            <div class="bs-title">${a.title}</div>
+            <div class="bs-meta">${a.source?.toUpperCase()} · ${Fmt.timeAgo(a.published_at)}</div>
+          </div>
+        </div>
+      </div>`).join('');
   }
-}
 
-// ── FavoritesManager ─────────────────────────────────────
-class FavoritesManager {
-  constructor() { this.key='mp-favorites'; this.data=JSON.parse(localStorage.getItem(this.key)||'{}'); }
-  toggle(id, meta={}) {
-    if (this.data[id]) { delete this.data[id]; Toast.show(`REMOVED ${id}`, 'info'); }
-    else { this.data[id]={...meta,savedAt:Date.now()}; Toast.show(`ADDED ${id} TO WATCHLIST`, 'success'); }
-    localStorage.setItem(this.key, JSON.stringify(this.data));
-    return !!this.data[id];
+  // ── TIME FILTER ───────────────────────────────────────
+  setTimeFilter(filter, el) {
+    document.querySelectorAll('.time-chip').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    this.timeFilter = filter;
+    this.page = 1;
+    this.render();
   }
-  has(id)  { return !!this.data[id]; }
-  getAll() { return Object.entries(this.data).map(([id,meta])=>({id,...meta})); }
-  count()  { return Object.keys(this.data).length; }
-}
 
-// ── APIClient ─────────────────────────────────────────────
-class APIClient {
-  constructor(base=API) { this.base=base; this._cache=new Map(); }
-  async get(endpoint, ttl=5*60*1000) {
-    const c = this._cache.get(endpoint);
-    if (c && ttl>0 && Date.now()-c.ts<ttl) return c.data;
-    const res = await fetch(`${this.base}${endpoint}`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    this._cache.set(endpoint, {data, ts:Date.now()});
-    return data;
-  }
-}
-
-// ── ScrollAnimator ────────────────────────────────────────
-class ScrollAnimator {
-  constructor() {
-    this.io = new IntersectionObserver(
-      es => es.forEach(e => { if(e.isIntersecting) e.target.classList.add('visible'); }),
-      { threshold: 0.06, rootMargin: '0px 0px -20px 0px' }
-    );
-    this.refresh();
-  }
-  refresh() { document.querySelectorAll('.fade-up:not(.visible)').forEach(el=>this.io.observe(el)); }
-}
-
-// ── NavManager ────────────────────────────────────────────
-class NavManager {
-  constructor() {
-    this._setActive();
-    this._buildDrawer();
-    this._startClock();
-  }
-  _setActive() {
-    const path = window.location.pathname.split('/').pop() || 'index.html';
-    document.querySelectorAll('.nav-link').forEach(l => {
-      const h = l.getAttribute('href')||'';
-      l.classList.toggle('active', h===path || (path===''&&h==='index.html'));
-    });
-  }
-  _buildDrawer() {
-    if (document.getElementById('mpDrawer')) return;
-    const overlay = document.createElement('div');
-    overlay.id='drawerOverlay'; overlay.className='drawer-overlay';
-    overlay.onclick = () => this.closeDrawer();
-
-    const drawer = document.createElement('div');
-    drawer.id='mpDrawer'; drawer.className='nav-drawer';
-
-    const pages = [
-      {href:'index.html',   icon:'bi-display',    label:'Terminal'},
-      {href:'markets.html', icon:'bi-graph-up',   label:'Markets'},
-      {href:'news.html',    icon:'bi-newspaper',  label:'News Feed'},
-      {href:'youtube.html', icon:'bi-play-circle',label:'Videos'},
-      {href:'calendar.html',icon:'bi-calendar3',  label:'Macro Calendar'},
-      {href:'tools.html',   icon:'bi-tools',      label:'Tools'},
-      {href:'search.html',  icon:'bi-search',     label:'Search'},
-    ];
-
-    const path = window.location.pathname.split('/').pop() || 'index.html';
-    drawer.innerHTML = `
-      <div class="drawer-header">
-        <span class="drawer-brand">MKT<span class="accent">PULSE</span></span>
-        <button class="drawer-close" onclick="window.navManager.closeDrawer()">✕</button>
-      </div>
-      <nav class="drawer-nav">
-        ${pages.map(p=>`
-          <a href="${p.href}" class="drawer-link ${p.href===path?'active':''}">
-            <i class="bi ${p.icon}"></i><span>${p.label}</span>
-            ${p.href===path?'<span class="drawer-active-dot"></span>':''}
-          </a>`).join('')}
-      </nav>
-      <div class="drawer-footer">
-        <button class="drawer-theme-btn" onclick="window.themeManager.toggle()">
-          <i class="bi bi-circle-half"></i> THEME
-        </button>
-        <span class="drawer-clock" id="drawerClock"></span>
-      </div>`;
-
-    document.body.appendChild(overlay);
-    document.body.appendChild(drawer);
-
-    const toggler = document.querySelector('.navbar-toggler');
-    if (toggler) { toggler.removeAttribute('data-bs-toggle'); toggler.removeAttribute('data-bs-target'); toggler.onclick = ()=>this.openDrawer(); }
-  }
-  openDrawer()  { document.getElementById('mpDrawer')?.classList.add('open'); document.getElementById('drawerOverlay')?.classList.add('open'); document.body.style.overflow='hidden'; }
-  closeDrawer() { document.getElementById('mpDrawer')?.classList.remove('open'); document.getElementById('drawerOverlay')?.classList.remove('open'); document.body.style.overflow=''; }
-  _startClock() {
-    const update = () => {
-      const now = new Date();
-      const t   = now.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
-      const d   = now.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}).toUpperCase();
-      const el  = document.getElementById('navClock');
-      const de  = document.getElementById('drawerClock');
-      if (el) el.innerHTML = `<span class="date">${d}</span>${t}`;
-      if (de) de.textContent = t;
+  _filterByTime(articles) {
+    if (this.timeFilter === 'all') return articles;
+    const now   = Date.now();
+    const limits = {
+      today: 24 * 60 * 60 * 1000,
+      week:  7  * 24 * 60 * 60 * 1000,
+      month: 30 * 24 * 60 * 60 * 1000,
     };
-    update(); setInterval(update, 1000);
-  }
-}
-
-// ── Format Helpers ────────────────────────────────────────
-class Fmt {
-  static price(p, d=2) {
-    if (p===null||p===undefined) return '—';
-    if (p>=1000) return '$'+p.toLocaleString('en-US',{maximumFractionDigits:2});
-    if (p>=1)    return '$'+p.toFixed(d);
-    return '$'+p.toFixed(4);
-  }
-  static large(v) {
-    if (!v) return '—';
-    if (v>=1e12) return '$'+(v/1e12).toFixed(2)+'T';
-    if (v>=1e9)  return '$'+(v/1e9).toFixed(1)+'B';
-    if (v>=1e6)  return '$'+(v/1e6).toFixed(1)+'M';
-    return '$'+(v/1e3).toFixed(0)+'K';
-  }
-  static pct(v, cls=true) {
-    if (v===null||v===undefined) return '—';
-    const up = v>=0;
-    const str = `${up?'+':''}${Math.abs(v).toFixed(2)}%`;
-    if (!cls) return str;
-    return `<span class="badge-${up?'up':'down'}">${up?'▲':'▼'} ${Math.abs(v).toFixed(2)}%</span>`;
-  }
-  static date(s) { if(!s) return '—'; return new Date(s).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); }
-  static timeAgo(s) {
-    if (!s) return '—';
-    const m = Math.floor((Date.now()-new Date(s).getTime())/60000);
-    if (m<1)  return 'JUST NOW';
-    if (m<60) return `${m}M AGO`;
-    const h=Math.floor(m/60);
-    if (h<24) return `${h}H AGO`;
-    return `${Math.floor(h/24)}D AGO`;
-  }
-}
-
-// ── Sparkline ─────────────────────────────────────────────
-class Sparkline {
-  static draw(canvasId, prices, positive) {
-    const canvas = document.getElementById(canvasId);
-    if (!canvas||!prices?.length) return;
-    const color = positive ? '#00c853' : '#ff1744';
-    if (canvas._chart) canvas._chart.destroy();
-    canvas._chart = new Chart(canvas.getContext('2d'), {
-      type:'line',
-      data:{ labels:prices.map((_,i)=>i), datasets:[{data:prices, borderColor:color, borderWidth:1.2, fill:true,
-        backgroundColor: positive?'rgba(0,200,83,0.06)':'rgba(255,23,68,0.06)', tension:0.4, pointRadius:0}]},
-      options:{responsive:false, animation:false,
-        plugins:{legend:{display:false},tooltip:{enabled:false}},
-        scales:{x:{display:false},y:{display:false}}}
+    const limit = limits[this.timeFilter];
+    if (!limit) return articles;
+    return articles.filter(a => {
+      if (!a.published_at) return true;
+      return (now - new Date(a.published_at).getTime()) <= limit;
     });
   }
-}
 
-// ── Boot ──────────────────────────────────────────────────
-window.themeManager     = new ThemeManager();
-window.favoritesManager = new FavoritesManager();
-window.apiClient        = new APIClient();
-window.Fmt              = Fmt;
-window.Sparkline        = Sparkline;
-window.Toast            = Toast;
+  // ── CATEGORY + SORT ───────────────────────────────────
+  setCategory(cat, el) {
+    document.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    this.category = cat;
+    this.page = 1;
+    this.query = '';
+    const si = document.getElementById('newsSearch');
+    if (si) si.value = '';
+    document.querySelector('.search-bar')?.classList.remove('has-val');
+    this.fetch(cat, '');
+  }
+
+  setSort(val) { this.sortBy = val; this.render(); }
+
+  search(q) {
+    this.query = q;
+    this.page  = 1;
+    clearTimeout(this._debounce);
+    this._debounce = setTimeout(() => {
+      if (!q) this.fetch(this.category, '');
+      else if (q.length >= 2) this.fetch('all', q);
+      else this.render();
+    }, 400);
+  }
+
+  clearSearch() {
+    this.query = '';
+    const si = document.getElementById('newsSearch');
+    if (si) si.value = '';
+    document.querySelector('.search-bar')?.classList.remove('has-val');
+    this.fetch(this.category, '');
+  }
+
+  // ── RENDER ────────────────────────────────────────────
+  getFiltered() {
+    let articles = [...this.allArticles];
+    if (this.query) {
+      const q = this.query.toLowerCase();
+      articles = articles.filter(a =>
+        (a.title||'').toLowerCase().includes(q) ||
+        (a.source||'').toLowerCase().includes(q)
+      );
+    }
+    articles = this._filterByTime(articles);
+    if (this.sortBy === 'source') articles.sort((a,b) => (a.source||'').localeCompare(b.source||''));
+    else articles.sort((a,b) => new Date(b.published_at||0) - new Date(a.published_at||0));
+    return articles;
+  }
+
+  render() {
+    const articles  = this.getFiltered();
+    const paginated = articles.slice(0, this.page * this.perPage);
+
+    const countEl = document.getElementById('articleCount');
+    if (countEl) countEl.textContent = `${articles.length} ARTICLES`;
+
+    const lmWrap = document.getElementById('loadMoreWrap');
+    if (lmWrap) lmWrap.style.display = articles.length > paginated.length ? 'block' : 'none';
+
+    // Show time filter counts
+    this._updateTimeCounts();
+
+    const grid = document.getElementById('newsGrid');
+    if (!grid) return;
+
+    if (!paginated.length) {
+      grid.innerHTML = `
+        <div style="grid-column:1/-1;text-align:center;padding:60px 20px;
+          font-family:var(--font-mono);font-size:.78rem;color:var(--text-muted)">
+          NO ARTICLES FOUND FOR THIS FILTER
+        </div>`;
+      return;
+    }
+
+    grid.innerHTML = paginated.map(a => `
+      <div class="news-card fade-up" onclick="window.open('${a.url}','_blank')">
+        <div class="nc-img">
+          ${a.image
+            ? `<img src="${a.image}" alt="" loading="lazy"
+                onerror="this.parentElement.innerHTML='<div class=nc-placeholder>📰</div>'">`
+            : '<div class="nc-placeholder">📰</div>'}
+        </div>
+        <div class="nc-body">
+          <div class="nc-src-row">
+            <span class="nc-src">${a.source || 'UNKNOWN'}</span>
+            <span class="nc-time">${Fmt.timeAgo(a.published_at)}</span>
+          </div>
+          <div class="nc-title">${a.title || 'Untitled'}</div>
+          ${a.description ? `<div class="nc-desc">${a.description.substring(0,120)}...</div>` : ''}
+          <div class="nc-footer">
+            <span style="color:var(--amber);font-size:.62rem;font-family:var(--font-mono)">READ MORE →</span>
+          </div>
+        </div>
+      </div>`).join('');
+
+    setTimeout(() => window.scrollAnimator?.refresh(), 50);
+  }
+
+  _updateTimeCounts() {
+    const now    = Date.now();
+    const limits = {
+      today: 24*60*60*1000,
+      week:  7*24*60*60*1000,
+      month: 30*24*60*60*1000,
+    };
+    Object.entries(limits).forEach(([key, ms]) => {
+      const el = document.getElementById(`tc-${key}`);
+      if (!el) return;
+      const count = this.allArticles.filter(a => {
+        if (!a.published_at) return false;
+        return (now - new Date(a.published_at).getTime()) <= ms;
+      }).length;
+      el.textContent = count;
+    });
+    const allEl = document.getElementById('tc-all');
+    if (allEl) allEl.textContent = this.allArticles.length;
+  }
+
+  loadMore() { this.page++; this.render(); Toast.show('MORE ARTICLES LOADED'); }
+
+  _showSkeletons() {
+    const g = document.getElementById('newsGrid');
+    if (!g) return;
+    g.innerHTML = Array(12).fill(`
+      <div class="news-card">
+        <div class="nc-img skeleton"></div>
+        <div class="nc-body">
+          <div class="skeleton" style="height:10px;width:45%;margin-bottom:8px;border-radius:2px"></div>
+          <div class="skeleton" style="height:14px;margin-bottom:5px;border-radius:2px"></div>
+          <div class="skeleton" style="height:12px;width:75%;border-radius:2px"></div>
+        </div>
+      </div>`).join('');
+  }
+
+  _showError(msg) {
+    const g = document.getElementById('newsGrid');
+    if (!g) return;
+    g.innerHTML = `
+      <div style="grid-column:1/-1;text-align:center;padding:48px;
+        font-family:var(--font-mono);font-size:.72rem;color:var(--text-muted)">
+        ⚠ BACKEND OFFLINE — ${msg || 'Run: uvicorn main:app --port 8000'}
+      </div>`;
+  }
+}
 
 document.addEventListener('DOMContentLoaded', () => {
-  window.navManager     = new NavManager();
-  window.scrollAnimator = new ScrollAnimator();
-  const t = document.getElementById('themeToggle');
-  if (t) t.onclick = () => window.themeManager.toggle();
-  document.addEventListener('keydown', e => { if(e.key==='Escape') window.navManager?.closeDrawer(); });
+  window.newsManager = new NewsManager();
 });
+
+function setNewsCategory(cat, el) { window.newsManager?.setCategory(cat, el); }
+function setNewsTimeFilter(f, el)  { window.newsManager?.setTimeFilter(f, el); }
+function setNewsSort(val)           { window.newsManager?.setSort(val); }
+function searchNews(q)              { window.newsManager?.search(q); }
+function clearNewsSearch()          { window.newsManager?.clearSearch(); }
+function loadMoreNews()             { window.newsManager?.loadMore(); }

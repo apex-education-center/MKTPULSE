@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 import httpx, json, os
 from datetime import datetime, timedelta
@@ -11,7 +11,8 @@ os.makedirs(CACHE_DIR, exist_ok=True)
 
 NEWSAPI_KEY   = os.getenv("NEWSAPI_KEY",   "c8afc01eee3e4050b94a8cd6badd434f")
 ANTHROPIC_KEY = os.getenv("ANTHROPIC_KEY", "")
-FINNHUB_KEY   = os.getenv("FINNHUB_KEY",   "cvqsat9r01qhup2eveigcvqsat9r01qhup2eveih")  # Free tier
+DEEPSEEK_KEY  = os.getenv("DEEPSEEK_KEY",  "sk-e19a2ff283a74ae1a8ed8eea3b0baef5")
+FINNHUB_KEY   = os.getenv("FINNHUB_KEY",   "cvqsat9r01qhup2eveigcvqsat9r01qhup2eveih")
 
 FINANCIAL_DOMAINS = (
     "bloomberg.com,reuters.com,cnbc.com,ft.com,wsj.com,forbes.com,"
@@ -102,15 +103,18 @@ async def get_watchlist():
 @app.get("/api/news")
 async def get_news(q: str = "", category: str = "all"):
     safe_q = q[:30].replace(' ','_').replace('/','').replace('\\','')
-    cache_key = f"{CACHE_DIR}/news_{category}_{safe_q}.json"
-    if cache_valid(cache_key, 20): return read_cache(cache_key)
+    today  = datetime.now().strftime("%Y-%m-%d")  # cache key includes date
+    cache_key = f"{CACHE_DIR}/news_{category}_{safe_q}_{today}.json"
+    if cache_valid(cache_key, 60): return read_cache(cache_key)
     queries = [q] if q else CATEGORY_QUERIES.get(category, CATEGORY_QUERIES["all"])
     articles, seen = [], set()
     async with httpx.AsyncClient(timeout=20) as client:
         for query in queries[:4]:
             try:
+                # Fetch from up to 1 month ago (NewsAPI free tier: 30 days)
+                from_date = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
                 params = {"q": query, "language": "en", "sortBy": "publishedAt",
-                          "pageSize": 10, "apiKey": NEWSAPI_KEY}
+                          "pageSize": 10, "apiKey": NEWSAPI_KEY, "from": from_date}
                 if not q: params["domains"] = FINANCIAL_DOMAINS
                 r = await client.get("https://newsapi.org/v2/everything", params=params)
                 data = r.json()
@@ -136,11 +140,11 @@ async def get_news(q: str = "", category: str = "all"):
 # ── REAL ECONOMIC CALENDAR (Finnhub) ─────────────────────
 @app.get("/api/calendar")
 async def get_calendar(from_date: str = "", to_date: str = ""):
-    # Default: next 60 days
+    # Default: past 30 days + next 90 days for full context
     if not from_date:
-        from_date = datetime.now().strftime("%Y-%m-%d")
+        from_date = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
     if not to_date:
-        to_date = (datetime.now() + timedelta(days=60)).strftime("%Y-%m-%d")
+        to_date = (datetime.now() + timedelta(days=90)).strftime("%Y-%m-%d")
 
     cache_key = f"{CACHE_DIR}/calendar_{from_date}_{to_date}.json"
     if cache_valid(cache_key, 60): return read_cache(cache_key)
@@ -333,8 +337,10 @@ async def get_gas():
 async def get_mood():
     path = f"{CACHE_DIR}/mood.json"
     if cache_valid(path, 120): return read_cache(path)
-    if not ANTHROPIC_KEY:
-        return {"sentiment":"Mixed","analysis":"Add ANTHROPIC_KEY environment variable to enable AI analysis.","generated_at":datetime.now().isoformat()}
+    # Use DeepSeek if available, fall back to Anthropic
+    ai_key = DEEPSEEK_KEY or ANTHROPIC_KEY
+    if not ai_key:
+        return {"sentiment":"Mixed","analysis":"AI analysis requires DeepSeek or Anthropic API key.","generated_at":datetime.now().isoformat()}
     try:
         watchlist = await get_watchlist()
         news      = await get_news()
@@ -352,10 +358,18 @@ Respond:
 Line 1: One word only — Bullish, Bearish, Neutral, or Mixed
 Lines 2-4: 2-3 sentences of specific professional analysis."""
         async with httpx.AsyncClient(timeout=30) as client:
-            r = await client.post("https://api.anthropic.com/v1/messages",
-                headers={"x-api-key":ANTHROPIC_KEY,"anthropic-version":"2023-06-01","content-type":"application/json"},
-                json={"model":"claude-haiku-4-5-20251001","max_tokens":250,"messages":[{"role":"user","content":prompt}]})
-            text  = r.json()["content"][0]["text"].strip()
+            if DEEPSEEK_KEY:
+                r = await client.post("https://api.deepseek.com/chat/completions",
+                    headers={"Authorization":f"Bearer {DEEPSEEK_KEY}","Content-Type":"application/json"},
+                    json={"model":"deepseek-chat","max_tokens":250,"temperature":0.3,
+                          "messages":[{"role":"system","content":"You are a professional market analyst. Be concise and data-driven."},
+                                      {"role":"user","content":prompt}]})
+                text = r.json()["choices"][0]["message"]["content"].strip()
+            else:
+                r = await client.post("https://api.anthropic.com/v1/messages",
+                    headers={"x-api-key":ANTHROPIC_KEY,"anthropic-version":"2023-06-01","content-type":"application/json"},
+                    json={"model":"claude-haiku-4-5-20251001","max_tokens":250,"messages":[{"role":"user","content":prompt}]})
+                text  = r.json()["content"][0]["text"].strip()
             lines = [l for l in text.split("\n") if l.strip()]
             sentiment = "Mixed"
             for w in ["Bullish","Bearish","Neutral","Mixed"]:
@@ -474,27 +488,381 @@ async def get_analysis():
             "generated_at": datetime.now().isoformat(),
         }
 
-        # If Anthropic key available, enhance with AI summary
-        if ANTHROPIC_KEY:
+        # DeepSeek AI analysis (primary) — fallback to Anthropic
+        ai_key_used = None
+        if DEEPSEEK_KEY:
+            ai_key_used = "deepseek"
+        elif ANTHROPIC_KEY:
+            ai_key_used = "anthropic"
+
+        if ai_key_used:
             try:
-                summary_prompt = f"""You are a Bloomberg terminal analyst. In 2-3 sentences max, give a sharp professional market summary.
-Data: Overall={overall}, BTC={btc['change_24h'] if btc else 'N/A'}%, Avg crypto={avg_crypto_change:.1f}%, Avg stocks={avg_stock_change:.1f}%, F&G={fg_val} ({fear_greed_data['label']})
-Top gainer: {top_gainer['symbol'] if top_gainer else 'N/A'} ({top_gainer['change_24h'] if top_gainer else 0:.1f}%)
-Key insight: {insights[0] if insights else 'Markets mixed'}
-Be direct, use numbers, no fluff. Start with the overall signal."""
-                async with httpx.AsyncClient(timeout=15) as client:
-                    r = await client.post("https://api.anthropic.com/v1/messages",
-                        headers={"x-api-key":ANTHROPIC_KEY,"anthropic-version":"2023-06-01","content-type":"application/json"},
-                        json={"model":"claude-haiku-4-5-20251001","max_tokens":150,"messages":[{"role":"user","content":summary_prompt}]})
-                    ai_text = r.json()["content"][0]["text"].strip()
-                    result["ai_summary"] = ai_text
-            except: pass
+                summary_prompt = f"""You are a Bloomberg terminal senior market analyst. Give a sharp, data-driven market summary.
+
+LIVE DATA:
+- Overall signal: {overall} (score: {score}/6)
+- Crypto avg 24h: {avg_crypto_change:+.2f}%
+- Stocks avg 24h: {avg_stock_change:+.2f}%
+- Fear & Greed: {fg_val}/100 ({fear_greed_data['label']})
+- Top gainer: {top_gainer['symbol'] if top_gainer else 'N/A'} ({top_gainer['change_24h'] if top_gainer else 0:+.1f}%)
+- Top loser: {top_loser['symbol'] if top_loser else 'N/A'} ({top_loser['change_24h'] if top_loser else 0:+.1f}%)
+- BTC: {btc['price'] if btc else 'N/A'} ({btc['change_24h'] if btc else 0:+.1f}%)
+- Key insight: {insights[0] if insights else 'Markets mixed'}
+
+Write exactly 3 sentences:
+1. Overall market direction with specific numbers
+2. Key driver or risk factor
+3. One actionable observation for traders
+
+Be direct, professional, use real numbers. No fluff."""
+
+                if ai_key_used == "deepseek":
+                    async with httpx.AsyncClient(timeout=20) as client:
+                        r = await client.post(
+                            "https://api.deepseek.com/chat/completions",
+                            headers={"Authorization": f"Bearer {DEEPSEEK_KEY}", "Content-Type": "application/json"},
+                            json={
+                                "model": "deepseek-chat",
+                                "messages": [
+                                    {"role": "system", "content": "You are a professional Bloomberg terminal market analyst. Be concise, precise, data-driven."},
+                                    {"role": "user", "content": summary_prompt}
+                                ],
+                                "max_tokens": 200,
+                                "temperature": 0.3,
+                            })
+                        resp = r.json()
+                        ai_text = resp["choices"][0]["message"]["content"].strip()
+                        result["ai_summary"] = ai_text
+                        result["ai_provider"] = "DeepSeek"
+                else:
+                    async with httpx.AsyncClient(timeout=15) as client:
+                        r = await client.post("https://api.anthropic.com/v1/messages",
+                            headers={"x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json"},
+                            json={"model": "claude-haiku-4-5-20251001", "max_tokens": 200,
+                                  "messages": [{"role": "user", "content": summary_prompt}]})
+                        ai_text = r.json()["content"][0]["text"].strip()
+                        result["ai_summary"] = ai_text
+                        result["ai_provider"] = "Claude"
+            except Exception as e:
+                print(f"AI analysis error: {e}")
 
         write_cache(path, result)
         return result
 
     except Exception as e:
         return {"overall":"N/A","score":0,"insights":[f"Analysis error: {str(e)}"],"generated_at":datetime.now().isoformat()}
+
+
+# ── LIVE TV STREAM PROXY ─────────────────────────────────
+# Browsers can't fetch HLS streams directly (CORS + Referer blocks).
+# This proxy fetches M3U8 manifests and TS segments server-side,
+# then rewrites URLs so the browser can fetch subsequent segments
+# through this same proxy.
+
+from fastapi import Request as FastAPIRequest
+from fastapi.responses import Response as FastAPIResponse, StreamingResponse
+import httpx
+
+# Map channel ID -> stream URL + required referer
+LIVE_STREAMS = {
+    "aljazeera": {
+        "url": "https://live-hls-apps-aje-fa.getaj.net/AJE/index.m3u8",
+        "referer": "https://www.aljazeera.com/",
+        "name": "Al Jazeera English"
+    },
+    "france24": {
+        "url": "https://live.france24.com/hls/live/2037218-b/F24_EN_HI_HLS/master_5000.m3u8",
+        "referer": "https://www.france24.com/",
+        "name": "France 24 English"
+    },
+    "dw": {
+        "url": "https://dwamdstream102.akamaized.net/hls/live/2015525/dwstream102/master.m3u8",
+        "referer": "https://www.dw.com/",
+        "name": "DW English"
+    },
+    "alarabiya": {
+        "url": "https://live.alarabiya.net/alarabiapublish/alarabiya.smil/playlist.m3u8",
+        "referer": "https://www.alarabiya.net/",
+        "name": "Al Arabiya"
+    },
+    "skynews": {
+        "url": "https://live-stream.skynewsarabia.com/c-horizontal-channel/horizontal-stream/index.m3u8",
+        "referer": "https://www.skynewsarabia.com/",
+        "name": "Sky News Arabia"
+    },
+    "euronews": {
+        "url": "https://2f6c5bf4.wurl.com/master/f36d25e7e52f1ba8d7e56eb859c636563214f541/UmxheHhUVi1ldV9FdXJvbmV3c0ZyZW5jaA==",
+        "referer": "https://www.euronews.com/",
+        "name": "Euronews"
+    },
+}
+
+PROXY_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Accept": "*/*",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Connection": "keep-alive",
+}
+
+@app.get("/api/stream/{channel_id}/playlist.m3u8")
+async def proxy_m3u8(channel_id: str, request: FastAPIRequest):
+    """Proxy M3U8 playlist and rewrite segment URLs to go through this proxy."""
+    ch = LIVE_STREAMS.get(channel_id)
+    if not ch:
+        raise HTTPException(status_code=404, detail=f"Channel '{channel_id}' not found")
+    
+    stream_url = ch["url"]
+    base_url   = stream_url.rsplit("/", 1)[0] + "/"
+    
+    headers = {**PROXY_HEADERS, "Referer": ch["referer"], "Origin": ch["referer"].rstrip("/")}
+    
+    try:
+        async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
+            r = await client.get(stream_url, headers=headers)
+            if r.status_code != 200:
+                raise HTTPException(status_code=r.status_code, detail=f"Upstream returned {r.status_code}")
+            
+            m3u8_text = r.text
+            
+            # Rewrite relative URLs in M3U8 to absolute, then proxy them
+            lines = []
+            for line in m3u8_text.splitlines():
+                stripped = line.strip()
+                if stripped and not stripped.startswith("#"):
+                    if stripped.startswith("http"):
+                        # Absolute URL → proxy it
+                        import urllib.parse
+                        encoded = urllib.parse.quote(stripped, safe="")
+                        lines.append(f"/api/stream/{channel_id}/segment?url={encoded}")
+                    elif stripped.endswith(".m3u8") or stripped.endswith(".ts") or stripped.endswith(".aac"):
+                        # Relative URL → make absolute then proxy
+                        abs_url = base_url + stripped
+                        import urllib.parse
+                        encoded = urllib.parse.quote(abs_url, safe="")
+                        lines.append(f"/api/stream/{channel_id}/segment?url={encoded}")
+                    else:
+                        lines.append(line)
+                else:
+                    lines.append(line)
+            
+            rewritten = "\n".join(lines)
+            
+            return FastAPIResponse(
+                content=rewritten,
+                media_type="application/vnd.apple.mpegurl",
+                headers={
+                    "Access-Control-Allow-Origin": "*",
+                    "Cache-Control": "no-cache, no-store",
+                    "Access-Control-Allow-Headers": "*",
+                }
+            )
+    except httpx.RequestError as e:
+        raise HTTPException(status_code=502, detail=f"Upstream error: {e}")
+
+@app.get("/api/stream/{channel_id}/segment")
+async def proxy_segment(channel_id: str, url: str, request: FastAPIRequest):
+    """Proxy individual TS segments and nested M3U8 playlists."""
+    ch = LIVE_STREAMS.get(channel_id)
+    if not ch:
+        raise HTTPException(status_code=404, detail="Channel not found")
+    
+    import urllib.parse
+    actual_url = urllib.parse.unquote(url)
+    
+    headers = {**PROXY_HEADERS, "Referer": ch["referer"], "Origin": ch["referer"].rstrip("/")}
+    
+    try:
+        async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
+            r = await client.get(actual_url, headers=headers)
+            
+            content_type = r.headers.get("content-type", "video/mp2t")
+            
+            # If this is a nested M3U8 (quality playlist), rewrite it too
+            if "mpegurl" in content_type or actual_url.endswith(".m3u8"):
+                m3u8_text = r.text
+                base_url  = actual_url.rsplit("/", 1)[0] + "/"
+                lines = []
+                for line in m3u8_text.splitlines():
+                    stripped = line.strip()
+                    if stripped and not stripped.startswith("#") and (stripped.endswith(".ts") or stripped.endswith(".aac") or stripped.endswith(".m3u8")):
+                        if stripped.startswith("http"):
+                            abs_url = stripped
+                        else:
+                            abs_url = base_url + stripped
+                        encoded = urllib.parse.quote(abs_url, safe="")
+                        lines.append(f"/api/stream/{channel_id}/segment?url={encoded}")
+                    else:
+                        lines.append(line)
+                return FastAPIResponse(
+                    content="\n".join(lines),
+                    media_type="application/vnd.apple.mpegurl",
+                    headers={"Access-Control-Allow-Origin": "*", "Cache-Control": "no-cache"}
+                )
+            
+            # Binary media segment (TS, AAC, etc.)
+            return FastAPIResponse(
+                content=r.content,
+                media_type=content_type,
+                headers={
+                    "Access-Control-Allow-Origin": "*",
+                    "Cache-Control": "no-cache",
+                }
+            )
+    except httpx.RequestError as e:
+        raise HTTPException(status_code=502, detail=f"Segment fetch error: {e}")
+
+@app.get("/api/stream/{channel_id}/status")
+async def stream_status(channel_id: str):
+    """Check if a channel stream is reachable."""
+    ch = LIVE_STREAMS.get(channel_id)
+    if not ch:
+        return {"ok": False, "error": "Unknown channel"}
+    headers = {**PROXY_HEADERS, "Referer": ch["referer"], "Origin": ch["referer"].rstrip("/")}
+    try:
+        async with httpx.AsyncClient(timeout=8, follow_redirects=True) as client:
+            r = await client.get(ch["url"], headers=headers)
+            return {"ok": r.status_code == 200, "status": r.status_code, "name": ch["name"]}
+    except Exception as e:
+        return {"ok": False, "error": str(e), "name": ch["name"]}
+
+@app.get("/api/streams")
+async def list_streams():
+    """List all available channels."""
+    return [{"id": k, "name": v["name"]} for k, v in LIVE_STREAMS.items()]
+
+
+# ── LIVE TV STREAM PROXY ──────────────────────────────────────────
+# HLS streams need a server-side proxy because:
+# 1. Many streams block direct browser fetch (CORS)  
+# 2. Some require specific Referer headers
+# We proxy both the playlist (.m3u8) AND the segments (.ts) to avoid CORS
+
+from fastapi.responses import StreamingResponse, Response
+import httpx
+
+# Verified working streams with their required referer headers
+LIVE_STREAMS = {
+    "bloomberg":  {"url": "https://66e4bbba.wurl.com/master/f36d25e7e52f1ba8d7e56eb859c636563214f541/TEctZ2JfQmxvb21iZXJnVFZQbHVzX0hMUw/playlist.m3u8", "referer": "https://www.wurl.com/"},
+    "aljazeera":  {"url": "https://live-hls-apps-aje-fa.getaj.net/AJE/index.m3u8",  "referer": "https://www.aljazeera.com/"},
+    "alarabiya":  {"url": "https://live.alarabiya.net/alarabiapublish/alarabiya.smil/playlist.m3u8", "referer": "https://www.alarabiya.net/"},
+    "france24":   {"url": "https://live.france24.com/hls/live/2037218-b/F24_EN_HI_HLS/master_5000.m3u8", "referer": "https://www.france24.com/"},
+    "dw":         {"url": "https://dwamdstream102.akamaized.net/hls/live/2015526/dwstream102/master.m3u8", "referer": "https://www.dw.com/"},
+    "euronews":   {"url": "https://rakuten-euronews-1-es.samsung.wurl.tv/manifest/playlist.m3u8", "referer": "https://www.euronews.com/"},
+    "cnbc":       {"url": "https://cnbc-live.akamaized.net/cnbc/master.m3u8", "referer": "https://www.cnbc.com/"},
+    "skynews":    {"url": "https://linear222.sky.com/sky-news/master.m3u8", "referer": "https://news.sky.com/"},
+}
+
+PROXY_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Accept": "*/*",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Connection": "keep-alive",
+}
+
+@app.get("/api/stream/{channel_id}/playlist.m3u8")
+async def stream_playlist(channel_id: str, request: Request):
+    """Proxy the M3U8 playlist for a live channel — rewrites segment URLs to go through our proxy"""
+    if channel_id not in LIVE_STREAMS:
+        raise HTTPException(404, f"Channel {channel_id} not found")
+    
+    ch = LIVE_STREAMS[channel_id]
+    headers = {**PROXY_HEADERS, "Referer": ch["referer"], "Origin": ch["referer"].rstrip("/")}
+    
+    try:
+        async with httpx.AsyncClient(timeout=10, verify=False, follow_redirects=True) as client:
+            r = await client.get(ch["url"], headers=headers)
+            if r.status_code != 200:
+                raise HTTPException(r.status_code, "Stream unavailable")
+            
+            content = r.text
+            base_url = ch["url"].rsplit("/", 1)[0] + "/"
+            
+            # Rewrite relative URLs in the M3U8 to point through our proxy
+            lines = content.split("\n")
+            rewritten = []
+            for line in lines:
+                line = line.strip()
+                if line and not line.startswith("#"):
+                    # This is a segment or sub-playlist URL
+                    if line.startswith("http"):
+                        # Absolute URL — proxy it
+                        import base64
+                        encoded = base64.urlsafe_b64encode(line.encode()).decode()
+                        rewritten.append(f"/api/stream/{channel_id}/segment?url={encoded}")
+                    else:
+                        # Relative URL — make absolute then proxy
+                        abs_url = base_url + line
+                        import base64
+                        encoded = base64.urlsafe_b64encode(abs_url.encode()).decode()
+                        rewritten.append(f"/api/stream/{channel_id}/segment?url={encoded}")
+                else:
+                    rewritten.append(line)
+            
+            return Response(
+                content="\n".join(rewritten),
+                media_type="application/vnd.apple.mpegurl",
+                headers={
+                    "Access-Control-Allow-Origin": "*",
+                    "Cache-Control": "no-cache",
+                }
+            )
+    except httpx.RequestError as e:
+        raise HTTPException(503, f"Stream connection error: {e}")
+
+@app.get("/api/stream/{channel_id}/segment")
+async def stream_segment(channel_id: str, url: str):
+    """Proxy individual HLS segments/sub-playlists"""
+    import base64
+    try:
+        actual_url = base64.urlsafe_b64decode(url.encode()).decode()
+    except Exception:
+        raise HTTPException(400, "Invalid URL encoding")
+    
+    if channel_id not in LIVE_STREAMS:
+        raise HTTPException(404, "Channel not found")
+    
+    ch = LIVE_STREAMS[channel_id]
+    headers = {**PROXY_HEADERS, "Referer": ch["referer"], "Origin": ch["referer"].rstrip("/")}
+    
+    try:
+        async with httpx.AsyncClient(timeout=15, verify=False, follow_redirects=True) as client:
+            r = await client.get(actual_url, headers=headers)
+            
+            # If it's a sub-playlist (m3u8), rewrite its URLs too
+            ct = r.headers.get("content-type", "")
+            if "mpegurl" in ct or actual_url.endswith(".m3u8"):
+                content = r.text
+                base = actual_url.rsplit("/", 1)[0] + "/"
+                lines = content.split("\n")
+                rewritten = []
+                for line in lines:
+                    line = line.strip()
+                    if line and not line.startswith("#"):
+                        abs_url = line if line.startswith("http") else base + line
+                        import base64 as b64
+                        enc = b64.urlsafe_b64encode(abs_url.encode()).decode()
+                        rewritten.append(f"/api/stream/{channel_id}/segment?url={enc}")
+                    else:
+                        rewritten.append(line)
+                return Response(
+                    content="\n".join(rewritten),
+                    media_type="application/vnd.apple.mpegurl",
+                    headers={"Access-Control-Allow-Origin": "*", "Cache-Control": "no-cache"}
+                )
+            
+            return Response(
+                content=r.content,
+                media_type=ct or "video/MP2T",
+                headers={"Access-Control-Allow-Origin": "*", "Cache-Control": "no-cache, max-age=0"}
+            )
+    except Exception as e:
+        raise HTTPException(503, f"Segment error: {e}")
+
+@app.get("/api/stream/channels")
+async def get_stream_channels():
+    """Return list of available channels"""
+    return [{"id": k, "name": k.replace("_"," ").title(), "playlist": f"/api/stream/{k}/playlist.m3u8"} 
+            for k in LIVE_STREAMS.keys()]
 
 @app.get("/api/clear-cache")
 async def clear_cache():

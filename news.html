@@ -8,205 +8,106 @@
 <title>MarketPulse Terminal</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="assets/css/main.css" rel="stylesheet">
 <style>
-/* ── HOMEPAGE SPECIFIC ── */
-.terminal-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  grid-template-rows: auto;
-  gap: 1px;
-  background: var(--border);
-  min-height: calc(100vh - 74px);
-}
+/* ── HOMEPAGE-SPECIFIC STYLES ── */
 
-/* Panels span multiple cols */
-.span-2 { grid-column: span 2; }
-.span-3 { grid-column: span 3; }
-
-.t-panel {
-  background: var(--bg2);
-  display: flex; flex-direction: column;
-  min-height: 0;
-}
-
-.t-panel-head {
-  background: var(--bg3);
-  border-bottom: 1px solid var(--border);
-  padding: 5px 10px;
-  display: flex; align-items: center; justify-content: space-between;
-  font-family: var(--font-mono);
-  font-size: 0.62rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  flex-shrink: 0;
-}
-.t-panel-head .p-title { color: var(--amber); font-weight: 600; display: flex; align-items: center; gap: 6px; }
-.t-panel-head .p-meta  { color: var(--text3); }
-.t-panel-head .p-link  { color: var(--blue); cursor: pointer; transition: color var(--transition); }
-.t-panel-head .p-link:hover { color: var(--amber); }
-
-.t-panel-body { padding: 10px; flex: 1; overflow: auto; min-height: 0; }
-
-/* ── HERO TICKER PANEL ── */
-.hero-ticker {
-  display: flex; flex-direction: column; justify-content: center;
-  padding: 16px;
-}
-
+/* Hero panel */
 .hero-title {
   font-family: var(--font-mono);
-  font-size: clamp(0.9rem, 2vw, 1.1rem);
+  font-size: clamp(0.95rem, 2vw, 1.15rem);
   font-weight: 600;
   letter-spacing: 0.08em;
   color: var(--amber);
   margin-bottom: 6px;
 }
-
 .hero-sub {
   font-family: var(--font-mono);
-  font-size: 0.65rem;
-  color: var(--text3);
+  font-size: 0.64rem;
+  color: var(--text-muted);
   letter-spacing: 0.06em;
-  margin-bottom: 20px;
+  margin-bottom: 18px;
 }
 
-.live-price-block {
+/* Live price grid (hero) */
+.live-price-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 8px;
 }
-
-.lpb-item {
-  background: var(--bg3);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+.lp-item {
+  background: var(--bg-raised);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
   padding: 10px 12px;
   cursor: pointer;
   transition: all var(--transition);
 }
-.lpb-item:hover { border-color: var(--amber); }
-.lpb-sym  { font-family: var(--font-mono); font-size: 0.65rem; color: var(--text3); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 4px; display: block; }
-.lpb-price { font-family: var(--font-mono); font-size: 1.05rem; font-weight: 700; color: var(--text); display: block; margin-bottom: 3px; }
-.lpb-chg  { font-family: var(--font-mono); font-size: 0.68rem; margin-top: 2px; display: block; }
+.lp-item:hover { border-color: var(--border-mid); background: var(--bg-overlay); }
+.lp-sym   { font-family: var(--font-mono); font-size: 0.62rem; color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 4px; display: block; }
+.lp-price { font-family: var(--font-mono); font-size: 1.05rem; font-weight: 700; color: var(--text-primary); display: block; margin-bottom: 3px; }
+.lp-chg   { font-family: var(--font-mono); font-size: 0.66rem; display: block; }
 
-/* ── FEATURED CAROUSEL ── */
-.carousel-item-inner {
+/* Featured carousel */
+.carousel-slide {
   height: 280px;
   position: relative;
   overflow: hidden;
-  background: var(--bg3);
+  background: var(--bg-raised);
   display: flex; flex-direction: column; justify-content: flex-end;
   padding: 20px;
 }
-
-.c-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.25; }
-.c-gradient { position: absolute; inset: 0; background: linear-gradient(0deg, rgba(8,10,14,0.98) 0%, rgba(8,10,14,0.4) 70%, transparent 100%); }
-.c-content { position: relative; z-index: 2; }
-
-.c-cat {
-  font-family: var(--font-mono); font-size: 0.6rem; font-weight: 600;
+.cs-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.22; }
+.cs-gradient { position: absolute; inset: 0; background: linear-gradient(0deg, var(--bg-base) 0%, rgba(7,11,16,0.45) 65%, transparent 100%); }
+.cs-content { position: relative; z-index: 2; }
+.cs-cat {
+  font-family: var(--font-mono); font-size: 0.6rem; font-weight: 700;
   letter-spacing: 0.15em; text-transform: uppercase;
-  padding: 2px 8px; border-radius: 2px;
-  margin-bottom: 8px; display: inline-block;
+  padding: 2px 8px; border-radius: 2px; margin-bottom: 8px; display: inline-block;
 }
+.cs-title { font-family: var(--font-sans); font-size: clamp(0.9rem, 1.8vw, 1.15rem); font-weight: 600; line-height: 1.3; margin-bottom: 6px; color: var(--text-primary); }
+.cs-desc  { font-size: 0.72rem; color: rgba(255,255,255,0.55); margin-bottom: 8px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.cs-cta   { font-family: var(--font-mono); font-size: 0.6rem; color: var(--amber); letter-spacing: 0.08em; }
 
-.c-title { font-family: var(--font-sans); font-size: clamp(0.9rem, 1.8vw, 1.2rem); font-weight: 600; line-height: 1.3; margin-bottom: 6px; }
-.c-desc  { font-size: 0.72rem; color: rgba(255,255,255,0.6); margin-bottom: 10px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-
-.carousel-indicators button { width: 20px !important; height: 2px !important; border-radius: 1px !important; background: var(--text3) !important; opacity: 0.5 !important; }
+.carousel-indicators button { width: 18px !important; height: 2px !important; border-radius: 1px !important; background: var(--text-muted) !important; opacity: 0.5 !important; }
 .carousel-indicators button.active { background: var(--amber) !important; opacity: 1 !important; }
-.carousel-control-prev, .carousel-control-next { width: 32px; height: 32px; background: rgba(0,0,0,0.6) !important; border: 1px solid var(--border2); border-radius: 2px; top: 50%; bottom: auto; transform: translateY(-50%); opacity: 1 !important; margin: 0 8px; }
+.carousel-control-prev, .carousel-control-next {
+  width: 30px; height: 30px;
+  background: rgba(0,0,0,0.6) !important;
+  border: 1px solid var(--border-mid);
+  border-radius: 2px; top: 50%; bottom: auto;
+  transform: translateY(-50%); opacity: 1 !important; margin: 0 8px;
+}
 .carousel-control-prev-icon, .carousel-control-next-icon { width: 12px !important; height: 12px !important; }
 
-/* ── MINI TABLE ── */
-.mini-table { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 0.78rem; table-layout: fixed; }
-.mini-table th { color: var(--text3); font-size: 0.6rem; letter-spacing: 0.08em; text-transform: uppercase; padding: 7px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: var(--bg3); }
-.mini-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text); vertical-align: middle; }
-.mini-table tr:last-child td { border-bottom: none; }
-.mini-table tr { cursor: pointer; transition: background var(--transition); }
-.mini-table tr:hover td { background: var(--bg3); }
-/* Fixed column widths for mini tables */
-.mini-table th:nth-child(1), .mini-table td:nth-child(1) { width: 32%; }
-.mini-table th:nth-child(2), .mini-table td:nth-child(2) { width: 26%; text-align: right; }
-.mini-table th:nth-child(3), .mini-table td:nth-child(3) { width: 22%; text-align: right; }
-.mini-table th:nth-child(4), .mini-table td:nth-child(4) { width: 20%; text-align: right; }
-
-/* ── NEWS MINI ── */
-.news-mini-item { padding: 8px 0; border-bottom: 1px solid var(--border); cursor: pointer; transition: all var(--transition); }
-.news-mini-item:last-child { border-bottom: none; }
-.news-mini-item:hover { padding-left: 6px; }
-.news-mini-src  { font-family: var(--font-mono); font-size: 0.58rem; color: var(--amber); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 2px; display: flex; justify-content: space-between; }
-.news-mini-title { font-size: 0.75rem; font-weight: 500; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-
-/* ── MOOD PANEL ── */
-.mood-panel { padding: 12px; }
+/* Mood panel */
 .mood-sentiment {
-  font-family: var(--font-mono); font-size: 1.4rem; font-weight: 700;
-  letter-spacing: 0.05em; padding: 6px 0;
+  font-family: var(--font-mono); font-size: 1.35rem; font-weight: 700;
+  letter-spacing: 0.05em; padding: 4px 0;
 }
 .mood-sentiment.bullish { color: var(--green); }
 .mood-sentiment.bearish { color: var(--red); }
 .mood-sentiment.neutral { color: var(--blue); }
 .mood-sentiment.mixed   { color: var(--amber); }
-.mood-analysis { font-size: 0.72rem; color: var(--text2); line-height: 1.6; margin-top: 8px; border-left: 2px solid var(--amber); padding-left: 10px; }
 
-/* ── CALENDAR MINI ── */
-.cal-mini-item { display: flex; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--border); align-items: center; }
+/* Fear & Greed mini */
+.fg-mini { display: flex; align-items: center; gap: 12px; padding: 6px 0 10px; }
+.fg-mini-val   { font-family: var(--font-mono); font-size: 1.7rem; font-weight: 700; line-height: 1; }
+.fg-mini-info  { flex: 1; }
+.fg-mini-label { font-size: 0.7rem; font-weight: 600; }
+.fg-mini-sub   { font-family: var(--font-mono); font-size: 0.6rem; color: var(--text-muted); margin-top: 2px; }
+
+/* Calendar mini */
+.cal-mini-item { display: flex; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--border-dim); align-items: center; }
 .cal-mini-item:last-child { border-bottom: none; }
-.cal-mini-date { font-family: var(--font-mono); font-size: 0.62rem; color: var(--text3); min-width: 42px; }
-.cal-mini-name { font-size: 0.72rem; font-weight: 500; flex: 1; }
+.cal-mini-date { font-family: var(--font-mono); font-size: 0.6rem; color: var(--text-muted); min-width: 40px; }
+.cal-mini-name { font-size: 0.74rem; font-weight: 500; flex: 1; color: var(--text-primary); }
 
-/* ── FG WIDGET MINI ── */
-.fg-mini { display: flex; align-items: center; gap: 12px; padding: 10px 0; }
-.fg-mini-val { font-family: var(--font-mono); font-size: 1.8rem; font-weight: 700; }
-.fg-mini-info { flex: 1; }
-.fg-mini-label { font-size: 0.72rem; font-weight: 600; }
-.fg-mini-sub   { font-family: var(--font-mono); font-size: 0.62rem; color: var(--text3); }
+/* Live TV panel */
+.tv-wrap { display: flex; flex-direction: column; min-height: 360px; }
 
-/* ── MARKET SUMMARY ── */
-.mkt-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-.mkt-sum-item { background: var(--bg3); border-radius: var(--radius); padding: 8px 10px; }
-.mkt-sum-lbl  { font-family: var(--font-mono); font-size: 0.58rem; color: var(--text3); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 3px; }
-.mkt-sum-val  { font-family: var(--font-mono); font-size: 1rem; font-weight: 600; }
-
-@media (max-width: 1200px) { .terminal-grid { grid-template-columns: 1fr 1fr; } .span-3 { grid-column: span 2; } }
-@media (max-width: 768px)  { .terminal-grid { grid-template-columns: 1fr; } .span-2,.span-3 { grid-column: span 1; } }
-
-/* ── LIVE TV PANEL ── */
-.live-tv-wrap { display: flex; flex-direction: column; height: 100%; min-height: 360px; }
-.tv-channel-bar {
-  display: flex; flex-wrap: wrap; gap: 4px; padding: 8px 10px;
-  background: var(--bg3); border-bottom: 1px solid var(--border); flex-shrink: 0;
-}
-.tv-channel-btn {
-  font-family: var(--font-mono); font-size: 0.6rem; font-weight: 700;
-  letter-spacing: 0.08em; text-transform: uppercase;
-  padding: 3px 10px; border-radius: 2px; border: 1px solid var(--border2);
-  background: var(--bg4); color: var(--text3); cursor: pointer; transition: all .15s;
-}
-.tv-channel-btn:hover { border-color: var(--amber); color: var(--amber); }
-.tv-channel-btn.active { background: var(--red); border-color: var(--red); color: #fff; }
-.tv-embed-wrap { flex: 1; position: relative; overflow: hidden; background: #000; min-height: 280px; }
-.tv-embed-wrap iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: none; }
-.tv-placeholder {
-  position: absolute; inset: 0; display: flex; flex-direction: column;
-  align-items: center; justify-content: center; background: var(--bg3);
-  gap: 10px; color: var(--text3); font-family: var(--font-mono); font-size: .72rem;
-  text-align: center; padding: 20px;
-}
-.tv-placeholder i { font-size: 2.5rem; color: var(--red); opacity: .6; }
-.tv-controls {
-  display: flex; align-items: center; gap: 10px; padding: 6px 10px;
-  background: var(--bg3); border-top: 1px solid var(--border); flex-shrink: 0;
-}
-.tv-live-badge {
-  display: flex; align-items: center; gap: 5px;
-  font-family: var(--font-mono); font-size: .6rem; font-weight: 700;
-  color: var(--red); letter-spacing: .1em;
-}
-.tv-channel-name { font-family: var(--font-mono); font-size: .68rem; color: var(--amber); font-weight: 600; flex: 1; letter-spacing: .06em; }
-.tv-viewers { font-family: var(--font-mono); font-size: .6rem; color: var(--text3); }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.35} }
 </style>
 </head>
 <body>
@@ -214,43 +115,42 @@
 
 <!-- STATUS BAR -->
 <div class="status-bar" id="statusBar">
-  <div class="status-bar-item"><span class="status-bar-dot"></span><span class="value">LIVE</span></div>
-  <div class="status-bar-item" id="sb-btc"><span class="label">BTC</span><span class="value">—</span></div>
-  <div class="status-bar-item" id="sb-eth"><span class="label">ETH</span><span class="value">—</span></div>
-  <div class="status-bar-item" id="sb-nvda"><span class="label">NVDA</span><span class="value">—</span></div>
-  <div class="status-bar-item" id="sb-gold"><span class="label">XAU</span><span class="value">—</span></div>
-  <div class="status-bar-item" id="sb-oil"><span class="label">OIL</span><span class="value">—</span></div>
-  <div class="ms-auto status-bar-item"><span class="label">NY</span><span class="value" id="sb-time-ny">—</span></div>
-  <div class="status-bar-item"><span class="label">LN</span><span class="value" id="sb-time-ln">—</span></div>
-  <div class="status-bar-item"><span class="label">TK</span><span class="value" id="sb-time-tk">—</span></div>
-  <div class="status-bar-item"><span class="label">BT</span><span class="value" id="sb-time-bt">—</span></div>
-</div>
-
-<!-- NAVBAR -->
-<nav class="navbar navbar-expand-lg">
-  <div class="container-fluid px-3">
-    <a class="navbar-brand" href="index.html">MKT<span class="accent">PULSE</span><span class="version">v6</span></a>
-    <div class="nav-divider"></div>
-    <button class="navbar-toggler border-0 d-lg-none" type="button">
-      <i class="bi bi-list"></i>
-    </button>
-    <ul class="navbar-nav d-none d-lg-flex">
-      <li class="nav-item"><a class="nav-link" href="index.html"><i class="bi bi-display"></i> Terminal</a></li>
-      <li class="nav-item"><a class="nav-link" href="markets.html"><i class="bi bi-graph-up"></i> Markets</a></li>
-      <li class="nav-item"><a class="nav-link" href="news.html"><i class="bi bi-newspaper"></i> News</a></li>
-      <li class="nav-item"><a class="nav-link" href="youtube.html"><i class="bi bi-play-circle"></i> Videos</a></li>
-      <li class="nav-item"><a class="nav-link" href="calendar.html"><i class="bi bi-calendar3"></i> Calendar</a></li>
-      <li class="nav-item"><a class="nav-link" href="tools.html"><i class="bi bi-tools"></i> Tools</a></li>
-      <li class="nav-item"><a class="nav-link" href="search.html"><i class="bi bi-search"></i> Search</a></li>
-    </ul>
-    <div class="nav-clock d-none d-lg-block" id="navClock"></div>
-    <button class="theme-toggle ms-2" id="themeToggle">☀</button>
+  <div class="sb-item"><span class="sb-live-dot"></span><span class="sb-value" style="font-size:.6rem;letter-spacing:.06em">LIVE</span></div>
+  <div class="sb-item" id="sb-btc"><span class="sb-label">BTC</span><span class="sb-value">—</span></div>
+  <div class="sb-item" id="sb-eth"><span class="sb-label">ETH</span><span class="sb-value">—</span></div>
+  <div class="sb-item" id="sb-nvda"><span class="sb-label">NVDA</span><span class="sb-value">—</span></div>
+  <div class="sb-item" id="sb-gold"><span class="sb-label">XAU</span><span class="sb-value">—</span></div>
+  <div class="sb-item" id="sb-oil"><span class="sb-label">OIL</span><span class="sb-value">—</span></div>
+  <div id="sb-watchlist" style="display:flex;align-items:center;height:100%"></div>
+  <div id="marketSessions" style="display:flex;align-items:center;margin-left:auto;height:100%"></div>
+  <div class="sb-clocks" style="border-left:1px solid var(--border-dim)">
+    <div class="sb-item"><span class="sb-label">NY</span><span class="sb-value" id="sb-ny">—</span></div>
+    <div class="sb-item"><span class="sb-label">LN</span><span class="sb-value" id="sb-ln">—</span></div>
+    <div class="sb-item"><span class="sb-label">TK</span><span class="sb-value" id="sb-tk">—</span></div>
+    <div class="sb-item"><span class="sb-label">BT</span><span class="sb-value" id="sb-bt">—</span></div>
   </div>
+</div>
+<!-- NAVBAR -->
+<nav class="navbar">
+  <a class="navbar-brand" href="index.html">MKT<span class="accent">PULSE</span><span class="ver">v9</span></a>
+  <div class="nav-sep"></div>
+  <ul class="nav-links">
+      <li><a class="nav-link" href="index.html"><i class="bi bi-display"></i> Terminal</a></li>
+      <li><a class="nav-link" href="markets.html"><i class="bi bi-graph-up"></i> Markets</a></li>
+      <li><a class="nav-link" href="news.html"><i class="bi bi-newspaper"></i> News</a></li>
+      <li><a class="nav-link" href="youtube.html"><i class="bi bi-play-circle"></i> Videos</a></li>
+      <li><a class="nav-link" href="calendar.html"><i class="bi bi-calendar3"></i> Calendar</a></li>
+      <li><a class="nav-link" href="tools.html"><i class="bi bi-tools"></i> Tools</a></li>
+      <li><a class="nav-link" href="search.html"><i class="bi bi-search"></i> Search</a></li>
+  </ul>
+  <div class="nav-clock d-none d-lg-block" id="navClock"></div>
+  <button class="theme-btn" id="themeToggle" title="Toggle theme">☀</button>
+  <button class="hamburger" id="hamburgerBtn"><i class="bi bi-list"></i></button>
 </nav>
 
 <!-- TICKER TAPE -->
 <div class="ticker-tape">
-  <div class="ticker-inner" id="tickerInner">
+  <div class="ticker-track" id="tickerInner">
     <div class="ticker-item"><span class="ticker-sym">LOADING</span><span class="ticker-price">MARKET DATA...</span></div>
   </div>
 </div>
@@ -259,33 +159,33 @@
 <div class="terminal-grid">
 
   <!-- [1] HERO / LIVE PRICES -->
-  <div class="t-panel">
-    <div class="t-panel-head">
-      <span class="p-title"><i class="bi bi-display"></i> MARKETPULSE TERMINAL</span>
-      <span class="p-meta" id="lastUpdate">—</span>
+  <div class="tg-cell">
+    <div class="panel-head">
+      <span class="ph-title"><i class="bi bi-display"></i> MARKETPULSE TERMINAL</span>
+      <span class="ph-meta" id="lastUpdate">—</span>
     </div>
-    <div class="t-panel-body hero-ticker">
+    <div class="tg-body-p">
       <div class="hero-title">FINANCIAL INTELLIGENCE</div>
       <div class="hero-sub">REAL-TIME DATA · AI ANALYSIS · MACRO CALENDAR</div>
-      <div class="live-price-block" id="heroPrices">
-        <div class="lpb-item skeleton" style="min-height:60px"></div>
-        <div class="lpb-item skeleton" style="min-height:60px"></div>
-        <div class="lpb-item skeleton" style="min-height:60px"></div>
-        <div class="lpb-item skeleton" style="min-height:60px"></div>
+      <div class="live-price-grid" id="heroPrices">
+        <div class="lp-item skeleton" style="min-height:60px"></div>
+        <div class="lp-item skeleton" style="min-height:60px"></div>
+        <div class="lp-item skeleton" style="min-height:60px"></div>
+        <div class="lp-item skeleton" style="min-height:60px"></div>
       </div>
     </div>
   </div>
 
   <!-- [2,3] FEATURED CAROUSEL -->
-  <div class="t-panel span-2">
-    <div class="t-panel-head">
-      <span class="p-title"><i class="bi bi-star"></i> FEATURED</span>
-      <a class="p-link" href="news.html">ALL NEWS →</a>
+  <div class="tg-cell tg-span2">
+    <div class="panel-head">
+      <span class="ph-title"><i class="bi bi-star"></i> FEATURED</span>
+      <a class="ph-link" href="news.html">ALL NEWS →</a>
     </div>
     <div id="featuredCarousel" class="carousel slide" data-bs-ride="carousel" data-bs-interval="5000" style="height:100%">
       <div class="carousel-indicators" id="carouselIndicators"></div>
       <div class="carousel-inner" id="carouselInner" style="height:100%">
-        <div class="carousel-item active"><div class="carousel-item-inner"><div class="c-gradient"></div><div class="c-content"><div class="skeleton" style="height:16px;width:60%;margin-bottom:8px"></div><div class="skeleton" style="height:24px;margin-bottom:6px"></div></div></div></div>
+        <div class="carousel-item active"><div class="carousel-slide"><div class="cs-gradient"></div><div class="cs-content"><div class="skeleton" style="height:16px;width:60%;margin-bottom:8px"></div><div class="skeleton" style="height:24px;margin-bottom:6px"></div></div></div></div>
       </div>
       <button class="carousel-control-prev" type="button" data-bs-target="#featuredCarousel" data-bs-slide="prev"><span class="carousel-control-prev-icon"></span></button>
       <button class="carousel-control-next" type="button" data-bs-target="#featuredCarousel" data-bs-slide="next"><span class="carousel-control-next-icon"></span></button>
@@ -293,172 +193,170 @@
   </div>
 
   <!-- [4] CRYPTO TABLE -->
-  <div class="t-panel">
-    <div class="t-panel-head">
-      <span class="p-title"><i class="bi bi-currency-bitcoin"></i> CRYPTO</span>
-      <a class="p-link" href="markets.html">FULL TABLE →</a>
+  <div class="tg-cell">
+    <div class="panel-head">
+      <span class="ph-title"><i class="bi bi-currency-bitcoin"></i> CRYPTO</span>
+      <a class="ph-link" href="markets.html">FULL TABLE →</a>
     </div>
-    <div class="t-panel-body" style="padding:0;overflow-x:auto">
+    <div class="tg-body" style="padding:0;overflow-x:auto">
       <table class="mini-table" id="cryptoMini">
-        <thead><tr><th>ASSET</th><th>PRICE</th><th>24H</th><th>7D</th></tr></thead>
+        <thead><tr><th style="padding:6px 10px;font-family:var(--font-mono);font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);background:var(--bg-raised);border-bottom:1px solid var(--border-soft)">ASSET</th><th style="padding:6px 10px;font-family:var(--font-mono);font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);background:var(--bg-raised);border-bottom:1px solid var(--border-soft);text-align:right">PRICE</th><th style="padding:6px 10px;font-family:var(--font-mono);font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);background:var(--bg-raised);border-bottom:1px solid var(--border-soft);text-align:right">24H %</th><th style="padding:6px 10px;font-family:var(--font-mono);font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);background:var(--bg-raised);border-bottom:1px solid var(--border-soft);text-align:right">7D %</th><th style="padding:6px 10px;font-family:var(--font-mono);font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);background:var(--bg-raised);border-bottom:1px solid var(--border-soft);text-align:right">CHART</th></tr></thead>
         <tbody id="cryptoMiniBody">
-          <tr><td colspan="4" style="padding:20px;text-align:center;color:var(--text3);font-family:var(--font-mono);font-size:.7rem">LOADING...</td></tr>
+          <tr><td colspan="4" style="padding:20px;text-align:center;color:var(--text-muted);font-family:var(--font-mono);font-size:.7rem">LOADING...</td></tr>
         </tbody>
       </table>
     </div>
   </div>
 
   <!-- [5] STOCKS TABLE -->
-  <div class="t-panel">
-    <div class="t-panel-head">
-      <span class="p-title"><i class="bi bi-graph-up-arrow"></i> EQUITIES</span>
-      <a class="p-link" href="markets.html">FULL TABLE →</a>
+  <div class="tg-cell">
+    <div class="panel-head">
+      <span class="ph-title"><i class="bi bi-graph-up-arrow"></i> EQUITIES</span>
+      <a class="ph-link" href="markets.html">FULL TABLE →</a>
     </div>
-    <div class="t-panel-body" style="padding:0;overflow-x:auto">
+    <div class="tg-body" style="padding:0;overflow-x:auto">
       <table class="mini-table" id="stocksMini">
-        <thead><tr><th>ASSET</th><th>PRICE</th><th>24H</th><th>VOL</th></tr></thead>
+        <thead><tr><th style="padding:6px 10px;font-family:var(--font-mono);font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);background:var(--bg-raised);border-bottom:1px solid var(--border-soft)">ASSET</th><th style="padding:6px 10px;font-family:var(--font-mono);font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);background:var(--bg-raised);border-bottom:1px solid var(--border-soft);text-align:right">PRICE</th><th style="padding:6px 10px;font-family:var(--font-mono);font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);background:var(--bg-raised);border-bottom:1px solid var(--border-soft);text-align:right">24H %</th><th style="padding:6px 10px;font-family:var(--font-mono);font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);background:var(--bg-raised);border-bottom:1px solid var(--border-soft);text-align:right">VOL</th><th style="padding:6px 10px;font-family:var(--font-mono);font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);background:var(--bg-raised);border-bottom:1px solid var(--border-soft);text-align:right">CHART</th></tr></thead>
         <tbody id="stocksMiniBody">
-          <tr><td colspan="4" style="padding:20px;text-align:center;color:var(--text3);font-family:var(--font-mono);font-size:.7rem">LOADING...</td></tr>
+          <tr><td colspan="4" style="padding:20px;text-align:center;color:var(--text-muted);font-family:var(--font-mono);font-size:.7rem">LOADING...</td></tr>
         </tbody>
       </table>
     </div>
   </div>
 
   <!-- [6] COMMODITIES TABLE -->
-  <div class="t-panel">
-    <div class="t-panel-head">
-      <span class="p-title"><i class="bi bi-basket"></i> COMMODITIES</span>
-      <a class="p-link" href="markets.html">FULL TABLE →</a>
+  <div class="tg-cell">
+    <div class="panel-head">
+      <span class="ph-title"><i class="bi bi-basket"></i> COMMODITIES</span>
+      <a class="ph-link" href="markets.html">FULL TABLE →</a>
     </div>
-    <div class="t-panel-body" style="padding:0;overflow-x:auto">
+    <div class="tg-body" style="padding:0;overflow-x:auto">
       <table class="mini-table" id="commodMini">
-        <thead><tr><th>ASSET</th><th>PRICE</th><th>24H</th><th>7D</th></tr></thead>
+        <thead><tr><th style="padding:6px 10px;font-family:var(--font-mono);font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);background:var(--bg-raised);border-bottom:1px solid var(--border-soft)">ASSET</th><th style="padding:6px 10px;font-family:var(--font-mono);font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);background:var(--bg-raised);border-bottom:1px solid var(--border-soft);text-align:right">PRICE</th><th style="padding:6px 10px;font-family:var(--font-mono);font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);background:var(--bg-raised);border-bottom:1px solid var(--border-soft);text-align:right">24H %</th><th style="padding:6px 10px;font-family:var(--font-mono);font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);background:var(--bg-raised);border-bottom:1px solid var(--border-soft);text-align:right">7D %</th><th style="padding:6px 10px;font-family:var(--font-mono);font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);background:var(--bg-raised);border-bottom:1px solid var(--border-soft);text-align:right">CHART</th></tr></thead>
         <tbody id="commodMiniBody">
-          <tr><td colspan="4" style="padding:20px;text-align:center;color:var(--text3);font-family:var(--font-mono);font-size:.7rem">LOADING...</td></tr>
+          <tr><td colspan="4" style="padding:20px;text-align:center;color:var(--text-muted);font-family:var(--font-mono);font-size:.7rem">LOADING...</td></tr>
         </tbody>
       </table>
     </div>
   </div>
 
-  <!-- [7] AI MOOD -->
-  <div class="t-panel">
-    <div class="t-panel-head">
-      <span class="p-title"><i class="bi bi-robot"></i> AI SENTIMENT</span>
-      <button class="p-link btn-terminal" onclick="homePage.refreshMood()" style="border:none;background:none;padding:0;font-size:.62rem;letter-spacing:.1em">↻ REFRESH</button>
+  <!-- [7] AI MARKET ANALYSIS (DeepSeek) -->
+  <div class="tg-cell">
+    <div class="panel-head">
+      <span class="ph-title"><i class="bi bi-robot"></i> AI ANALYSIS</span>
+      <button onclick="homePage.refreshAnalysis()" style="background:none;border:none;cursor:pointer;font-family:var(--font-mono);font-size:.6rem;color:var(--blue);letter-spacing:.08em;padding:0">↻</button>
     </div>
-    <div class="mood-panel">
-      <div style="font-family:var(--font-mono);font-size:.6rem;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px">MARKET SENTIMENT</div>
-      <div class="mood-sentiment skeleton" id="moodSentiment" style="min-height:36px">&nbsp;</div>
-      <div class="mood-analysis skeleton" id="moodAnalysis" style="min-height:60px;margin-top:8px">&nbsp;</div>
-      <div style="font-family:var(--font-mono);font-size:.6rem;color:var(--text3);margin-top:8px" id="moodTime">—</div>
+    <div class="tg-body" id="termAnalysisPanel" style="overflow-y:auto;padding:10px">
+      <div style="text-align:center;padding:16px;color:var(--text-muted);font-family:var(--font-mono);font-size:.68rem">
+        <div class="spinner-border spinner-border-sm" style="color:var(--amber);width:.9rem;height:.9rem;border-width:2px"></div>
+        <div style="margin-top:6px">LOADING ANALYSIS...</div>
+      </div>
     </div>
+  </div>
   </div>
 
   <!-- [8] NEWS FEED -->
-  <div class="t-panel span-2">
-    <div class="t-panel-head">
-      <span class="p-title"><i class="bi bi-rss"></i> LIVE NEWS FEED</span>
-      <a class="p-link" href="news.html">ALL ARTICLES →</a>
+  <div class="tg-cell tg-span2">
+    <div class="panel-head">
+      <span class="ph-title"><i class="bi bi-rss"></i> LIVE NEWS FEED</span>
+      <a class="ph-link" href="news.html">ALL ARTICLES →</a>
     </div>
-    <div class="t-panel-body" style="overflow-y:auto;max-height:260px" id="newsMini">
-      <div style="color:var(--text3);font-family:var(--font-mono);font-size:.7rem;text-align:center;padding:20px">LOADING NEWS...</div>
+    <div class="tg-body" style="overflow-y:auto;max-height:260px;padding:0 10px 10px" id="newsMini">
+      <div style="color:var(--text-muted);font-family:var(--font-mono);font-size:.7rem;text-align:center;padding:20px">LOADING NEWS...</div>
     </div>
   </div>
 
   <!-- [9] FEAR & GREED -->
-  <div class="t-panel">
-    <div class="t-panel-head">
-      <span class="p-title"><i class="bi bi-speedometer2"></i> FEAR & GREED</span>
-      <a class="p-link" href="tools.html">TOOLS →</a>
+  <div class="tg-cell">
+    <div class="panel-head">
+      <span class="ph-title"><i class="bi bi-speedometer2"></i> FEAR & GREED</span>
+      <a class="ph-link" href="tools.html">TOOLS →</a>
     </div>
-    <div class="t-panel-body">
+    <div class="tg-body-p">
       <div class="fg-mini" id="fgMini">
         <div class="fg-mini-val skeleton" style="width:60px;height:40px"></div>
         <div class="fg-mini-info"><div class="skeleton" style="height:14px;margin-bottom:6px"></div><div class="skeleton" style="height:10px;width:80%"></div></div>
       </div>
       <div class="fg-bar"><div class="fg-indicator" id="fgInd" style="left:50%"></div></div>
-      <div style="display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:.55rem;color:var(--text3);margin-top:4px">
+      <div style="display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:.55rem;color:var(--text-muted);margin-top:4px">
         <span>EXT FEAR</span><span>FEAR</span><span>NEUTRAL</span><span>GREED</span><span>EXT GREED</span>
       </div>
     </div>
   </div>
 
   <!-- [10] MACRO CALENDAR MINI -->
-  <div class="t-panel">
-    <div class="t-panel-head">
-      <span class="p-title"><i class="bi bi-calendar-event"></i> UPCOMING EVENTS</span>
-      <a class="p-link" href="calendar.html">FULL CALENDAR →</a>
+  <div class="tg-cell">
+    <div class="panel-head">
+      <span class="ph-title"><i class="bi bi-calendar-event"></i> UPCOMING EVENTS</span>
+      <a class="ph-link" href="calendar.html">FULL CALENDAR →</a>
     </div>
-    <div class="t-panel-body" style="overflow-y:auto;max-height:200px" id="calMini">
-      <div style="color:var(--text3);font-family:var(--font-mono);font-size:.7rem;text-align:center;padding:20px">LOADING...</div>
+    <div class="tg-body" style="overflow-y:auto;max-height:200px;padding:8px 10px" id="calMini">
+      <div style="color:var(--text-muted);font-family:var(--font-mono);font-size:.7rem;text-align:center;padding:20px">LOADING...</div>
     </div>
   </div>
 
   <!-- [11] MARKET SUMMARY + HEATMAP -->
-  <div class="t-panel span-2">
-    <div class="t-panel-head">
-      <span class="p-title"><i class="bi bi-grid-3x3"></i> MARKET HEATMAP — 24H PERFORMANCE</span>
+  <div class="tg-cell tg-span2">
+    <div class="panel-head">
+      <span class="ph-title"><i class="bi bi-grid-3x3"></i> MARKET HEATMAP — 24H PERFORMANCE</span>
       <div class="chip-row mb-0" style="margin:0">
         <span class="chip active" style="padding:2px 8px" onclick="homePage.setHeatmapTab('crypto',this)">CRYPTO</span>
         <span class="chip" style="padding:2px 8px" onclick="homePage.setHeatmapTab('stocks',this)">STOCKS</span>
         <span class="chip" style="padding:2px 8px" onclick="homePage.setHeatmapTab('commodities',this)">COMMOD</span>
       </div>
     </div>
-    <div class="t-panel-body">
+    <div class="tg-body-p">
       <div class="heatmap-grid" id="hmGrid">
-        <div style="color:var(--text3);font-family:var(--font-mono);font-size:.7rem;grid-column:1/-1;text-align:center;padding:20px">LOADING...</div>
+        <div style="color:var(--text-muted);font-family:var(--font-mono);font-size:.7rem;grid-column:1/-1;text-align:center;padding:20px">LOADING...</div>
       </div>
     </div>
   </div>
 
 
   <!-- LIVE TV NEWS PANEL -->
-  <div class="t-panel span-3">
-    <div class="t-panel-head">
-      <span class="p-title">
-        <span style="width:7px;height:7px;border-radius:50%;background:var(--red);box-shadow:0 0 6px var(--red);display:inline-block;animation:livePulse 1.5s ease-in-out infinite"></span>
+  <div class="tg-cell tg-span3">
+    <div class="panel-head">
+      <span class="ph-title">
+        <span style="width:7px;height:7px;border-radius:50%;background:var(--red);box-shadow:0 0 6px var(--red);display:inline-block;animation:pulse 1.5s ease-in-out infinite"></span>
         LIVE NEWS CHANNELS
       </span>
-      <span class="p-meta" id="tvViewers"></span>
+      <span class="ph-meta" id="tvViewers">YOUTUBE LIVE STREAMS</span>
     </div>
-    <div class="live-tv-wrap">
-      <!-- Channel selector -->
-      <div class="tv-channel-bar" id="tvChannelBar">
-        <button class="tv-channel-btn active" onclick="liveTv.setChannel('bloomberg')"    data-ch="bloomberg">BLOOMBERG</button>
-        <button class="tv-channel-btn" onclick="liveTv.setChannel('skynews')"    data-ch="skynews">SKY NEWS</button>
-        <button class="tv-channel-btn" onclick="liveTv.setChannel('euronews')"   data-ch="euronews">EURONEWS</button>
-        <button class="tv-channel-btn" onclick="liveTv.setChannel('dw')"         data-ch="dw">DW</button>
-        <button class="tv-channel-btn" onclick="liveTv.setChannel('cnbc')"       data-ch="cnbc">CNBC</button>
-        <button class="tv-channel-btn" onclick="liveTv.setChannel('cnn')"        data-ch="cnn">CNN</button>
-        <button class="tv-channel-btn" onclick="liveTv.setChannel('france24')"   data-ch="france24">FRANCE 24</button>
-        <button class="tv-channel-btn" onclick="liveTv.setChannel('alarabiya')"  data-ch="alarabiya">AL ARABIYA</button>
-        <button class="tv-channel-btn" onclick="liveTv.setChannel('aljazeera')"  data-ch="aljazeera">AL JAZEERA</button>
+    <div class="tv-wrap">
+      <div class="tv-channels" id="liveChannelBar">
+        <button class="tv-btn live" onclick="liveTv.setChannel('bloomberg')" data-ch="bloomberg">BLOOMBERG</button>
+        <button class="tv-btn" onclick="liveTv.setChannel('skynews')"   data-ch="skynews">SKY NEWS</button>
+        <button class="tv-btn" onclick="liveTv.setChannel('euronews')"  data-ch="euronews">EURONEWS</button>
+        <button class="tv-btn" onclick="liveTv.setChannel('dw')"        data-ch="dw">DW NEWS</button>
+        <button class="tv-btn" onclick="liveTv.setChannel('cnbc')"      data-ch="cnbc">CNBC</button>
+        <button class="tv-btn" onclick="liveTv.setChannel('cnn')"       data-ch="cnn">CNN</button>
+        <button class="tv-btn" onclick="liveTv.setChannel('france24')"  data-ch="france24">FRANCE 24</button>
+        <button class="tv-btn" onclick="liveTv.setChannel('alarabiya')" data-ch="alarabiya">AL ARABIYA</button>
+        <button class="tv-btn" onclick="liveTv.setChannel('aljazeera')" data-ch="aljazeera">AL JAZEERA</button>
       </div>
 
-      <!-- Video embed area -->
-      <div class="tv-embed-wrap" id="tvEmbed">
-        <div class="tv-placeholder" id="tvPlaceholder">
+      <div class="tv-embed-zone" id="liveEmbedZone">
+        <div class="tv-idle" id="tvIdle">
           <i class="bi bi-play-circle"></i>
-          <div>Click a channel above to start watching</div>
-          <div style="font-size:.62rem;color:var(--text3)">Live streams via YouTube · Requires internet connection</div>
+          <div>SELECT A CHANNEL TO START STREAMING</div>
+          <div style="font-size:.6rem;color:var(--text-muted)">Live broadcasts via YouTube — requires internet connection</div>
         </div>
       </div>
 
-      <!-- Controls bar -->
       <div class="tv-controls">
-        <div class="tv-live-badge">
-          <span style="width:6px;height:6px;border-radius:50%;background:var(--red);animation:livePulse 1.5s ease-in-out infinite"></span>
+        <div class="tv-live-dot">
+          <span style="width:6px;height:6px;border-radius:50%;background:var(--red);animation:pulse 1.5s ease-in-out infinite;display:inline-block"></span>
           LIVE
         </div>
-        <div class="tv-channel-name" id="tvChannelName">SELECT A CHANNEL</div>
-        <button class="btn-terminal" onclick="liveTv.stop()" style="padding:3px 10px;font-size:.6rem">■ STOP</button>
-        <button class="btn-terminal" onclick="liveTv.toggleMute()" id="tvMuteBtn" style="padding:3px 10px;font-size:.6rem">🔊 AUDIO</button>
-        <button class="btn-terminal" onclick="liveTv.fullscreen()" style="padding:3px 10px;font-size:.6rem">⛶ FULLSCREEN</button>
+        <div class="tv-ch-name" id="liveChannelName">NO CHANNEL SELECTED</div>
+        <button class="btn" onclick="liveTv.stop()" style="padding:3px 10px;font-size:.6rem">■ STOP</button>
+        <button class="btn" onclick="liveTv.toggleMute()" id="liveMuteBtn" style="padding:3px 10px;font-size:.6rem">🔇 UNMUTE</button>
+        <button class="btn" onclick="liveTv.fullscreen()" style="padding:3px 10px;font-size:.6rem">⛶ FULLSCREEN</button>
       </div>
     </div>
   </div>
 
-</div><!-- terminal-grid -->
+</div><!-- terminal-grid --></div><!-- terminal-grid -->
 
 <!-- FOOTER -->
 <footer>
@@ -474,7 +372,7 @@
       </div>
       <div class="col-md-3 text-md-end mt-3 mt-md-0"><p>CoinGecko · Yahoo Finance · NewsAPI · Finnhub</p></div>
     </div>
-    <hr style="border-color:var(--border);margin:16px 0">
+    <hr style="border-color:var(--border-dim);margin:16px 0">
     <p class="text-center">© 2026 MARKETPULSE — UNIVERSITY PROJECT — ALL DATA FOR EDUCATIONAL USE</p>
   </div>
 </footer>
@@ -482,6 +380,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.7/dist/hls.min.js"></script>
 <script src="assets/js/app.js"></script>
 <script>
 class HomePage {
@@ -492,7 +391,8 @@ class HomePage {
   }
 
   async init() {
-    await Promise.all([this.loadWatchlist(), this.loadNews(), this.loadMood(), this.loadFG(), this.loadCalendar()]);
+    await Promise.all([this.loadWatchlist(), this.loadNews(), this.loadFG(), this.loadCalendar()]);
+    this.loadAnalysis();
     this.loadCarousel();
   }
 
@@ -510,7 +410,7 @@ class HomePage {
     } catch(e) {
       ['cryptoMiniBody','stocksMiniBody','commodMiniBody'].forEach(id => {
         const el = document.getElementById(id);
-        if (el) el.innerHTML = `<tr><td colspan="4" style="padding:16px;text-align:center;color:var(--text3);font-family:var(--font-mono);font-size:.68rem">⚠ START BACKEND: uvicorn main:app --port 8000</td></tr>`;
+        if (el) el.innerHTML = `<tr><td colspan="4" style="padding:16px;text-align:center;color:var(--text-muted);font-family:var(--font-mono);font-size:.68rem">⚠ START BACKEND: uvicorn main:app --port 8000</td></tr>`;
       });
     }
   }
@@ -523,10 +423,10 @@ class HomePage {
     const items = [btc,eth,nvda,gold].filter(Boolean);
     document.getElementById('heroPrices').innerHTML = items.map(a => {
       const up = a.change_24h >= 0;
-      return `<div class="lpb-item" onclick="window.location.href='markets.html'">
-        <div class="lpb-sym">${a.symbol}</div>
-        <div class="lpb-price" style="color:${up?'var(--green)':'var(--red)'}">${Fmt.price(a.price)}</div>
-        <div class="lpb-chg" style="color:${up?'var(--green)':'var(--red)'}">${up?'▲':'▼'} ${Math.abs(a.change_24h).toFixed(2)}%</div>
+      return `<div class="lp-item" onclick="window.location.href='markets.html'">
+        <div class="lp-sym">${a.symbol}</div>
+        <div class="lp-price" style="color:${up?'var(--green)':'var(--red)'}">${Fmt.price(a.price)}</div>
+        <div class="lp-chg" style="color:${up?'var(--green)':'var(--red)'}">${up?'▲':'▼'} ${Math.abs(a.change_24h).toFixed(2)}%</div>
       </div>`;
     }).join('');
   }
@@ -534,20 +434,77 @@ class HomePage {
   renderMiniTable(tbodyId, assets, cols) {
     const tbody = document.getElementById(tbodyId);
     if (!tbody) return;
-    tbody.innerHTML = assets.map(a => {
-      const cells = cols.map(col => {
-        if (col==='price')      return `<td style="text-align:right;font-family:var(--font-mono);font-weight:600;color:var(--text)">${Fmt.price(a.price)}</td>`;
-        if (col==='change_24h') return `<td style="text-align:right">${Fmt.pct(a.change_24h)}</td>`;
-        if (col==='change_7d')  return `<td style="text-align:right">${Fmt.pct(a.change_7d)}</td>`;
-        if (col==='volume')     return `<td style="text-align:right;font-family:var(--font-mono);font-size:.7rem;color:var(--text2)">${Fmt.large(a.volume)}</td>`;
-        if (col==='symbol')     return `<td><div style="display:flex;align-items:center;gap:6px">
-          ${a.image?`<img src="${a.image}" style="width:18px;height:18px;border-radius:50%" onerror="this.style.display='none'">`:``}
-          <div><div style="color:var(--amber);font-family:var(--font-mono);font-size:.72rem;font-weight:700">${a.symbol}</div>
-          <div style="color:var(--text3);font-size:.6rem">${a.name.length>10?a.name.substring(0,10)+'..':a.name}</div></div></div></td>`;
-        return `<td style="color:var(--text)">${a[col]||'—'}</td>`;
-      }).join('');
-      return `<tr class="row" onclick="window.location.href='markets.html'" style="transition:background .15s">${cells}</tr>`;
+    if (!assets.length) {
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text-muted);font-family:var(--font-mono);font-size:.68rem">NO DATA — START BACKEND</td></tr>`;
+      return;
+    }
+    const tableId = tbodyId + '_spark';
+    const isStock = cols.includes('volume');
+
+    tbody.innerHTML = assets.map((a, i) => {
+      const up24 = (a.change_24h || 0) >= 0;
+      const up7d  = (a.change_7d  || 0) >= 0;
+      const sparkId = `mtsp_${tbodyId}_${i}`;
+
+      const iconHtml = a.image
+        ? `<img src="${a.image}" style="width:28px;height:28px;border-radius:50%;flex-shrink:0;border:1px solid var(--border-mid)" onerror="this.style.display='none'">`
+        : `<div style="width:28px;height:28px;border-radius:50%;background:var(--bg-overlay);border:1px solid var(--border-mid);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:.5rem;color:var(--amber);flex-shrink:0">${a.symbol.substring(0,3)}</div>`;
+
+      const volOrChg7 = isStock
+        ? `<td style="text-align:right;padding:8px 10px;font-family:var(--font-mono);font-size:.7rem;color:var(--text-secondary);white-space:nowrap;vertical-align:middle">${Fmt.large(a.volume)}</td>`
+        : `<td style="text-align:right;padding:8px 10px;vertical-align:middle;white-space:nowrap">
+            <span style="font-family:var(--font-mono);font-size:.7rem;font-weight:600;
+              color:${up7d?'var(--green)':'var(--red)'};
+              background:${up7d?'rgba(0,200,83,.1)':'rgba(246,36,89,.1)'};
+              padding:2px 7px;border-radius:2px;display:inline-block">
+              ${up7d?'▲':'▼'} ${Math.abs(a.change_7d||0).toFixed(2)}%
+            </span>
+           </td>`;
+
+      return `<tr style="border-bottom:1px solid var(--border-dim);cursor:pointer;transition:background .15s"
+                  onmouseover="this.style.background='var(--bg-raised)'"
+                  onmouseout="this.style.background=''"
+                  onclick="window.location.href='markets.html'">
+        <!-- ASSET: icon + full name + symbol -->
+        <td style="padding:8px 10px;vertical-align:middle">
+          <div style="display:flex;align-items:center;gap:9px">
+            ${iconHtml}
+            <div style="min-width:0">
+              <div style="font-family:var(--font-sans);font-size:.8rem;font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:110px">${a.name}</div>
+              <div style="font-family:var(--font-mono);font-size:.6rem;color:var(--text-muted);margin-top:1px">${a.symbol}</div>
+            </div>
+          </div>
+        </td>
+        <!-- PRICE -->
+        <td style="text-align:right;padding:8px 10px;font-family:var(--font-mono);font-size:.82rem;font-weight:600;color:var(--text-primary);white-space:nowrap;vertical-align:middle">
+          ${Fmt.price(a.price)}
+        </td>
+        <!-- 24H -->
+        <td style="text-align:right;padding:8px 10px;vertical-align:middle;white-space:nowrap">
+          <span style="font-family:var(--font-mono);font-size:.7rem;font-weight:600;
+            color:${up24?'var(--green)':'var(--red)'};
+            background:${up24?'rgba(0,200,83,.1)':'rgba(246,36,89,.1)'};
+            padding:2px 7px;border-radius:2px;display:inline-block">
+            ${up24?'▲':'▼'} ${Math.abs(a.change_24h||0).toFixed(2)}%
+          </span>
+        </td>
+        <!-- 7D or VOL -->
+        ${volOrChg7}
+        <!-- SPARKLINE -->
+        <td style="padding:8px 10px;text-align:right;vertical-align:middle">
+          <canvas id="${sparkId}" width="72" height="26" style="display:block;margin-left:auto"></canvas>
+        </td>
+      </tr>`;
     }).join('');
+
+    // Draw sparklines after DOM update
+    requestAnimationFrame(() => {
+      assets.forEach((a, i) => {
+        if (a.sparkline?.length) {
+          Sparkline.draw(`mtsp_${tbodyId}_${i}`, a.sparkline, (a.change_7d||0) >= 0);
+        }
+      });
+    });
   }
 
   renderHeatmap() {
@@ -567,7 +524,7 @@ class HomePage {
   }
 
   setHeatmapTab(tab, el) {
-    document.querySelectorAll('.t-panel-head .chip').forEach(c=>c.classList.remove('active'));
+    document.querySelectorAll('.panel-head .chip').forEach(c=>c.classList.remove('active'));
     el.classList.add('active');
     this.hmTab = tab;
     this.renderHeatmap();
@@ -580,14 +537,15 @@ class HomePage {
       ...(this.data.commodities||[]),
     ];
     const html = all.map(a => {
-      const up = a.change_24h >= 0;
+      const up = (a.change_24h || 0) >= 0;
       return `<div class="ticker-item">
-        <span class="ticker-sym">${a.symbol}</span>
-        <span class="ticker-price">${Fmt.price(a.price)}</span>
-        <span class="ticker-chg ${up?'change-up':'change-down'}">${up?'▲':'▼'}${Math.abs(a.change_24h).toFixed(2)}%</span>
+        <span class="ti-sym">${a.symbol}</span>
+        <span class="ti-price">${Fmt.price(a.price)}</span>
+        <span class="ti-chg ${up?'up':'down'}">${up?'▲':'▼'}${Math.abs(a.change_24h||0).toFixed(2)}%</span>
       </div>`;
     }).join('');
     const t = document.getElementById('tickerInner');
+    // Duplicate for seamless loop
     if (t) t.innerHTML = html + html;
   }
 
@@ -610,13 +568,13 @@ class HomePage {
 
     inner.innerHTML = slides.map((s,i) => `
       <div class="carousel-item ${i===0?'active':''}" style="height:100%">
-        <div class="carousel-item-inner" onclick="window.location.href='${s.link}'" style="cursor:pointer;height:100%">
-          <img class="c-bg" src="${s.bg}" alt="" loading="lazy">
-          <div class="c-gradient"></div>
-          <div class="c-content">
-            <span class="c-cat" style="background:${s.catColor};color:#000;font-weight:700">${s.cat}</span>
-            <div class="c-title">${s.title}</div>
-            <div class="c-desc">${s.desc}</div>
+        <div class="carousel-slide" onclick="window.location.href='${s.link}'" style="cursor:pointer;height:100%">
+          <img class="cs-bg" src="${s.bg}" alt="" loading="lazy">
+          <div class="cs-gradient"></div>
+          <div class="cs-content">
+            <span class="cs-cat" style="background:${s.catColor};color:#000;font-weight:700">${s.cat}</span>
+            <div class="cs-title">${s.title}</div>
+            <div class="cs-desc">${s.desc}</div>
             <span style="font-family:var(--font-mono);font-size:.62rem;color:var(--amber);letter-spacing:.08em">READ MORE →</span>
           </div>
         </div>
@@ -637,35 +595,8 @@ class HomePage {
           <div class="news-mini-title">${a.title}</div>
         </div>`).join('');
     } catch(e) {
-      document.getElementById('newsMini').innerHTML = '<div style="color:var(--text3);font-family:var(--font-mono);font-size:.7rem;padding:16px">NEWS UNAVAILABLE — ADD NEWSAPI KEY</div>';
+      document.getElementById('newsMini').innerHTML = '<div style="color:var(--text-muted);font-family:var(--font-mono);font-size:.7rem;padding:16px">NEWS UNAVAILABLE — ADD NEWSAPI KEY</div>';
     }
-  }
-
-  async loadMood() {
-    try {
-      const data = await window.apiClient.get('/api/mood', 2*60*60*1000);
-      const sent = document.getElementById('moodSentiment');
-      const ana  = document.getElementById('moodAnalysis');
-      const time = document.getElementById('moodTime');
-      if (sent) { sent.className = `mood-sentiment ${(data.sentiment||'mixed').toLowerCase()}`; sent.textContent = data.sentiment?.toUpperCase()||'MIXED'; }
-      if (ana)  { ana.className = 'mood-analysis'; ana.textContent = data.analysis||'—'; }
-      if (time && data.generated_at) time.textContent = `UPDATED: ${new Date(data.generated_at).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:false})}`;
-    } catch(e) {
-      const sent = document.getElementById('moodSentiment');
-      const ana  = document.getElementById('moodAnalysis');
-      if (sent) { sent.className = 'mood-sentiment mixed'; sent.textContent = 'N/A'; }
-      if (ana)  { ana.className = 'mood-analysis'; ana.textContent = 'Add ANTHROPIC_KEY to enable AI sentiment analysis.'; }
-    }
-  }
-
-  async refreshMood() {
-    window.apiClient._cache.delete('/api/mood');
-    const sent = document.getElementById('moodSentiment');
-    const ana  = document.getElementById('moodAnalysis');
-    if (sent) { sent.className='mood-sentiment mixed skeleton'; sent.textContent='\u00a0'; }
-    if (ana)  { ana.className='mood-analysis skeleton'; ana.textContent='\u00a0'; }
-    await this.loadMood();
-    Toast.show('SENTIMENT REFRESHED', 'success');
   }
 
   async loadFG() {
@@ -706,108 +637,139 @@ class HomePage {
       }).join('');
     } catch(e) {}
   }
-}
 
-// Status bar + world clocks
-async function initStatusBar() {
-  try {
-    const data = await window.apiClient.get('/api/watchlist', 5*60*1000);
-    const set = (id, asset) => {
-      const el = document.getElementById(id);
-      if (!el || !asset) return;
-      const up = asset.change_24h >= 0;
-      el.className = `status-bar-item ${up?'positive':'negative'}`;
-      el.innerHTML = `<span class="label">${el.querySelector('.label')?.textContent||''}</span><span class="value">${Fmt.price(asset.price)} <span style="font-size:.58rem">${up?'▲':'▼'}${Math.abs(asset.change_24h).toFixed(2)}%</span></span>`;
-    };
-    set('sb-btc',  data.crypto?.find(c=>c.symbol==='BTC'));
-    set('sb-eth',  data.crypto?.find(c=>c.symbol==='ETH'));
-    set('sb-nvda', data.stocks?.find(s=>s.symbol==='NVDA'));
-    set('sb-gold', data.commodities?.find(c=>c.name==='Gold'));
-    set('sb-oil',  data.commodities?.find(c=>c.name==='Crude Oil'));
-  } catch(e) {}
-
-  function clocks() {
-    const fmt = tz => new Date().toLocaleTimeString('en-US',{timeZone:tz,hour:'2-digit',minute:'2-digit',hour12:false});
-    const s=(id,v)=>{ const e=document.getElementById(id); if(e) e.textContent=v; };
-    s('sb-time-ny', fmt('America/New_York'));
-    s('sb-time-ln', fmt('Europe/London'));
-    s('sb-time-tk', fmt('Asia/Tokyo'));
-    s('sb-time-bt', fmt('Asia/Beirut'));
+  async loadAnalysis() {
+    const el = document.getElementById('termAnalysisPanel');
+    try {
+      const data = await window.apiClient.get('/api/analysis', 30*60*1000);
+      this.renderAnalysis(data);
+    } catch(e) {
+      if (el) el.innerHTML = '<div style="font-family:var(--font-mono);font-size:.65rem;color:var(--text-muted);padding:12px;text-align:center">BACKEND OFFLINE<br><span style="font-size:.58rem">uvicorn main:app --port 8000</span></div>';
+    }
   }
-  clocks(); setInterval(clocks, 1000);
+
+  async refreshAnalysis() {
+    const el = document.getElementById('termAnalysisPanel');
+    if (el) el.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text-muted);font-family:var(--font-mono);font-size:.68rem"><div class="spinner-border spinner-border-sm" style="color:var(--amber);width:.9rem;height:.9rem;border-width:2px"></div><div style="margin-top:6px">REFRESHING...</div></div>';
+    window.apiClient.invalidate('/api/analysis');
+    await this.loadAnalysis();
+    Toast.show('ANALYSIS UPDATED', 'success');
+  }
+
+  renderAnalysis(data) {
+    const el = document.getElementById('termAnalysisPanel');
+    if (!el || !data) return;
+    const colors = {
+      'BULLISH':'var(--green)', 'MILDLY BULLISH':'#69f0ae',
+      'NEUTRAL':'var(--amber)', 'MILDLY BEARISH':'#ff8f00', 'BEARISH':'var(--red)'
+    };
+    const overall = data.overall || 'N/A';
+    const color   = colors[overall] || 'var(--amber)';
+
+    const insights = (data.insights||[]).slice(0,3).map(i =>
+      `<div style="display:flex;gap:6px;padding:5px 0;border-bottom:1px solid var(--border-dim);font-size:.7rem;color:var(--text-secondary);line-height:1.4">
+        <span style="color:var(--amber);flex-shrink:0">▶</span><span>${i}</span>
+      </div>`).join('');
+
+    const aiBlock = data.ai_summary ? `
+      <div style="background:var(--amber-dim);border-left:2px solid var(--amber);border-radius:2px;padding:7px 9px;margin:8px 0;font-size:.7rem;color:var(--text-secondary);line-height:1.5">
+        <div style="font-family:var(--font-mono);font-size:.55rem;color:var(--amber);letter-spacing:.1em;margin-bottom:4px">DEEPSEEK AI</div>
+        ${data.ai_summary}
+      </div>` : '';
+
+    el.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="font-family:var(--font-mono);font-size:1.1rem;font-weight:700;color:${color}">${overall}</div>
+        <div style="display:flex;gap:8px">
+          <div style="text-align:center;background:var(--bg-raised);border-radius:3px;padding:4px 8px">
+            <div style="font-family:var(--font-mono);font-size:.55rem;color:var(--text-muted)">GAINERS</div>
+            <div style="font-family:var(--font-mono);font-size:.82rem;font-weight:700;color:var(--green)">${data.gainers||0}</div>
+          </div>
+          <div style="text-align:center;background:var(--bg-raised);border-radius:3px;padding:4px 8px">
+            <div style="font-family:var(--font-mono);font-size:.55rem;color:var(--text-muted)">LOSERS</div>
+            <div style="font-family:var(--font-mono);font-size:.82rem;font-weight:700;color:var(--red)">${data.losers||0}</div>
+          </div>
+        </div>
+      </div>
+      ${aiBlock}
+      ${insights}
+      <div style="font-family:var(--font-mono);font-size:.56rem;color:var(--text-muted);margin-top:6px;text-align:right">
+        ${data.generated_at ? new Date(data.generated_at).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:false}) : ''}
+      </div>`;
+  }
+
 }
 
 document.addEventListener('DOMContentLoaded', () => {
   window.homePage = new HomePage();
-  initStatusBar();
+  // Global status bar (from app.js) handles prices + sessions + watchlist
+  if (window.initStatusBar) window.initStatusBar();
 });
 
 // ── LIVE TV CLASS ─────────────────────────────────────────
 class LiveTV {
   constructor() {
-    this.currentChannel = null;
-    this.muted = false;
-    this.channels = {
-      bloomberg:  { name:'BLOOMBERG TV',  id:'dp8PhrniqFc' },
-      skynews:    { name:'SKY NEWS',      id:'qEJkLkF33-E' },
-      euronews:   { name:'EURONEWS',      id:'CHqCpxvKcS4' },
-      dw:         { name:'DW ENGLISH',    id:'mGHHkltgwIw' },
-      cnbc:       { name:'CNBC LIVE',     id:'y-HKI0wFaDs' },
-      cnn:        { name:'CNN LIVE',      id:'pHBHVpuAHUo' },
-      france24:   { name:'FRANCE 24',     id:'l7ExV4cx2Mg' },
-      alarabiya:  { name:'AL ARABIYA',    id:'S1SaO1BPPCA' },
-      aljazeera:  { name:'AL JAZEERA',    id:'B6buJNDO3bg' },
-    };
+    this.active = null; this.hls = null; this.muted = false;
+    this.channels = [
+      {id:'bloomberg',name:'Bloomberg TV',flag:'🇺🇸'},
+      {id:'skynews',name:'Sky News',flag:'🇬🇧'},
+      {id:'euronews',name:'Euronews EN',flag:'🇪🇺'},
+      {id:'dw',name:'DW News',flag:'🇩🇪'},
+      {id:'cnbc',name:'CNBC',flag:'🇺🇸'},
+      {id:'france24',name:'France 24',flag:'🇫🇷'},
+      {id:'aljazeera',name:'Al Jazeera EN',flag:'🇶🇦'},
+      {id:'alarabiya',name:'Al Arabiya',flag:'🇦🇪'},
+    ];
+    this._buildBar();
   }
-  setChannel(ch) {
-    const channel = this.channels[ch];
-    if (!channel) return;
-    this.currentChannel = ch;
-    document.querySelectorAll('.tv-channel-btn').forEach(b=>b.classList.toggle('active',b.dataset.ch===ch));
-    const nameEl=document.getElementById('tvChannelName');
-    if(nameEl) nameEl.textContent=channel.name;
-    const params=`autoplay=1&mute=${this.muted?1:0}&controls=1&modestbranding=1&rel=0`;
-    const wrap=document.getElementById('tvEmbed');
-    if(!wrap) return;
-    const placeholder=document.getElementById('tvPlaceholder');
-    if(placeholder) placeholder.style.display='none';
-    // Remove old iframe if exists
-    const old=wrap.querySelector('iframe');
-    if(old) old.remove();
-    const iframe=document.createElement('iframe');
-    iframe.src=`https://www.youtube.com/embed/${channel.id}?${params}`;
-    iframe.allow='autoplay; encrypted-media; fullscreen';
-    iframe.allowFullscreen=true;
-    iframe.style.cssText='position:absolute;inset:0;width:100%;height:100%;border:none';
-    wrap.appendChild(iframe);
-    Toast.show(`${channel.name} — LIVE`,'success',2000);
+  _buildBar() {
+    const bar=document.getElementById('liveChannelBar');
+    if(!bar)return;
+    bar.innerHTML=this.channels.map(c=>`<button class="tv-btn" data-ch="${c.id}" onclick="window.liveTv.setChannel('${c.id}')">${c.flag} ${c.name}</button>`).join('');
   }
-  stop() {
-    const wrap=document.getElementById('tvEmbed');
-    const iframe=wrap?.querySelector('iframe');
-    if(iframe) iframe.remove();
-    const ph=document.getElementById('tvPlaceholder');
-    if(ph) ph.style.display='flex';
-    document.querySelectorAll('.tv-channel-btn').forEach(b=>b.classList.remove('active'));
-    const nameEl=document.getElementById('tvChannelName');
-    if(nameEl) nameEl.textContent='SELECT A CHANNEL';
-    this.currentChannel=null;
+  setChannel(id) {
+    const ch=this.channels.find(c=>c.id===id); if(!ch)return;
+    if(this.hls){this.hls.destroy();this.hls=null;}
+    this.active=id;
+    document.querySelectorAll('.tv-btn').forEach(b=>b.classList.toggle('live',b.dataset.ch===id));
+    const nameEl=document.getElementById('liveChannelName');
+    if(nameEl)nameEl.textContent=`${ch.flag} ${ch.name}`;
+    const zone=document.getElementById('liveEmbedZone');
+    if(!zone)return;
+    zone.innerHTML=`<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#000;gap:12px;font-family:var(--font-mono);font-size:.7rem;color:rgba(255,255,255,.6);text-align:center"><div class="spinner-border" style="color:var(--red);width:1.8rem;height:1.8rem;border-width:2px"></div><div>LOADING ${ch.name.toUpperCase()}...</div></div>`;
+    const video=document.createElement('video');
+    video.controls=true;video.autoplay=true;video.muted=this.muted;video.playsInline=true;
+    video.style.cssText='position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000;display:none';
+    zone.appendChild(video);
+    const url=`http://localhost:8000/api/stream/${id}/playlist.m3u8`;
+    if(window.Hls&&Hls.isSupported()){
+      const hls=new Hls({maxBufferLength:20,liveSyncDurationCount:3,lowLatencyMode:true});
+      this.hls=hls; hls.loadSource(url); hls.attachMedia(video);
+      hls.on(Hls.Events.MANIFEST_PARSED,()=>{zone.querySelector('div')?.remove();video.style.display='block';video.play().catch(()=>{});Toast.show(`▶ ${ch.name} — LIVE`,'success',2000);});
+      hls.on(Hls.Events.ERROR,(e,d)=>{if(d.fatal)zone.innerHTML=`<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--bg-raised);gap:10px;font-family:var(--font-mono);font-size:.68rem;color:var(--text-muted);text-align:center;padding:20px"><i class="bi bi-exclamation-triangle" style="font-size:1.8rem;color:var(--amber)"></i><div>BACKEND REQUIRED</div><div style="font-size:.58rem">uvicorn main:app --port 8000</div><button class="btn" onclick="window.liveTv.setChannel('${id}')" style="font-size:.6rem;margin-top:4px">↺ RETRY</button></div>`;});
+    }
   }
-  toggleMute() {
+  stop(){
+    if(this.hls){this.hls.destroy();this.hls=null;}
+    this.active=null;
+    document.querySelectorAll('.tv-btn').forEach(b=>b.classList.remove('live'));
+    const n=document.getElementById('liveChannelName');if(n)n.textContent='NO CHANNEL SELECTED';
+    const z=document.getElementById('liveEmbedZone');
+    if(z)z.innerHTML=`<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--bg-raised);gap:10px;font-family:var(--font-mono);font-size:.7rem;color:var(--text-muted);text-align:center"><i class="bi bi-broadcast" style="font-size:2rem;color:var(--red);opacity:.5"></i><div>SELECT A CHANNEL ABOVE</div></div>`;
+  }
+  toggleMute(){
     this.muted=!this.muted;
-    const btn=document.getElementById('tvMuteBtn');
-    if(btn) btn.textContent=this.muted?'🔇 MUTED':'🔊 AUDIO';
-    if(this.currentChannel) this.setChannel(this.currentChannel);
-    Toast.show(this.muted?'MUTED':'AUDIO ON','info',1500);
+    const v=document.querySelector('#liveEmbedZone video');if(v)v.muted=this.muted;
+    const b=document.getElementById('liveMuteBtn');if(b)b.textContent=this.muted?'🔇 UNMUTE':'🔊 MUTE';
   }
-  fullscreen() {
-    const iframe=document.querySelector('#tvEmbed iframe');
-    if(!iframe){Toast.show('START A CHANNEL FIRST','warning');return;}
-    if(iframe.requestFullscreen) iframe.requestFullscreen();
-    else if(iframe.webkitRequestFullscreen) iframe.webkitRequestFullscreen();
+  fullscreen(){
+    const v=document.querySelector('#liveEmbedZone video');
+    if(!v){Toast.show('SELECT A CHANNEL FIRST','warning');return;}
+    (v.requestFullscreen||v.webkitRequestFullscreen||function(){}).call(v);
   }
 }
 window.liveTv = new LiveTV();
 </script>
+<script src="assets/js/features.js"></script>
 </body>
 </html>

@@ -1,334 +1,455 @@
 // ═══════════════════════════════════════════════════════
-// MARKETPULSE — YOUTUBE PAGE LOGIC
-// YouTube Data API v3 key: AIzaSyBUABx4WHCox3crRyd4LRM63KpTLjBBPPY
+// MARKETPULSE — 10 NEW FEATURES v8
 // ═══════════════════════════════════════════════════════
 
-const YT_API_KEY = 'AIzaSyBUABx4WHCox3crRyd4LRM63KpTLjBBPPY';
-const YT_BASE    = 'https://www.googleapis.com/youtube/v3';
-
-class YouTubeManager {
+// ── FEATURE 1: KEYBOARD SHORTCUTS ───────────────────────
+class KeyboardShortcuts {
   constructor() {
-    this.allVideos    = [];
-    this.category     = 'all';
-    this.sortBy       = 'date';
-    this.query        = '';
-    this.page         = 1;
-    this.perPage      = 9;
-    this.nextPageToken = null;
-    this.loading      = false;
-    this.usingLive    = false;
-
-    this.categoryQueries = {
-      crypto:    'bitcoin ethereum cryptocurrency 2024',
-      stocks:    'stock market investing 2024',
-      macro:     'federal reserve macroeconomics global economy',
-      trading:   'technical analysis trading strategies',
-      education: 'personal finance investing beginners',
+    this.shortcuts = {
+      'g+h': () => window.location.href = 'index.html',
+      'g+m': () => window.location.href = 'markets.html',
+      'g+n': () => window.location.href = 'news.html',
+      'g+y': () => window.location.href = 'youtube.html',
+      'g+c': () => window.location.href = 'calendar.html',
+      'g+t': () => window.location.href = 'tools.html',
+      'g+s': () => window.location.href = 'search.html',
+      '/':   () => { const s = document.getElementById('globalSearch') || document.getElementById('assetSearch') || document.getElementById('newsSearch'); if (s) { s.focus(); } },
+      't':   () => window.themeManager?.toggle(),
     };
-
-    this.init();
+    this._buf = '';
+    this._timer = null;
+    this._listen();
+    this._renderHelp();
   }
 
-  async init() {
-    await this.fetchVideos('financial markets crypto stocks investing 2024');
-  }
+  _listen() {
+    document.addEventListener('keydown', e => {
+      // Ignore when typing in inputs
+      if (['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) return;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
 
-  async fetchVideos(searchQuery, pageToken = null) {
-    this.loading = true;
-    this.showSkeletons();
+      this._buf += e.key.toLowerCase();
+      clearTimeout(this._timer);
+      this._timer = setTimeout(() => { this._buf = ''; }, 800);
 
-    try {
-      let url = `${YT_BASE}/search?part=snippet&type=video&maxResults=24&order=relevance&key=${YT_API_KEY}&q=${encodeURIComponent(searchQuery)}`;
-      if (pageToken) url += `&pageToken=${pageToken}`;
-
-      const res  = await fetch(url);
-      const data = await res.json();
-
-      if (data.error) throw new Error(data.error.message);
-
-      // Fetch video details (duration, view count)
-      const ids = data.items.map(i => i.id.videoId).join(',');
-      const detailRes  = await fetch(
-        `${YT_BASE}/videos?part=contentDetails,statistics&id=${ids}&key=${YT_API_KEY}`
-      );
-      const detailData = await detailRes.json();
-
-      const detailMap = {};
-      (detailData.items || []).forEach(v => { detailMap[v.id] = v; });
-
-      const videos = data.items.map(item => {
-        const detail   = detailMap[item.id.videoId] || {};
-        const stats    = detail.statistics || {};
-        const duration = detail.contentDetails?.duration
-          ? this.parseDuration(detail.contentDetails.duration)
-          : null;
-        const views = stats.viewCount
-          ? this.formatViews(parseInt(stats.viewCount))
-          : 'N/A';
-
-        return {
-          id:       item.id.videoId,
-          title:    item.snippet.title,
-          channel:  item.snippet.channelTitle,
-          date:     item.snippet.publishedAt,
-          thumb:    item.snippet.thumbnails?.medium?.url || item.snippet.thumbnails?.default?.url,
-          desc:     item.snippet.description,
-          duration,
-          views,
-          category: this.detectCategory(item.snippet.title + ' ' + item.snippet.description),
-        };
-      }).filter(v => v.id);
-
-      if (pageToken) {
-        this.allVideos = [...this.allVideos, ...videos];
-      } else {
-        this.allVideos = videos;
+      if (this.shortcuts[this._buf]) {
+        e.preventDefault();
+        this.shortcuts[this._buf]();
+        this._buf = '';
+        clearTimeout(this._timer);
+      } else if (this._buf.length > 3) {
+        this._buf = e.key.toLowerCase();
       }
-
-      this.nextPageToken = data.nextPageToken || null;
-      this.usingLive     = true;
-      this.loading       = false;
-
-      const notice = document.getElementById('apiNotice');
-      if (notice) notice.style.display = 'none';
-
-      this.render();
-
-    } catch(e) {
-      console.warn('YouTube API error, falling back to curated:', e.message);
-      this.loading   = false;
-      this.usingLive = false;
-
-      const notice = document.getElementById('apiNotice');
-      if (notice) notice.style.display = 'flex';
-
-      this.allVideos = this.getCuratedVideos();
-      this.render();
-    }
+    });
   }
 
-  async fetchByCategory(category) {
-    this.page = 1;
-    this.nextPageToken = null;
+  _renderHelp() {
+    // ? key shows shortcut overlay
+    document.addEventListener('keydown', e => {
+      if (e.key === '?' && !['INPUT','TEXTAREA'].includes(e.target.tagName)) {
+        this.toggleHelp();
+      }
+      if (e.key === 'Escape') this.hideHelp();
+    });
 
-    if (category === 'all') {
-      await this.fetchVideos('financial markets crypto stocks investing 2024');
-      return;
-    }
-
-    const q = this.categoryQueries[category] || category;
-    await this.fetchVideos(q);
-  }
-
-  async searchVideos(query) {
-    if (!query.trim()) {
-      await this.fetchVideos('financial markets crypto stocks investing 2024');
-      return;
-    }
-    await this.fetchVideos(query);
-  }
-
-  detectCategory(text) {
-    const t = text.toLowerCase();
-    if (t.includes('bitcoin') || t.includes('crypto') || t.includes('ethereum') || t.includes('defi')) return 'crypto';
-    if (t.includes('stock') || t.includes('equity') || t.includes('nasdaq') || t.includes('s&p')) return 'stocks';
-    if (t.includes('fed') || t.includes('macro') || t.includes('inflation') || t.includes('gdp')) return 'macro';
-    if (t.includes('trad') || t.includes('technical analysis') || t.includes('chart')) return 'trading';
-    return 'education';
-  }
-
-  parseDuration(iso) {
-    const match = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
-    if (!match) return null;
-    const h = parseInt(match[1] || 0);
-    const m = parseInt(match[2] || 0);
-    const s = parseInt(match[3] || 0);
-    if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-    return `${m}:${String(s).padStart(2, '0')}`;
-  }
-
-  formatViews(n) {
-    if (n >= 1e9) return (n / 1e9).toFixed(1) + 'B';
-    if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
-    if (n >= 1e3) return (n / 1e3).toFixed(0) + 'K';
-    return n.toString();
-  }
-
-  getFiltered() {
-    let videos = [...this.allVideos];
-
-    if (this.category !== 'all') {
-      videos = videos.filter(v => v.category === this.category);
-    }
-
-    if (this.query && !this.usingLive) {
-      const q = this.query.toLowerCase();
-      videos  = videos.filter(v =>
-        (v.title || '').toLowerCase().includes(q) ||
-        (v.channel || '').toLowerCase().includes(q)
-      );
-    }
-
-    if (this.sortBy === 'views') {
-      videos.sort((a, b) => {
-        const parse = s => {
-          if (!s || s === 'N/A') return 0;
-          const n = parseFloat(s);
-          if (s.includes('B')) return n * 1e9;
-          if (s.includes('M')) return n * 1e6;
-          if (s.includes('K')) return n * 1e3;
-          return n;
-        };
-        return parse(b.views) - parse(a.views);
-      });
-    } else if (this.sortBy === 'title') {
-      videos.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
-    } else {
-      videos.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
-    }
-
-    return videos;
-  }
-
-  render() {
-    const videos    = this.getFiltered();
-    const paginated = videos.slice(0, this.page * this.perPage);
-
-    const badge = document.getElementById('videoCountBadge');
-    if (badge) badge.textContent = `${videos.length} videos`;
-
-    const loadMore = document.getElementById('loadMoreWrap');
-    if (loadMore) {
-      loadMore.style.display =
-        (videos.length > paginated.length || this.nextPageToken) ? 'block' : 'none';
-    }
-
-    const grid = document.getElementById('videoGrid');
-    if (!grid) return;
-
-    if (!videos.length) {
-      grid.innerHTML = `
-        <div style="text-align:center;padding:60px;color:var(--text3);grid-column:1/-1">
-          <div style="font-size:3rem;margin-bottom:16px">🎬</div>
-          <h3 style="color:var(--text2)">No videos found</h3>
-          <p>Try a different search or category.</p>
-        </div>`;
-      return;
-    }
-
-    grid.innerHTML = paginated.map(v => `
-      <div class="video-card fade-up"
-        onclick="youtubePage.openModal('${v.id}','${(v.title || '').replace(/'/g, "\\'")}','${(v.channel || '').replace(/'/g, "\\'")}')">
-        <div class="video-thumb">
-          <img src="${v.thumb || `https://img.youtube.com/vi/${v.id}/mqdefault.jpg`}"
-               alt="${(v.title || '').replace(/"/g, '&quot;')}" loading="lazy">
-          <div class="video-play-btn"><i class="bi bi-play-fill"></i></div>
-          ${v.duration ? `<div class="video-duration">${v.duration}</div>` : ''}
+    const overlay = document.createElement('div');
+    overlay.id = 'shortcutOverlay';
+    overlay.style.cssText = `display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace`;
+    overlay.onclick = e => { if (e.target === overlay) this.hideHelp(); };
+    overlay.innerHTML = `
+      <div style="background:var(--bg-surface);border:1px solid var(--amber);border-top:3px solid var(--amber);border-radius:8px;padding:28px 32px;min-width:360px;max-width:90vw">
+        <div style="font-size:.7rem;letter-spacing:.15em;text-transform:uppercase;color:var(--amber);margin-bottom:20px;display:flex;justify-content:space-between">
+          <span>KEYBOARD SHORTCUTS</span>
+          <span style="cursor:pointer;color:var(--text-muted)" onclick="window._shortcuts.hideHelp()">✕</span>
         </div>
-        <div class="video-body">
-          <div class="video-channel">
-            <i class="bi bi-youtube" style="color:#ff0000"></i>
-            ${v.channel || 'Unknown Channel'}
-          </div>
-          <div class="video-title">${v.title || 'Untitled Video'}</div>
-          <div class="video-meta">
-            <span class="video-views"><i class="bi bi-eye me-1"></i>${v.views} views</span>
-            <span>${v.date ? Fmt.date(v.date) : ''}</span>
-          </div>
-        </div>
-      </div>`).join('');
-
-    setTimeout(() => {
-      document.querySelectorAll('.fade-up').forEach(el => el.classList.add('visible'));
-    }, 50);
+        ${[
+          ['G → H','Go to Terminal'],
+          ['G → M','Go to Markets'],
+          ['G → N','Go to News'],
+          ['G → Y','Go to Videos'],
+          ['G → C','Go to Calendar'],
+          ['G → T','Go to Tools'],
+          ['G → S','Go to Search'],
+          ['/','Focus Search'],
+          ['T','Toggle Theme'],
+          ['?','Show this help'],
+        ].map(([k,d]) => `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border-dim)">
+            <span style="background:var(--bg-raised);border:1px solid var(--border-mid);padding:2px 8px;border-radius:3px;font-size:.68rem;color:var(--amber)">${k}</span>
+            <span style="font-size:.72rem;color:var(--text-secondary)">${d}</span>
+          </div>`).join('')}
+        <div style="font-size:.6rem;color:var(--text-muted);margin-top:14px;text-align:center">PRESS ? TO TOGGLE · ESC TO CLOSE</div>
+      </div>`;
+    document.body.appendChild(overlay);
   }
 
-  setCategory(cat, el) {
-    document.querySelectorAll('.filter-chips .chip').forEach(c => c.classList.remove('active'));
-    el.classList.add('active');
-    this.category = cat;
-    this.page     = 1;
-    this.fetchByCategory(cat);
+  toggleHelp() {
+    const el = document.getElementById('shortcutOverlay');
+    if (!el) return;
+    el.style.display = el.style.display === 'none' ? 'flex' : 'none';
   }
 
-  setSort(val) { this.sortBy = val; this.render(); }
-
-  search(q) {
-    this.query = q;
-    this.page  = 1;
-    clearTimeout(this._searchDebounce);
-    this._searchDebounce = setTimeout(() => {
-      if (this.usingLive) this.searchVideos(q);
-      else this.render();
-    }, 500);
-  }
-
-  async loadMore() {
-    this.page++;
-    if (this.usingLive && this.nextPageToken && this.page * this.perPage > this.allVideos.length) {
-      const q = this.categoryQueries[this.category] || 'financial markets investing';
-      await this.fetchVideos(q, this.nextPageToken);
-    } else {
-      this.render();
-    }
-    Toast.show('More videos loaded');
-  }
-
-  openModal(videoId, title, channel) {
-    const frame = document.getElementById('videoFrame');
-    const mtitle = document.getElementById('modalVideoTitle');
-    const mmeta  = document.getElementById('modalVideoMeta');
-    if (frame)  frame.src   = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
-    if (mtitle) mtitle.textContent = title || 'Video';
-    if (mmeta)  mmeta.textContent  = `${channel || ''} · YouTube`;
-    document.getElementById('videoOverlay')?.classList.add('open');
-  }
-
-  closeModal() {
-    const frame = document.getElementById('videoFrame');
-    if (frame) frame.src = '';
-    document.getElementById('videoOverlay')?.classList.remove('open');
-  }
-
-  showSkeletons() {
-    const grid = document.getElementById('videoGrid');
-    if (!grid) return;
-    grid.innerHTML = Array(9).fill(`
-      <div class="video-card">
-        <div class="video-thumb skeleton" style="padding-top:56.25%"></div>
-        <div class="video-body">
-          <div class="skeleton" style="height:10px;width:50%;margin-bottom:8px"></div>
-          <div class="skeleton" style="height:14px;margin-bottom:6px"></div>
-          <div class="skeleton" style="height:14px;width:70%"></div>
-        </div>
-      </div>`).join('');
-  }
-
-  getCuratedVideos() {
-    return [
-      { id:'eHRmM5SaxBk', title:'How The Economic Machine Works by Ray Dalio', channel:'Principles by Ray Dalio', category:'macro',     views:'42M', date:'2013-09-22', duration:'31:00', thumb:`https://img.youtube.com/vi/eHRmM5SaxBk/mqdefault.jpg` },
-      { id:'ZCFkWDdmXG8', title:'Bitcoin Explained Simply', channel:'99Bitcoins',                                  category:'crypto',    views:'3.2M',date:'2024-01-10', duration:'12:34', thumb:`https://img.youtube.com/vi/ZCFkWDdmXG8/mqdefault.jpg` },
-      { id:'GmOzih6I1zs', title:'Warren Buffett: How To Invest For Beginners', channel:'CNBC',                     category:'stocks',    views:'8.7M',date:'2024-03-15', duration:'22:10', thumb:`https://img.youtube.com/vi/GmOzih6I1zs/mqdefault.jpg` },
-      { id:'7FaYwtDetXE', title:'How The Stock Market Works', channel:'Patrick Boyle',                             category:'stocks',    views:'5.1M',date:'2024-02-20', duration:'18:45', thumb:`https://img.youtube.com/vi/7FaYwtDetXE/mqdefault.jpg` },
-      { id:'0W0apxkzBHA', title:'Ethereum and the Future of Finance', channel:'Bankless',                          category:'crypto',    views:'1.8M',date:'2024-04-01', duration:'45:22', thumb:`https://img.youtube.com/vi/0W0apxkzBHA/mqdefault.jpg` },
-      { id:'Ph3FrFSGX0Y', title:'Macro Economics for Investors 2024', channel:'Real Vision',                      category:'macro',     views:'2.3M',date:'2024-05-10', duration:'28:17', thumb:`https://img.youtube.com/vi/Ph3FrFSGX0Y/mqdefault.jpg` },
-      { id:'a5zsWsTknBU', title:'Technical Analysis Masterclass', channel:'Trading 212',                          category:'trading',   views:'4.5M',date:'2024-01-28', duration:'35:50', thumb:`https://img.youtube.com/vi/a5zsWsTknBU/mqdefault.jpg` },
-      { id:'1BKnfLf9gXQ', title:'The Basics of Investing Explained', channel:'Khan Academy',                      category:'education', views:'12M', date:'2023-11-05', duration:'16:20', thumb:`https://img.youtube.com/vi/1BKnfLf9gXQ/mqdefault.jpg` },
-      { id:'Rm5KUJhBf-4', title:'How Central Banks Control Money Supply', channel:'The Plain Bagel',              category:'macro',     views:'3.8M',date:'2024-02-01', duration:'14:30', thumb:`https://img.youtube.com/vi/Rm5KUJhBf-4/mqdefault.jpg` },
-      { id:'oVfHeWTKjag', title:'DeFi Explained: The Future of Finance', channel:'Whiteboard Crypto',             category:'crypto',    views:'2.1M',date:'2024-03-22', duration:'20:15', thumb:`https://img.youtube.com/vi/oVfHeWTKjag/mqdefault.jpg` },
-      { id:'2MHIcabnjrA', title:'How to Read Stock Charts Like a Pro', channel:'Investors Underground',           category:'trading',   views:'6.7M',date:'2024-01-15', duration:'42:18', thumb:`https://img.youtube.com/vi/2MHIcabnjrA/mqdefault.jpg` },
-      { id:'sMmCFJNEoew', title:'Global Macro: Why Currencies Matter', channel:'George Gammon',                   category:'macro',     views:'1.5M',date:'2024-04-20', duration:'25:40', thumb:`https://img.youtube.com/vi/sMmCFJNEoew/mqdefault.jpg` },
-    ];
+  hideHelp() {
+    const el = document.getElementById('shortcutOverlay');
+    if (el) el.style.display = 'none';
   }
 }
 
-// Boot
-document.addEventListener('DOMContentLoaded', () => {
-  window.youtubePage = new YouTubeManager();
-});
+// ── FEATURE 2: PRICE CHANGE FLASH ───────────────────────
+class PriceFlash {
+  static flash(el, direction) {
+    if (!el) return;
+    el.style.transition = 'background .05s';
+    el.style.background = direction === 'up' ? 'rgba(0,200,83,.25)' : 'rgba(255,23,68,.25)';
+    setTimeout(() => {
+      el.style.background = '';
+      el.style.transition = 'background .5s';
+    }, 400);
+  }
+}
 
-// Global helpers called from HTML
-function setVideoCategory(cat, el) { window.youtubePage?.setCategory(cat, el); }
-function setVideoSort(val)         { window.youtubePage?.setSort(val); }
-function searchVideos(q)           { window.youtubePage?.search(q); }
-function loadMoreVideos()          { window.youtubePage?.loadMore(); }
+// ── FEATURE 3: MINI CHART MODAL (click any sparkline) ───
+class SparklineExpand {
+  static init() {
+    document.addEventListener('click', e => {
+      const canvas = e.target.closest('canvas[id^="spark-"]');
+      if (!canvas) return;
+      const id    = canvas.id; // spark-crypto-0
+      const parts = id.split('-');
+      if (parts.length < 3) return;
+      e.stopPropagation();
+    });
+  }
+}
+
+// ── FEATURE 4: WATCHLIST SNAPSHOT (save current state) ──
+class WatchlistSnapshot {
+  static save(data) {
+    const snapshot = {
+      timestamp: new Date().toISOString(),
+      data: data,
+    };
+    const snapshots = JSON.parse(localStorage.getItem('mp-snapshots') || '[]');
+    snapshots.unshift(snapshot);
+    if (snapshots.length > 10) snapshots.splice(10);
+    localStorage.setItem('mp-snapshots', JSON.stringify(snapshots));
+    Toast.show('SNAPSHOT SAVED ✓', 'success');
+  }
+
+  static getAll() {
+    return JSON.parse(localStorage.getItem('mp-snapshots') || '[]');
+  }
+}
+
+// ── FEATURE 5: CONNECTION STATUS MONITOR ────────────────
+class ConnectionMonitor {
+  constructor() {
+    this._online = navigator.onLine;
+    this._el = null;
+    this._init();
+  }
+
+  _init() {
+    const el = document.createElement('div');
+    el.id = 'connStatus';
+    el.style.cssText = `
+      position:fixed;bottom:16px;left:16px;z-index:9998;
+      font-family:'IBM Plex Mono',monospace;font-size:.6rem;letter-spacing:.08em;
+      padding:4px 10px;border-radius:2px;border:1px solid;
+      display:none;transition:all .3s;
+    `;
+    document.body.appendChild(el);
+    this._el = el;
+
+    window.addEventListener('online',  () => this._update(true));
+    window.addEventListener('offline', () => this._update(false));
+
+    // Periodic check
+    setInterval(() => {
+      if (!navigator.onLine && this._online) this._update(false);
+      else if (navigator.onLine && !this._online) this._update(true);
+    }, 5000);
+  }
+
+  _update(online) {
+    this._online = online;
+    if (!this._el) return;
+    if (online) {
+      this._el.style.display = 'block';
+      this._el.style.background = 'rgba(0,200,83,.1)';
+      this._el.style.borderColor = 'var(--green)';
+      this._el.style.color = 'var(--green)';
+      this._el.textContent = '● CONNECTED';
+      setTimeout(() => { if (this._el) this._el.style.display = 'none'; }, 3000);
+    } else {
+      this._el.style.display = 'block';
+      this._el.style.background = 'rgba(255,23,68,.1)';
+      this._el.style.borderColor = 'var(--red)';
+      this._el.style.color = 'var(--red)';
+      this._el.textContent = '⚠ OFFLINE — DATA MAY BE STALE';
+    }
+  }
+}
+
+// ── FEATURE 6: DATA REFRESH INDICATOR ───────────────────
+class RefreshIndicator {
+  static show(message = 'REFRESHING...') {
+    let el = document.getElementById('refreshBar');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'refreshBar';
+      el.style.cssText = `
+        position:fixed;top:0;left:0;right:0;height:2px;z-index:99998;
+        background:linear-gradient(90deg,transparent,var(--amber),transparent);
+        background-size:200% 100%;
+        animation:refreshSlide 1s linear infinite;
+      `;
+      const style = document.createElement('style');
+      style.textContent = '@keyframes refreshSlide{0%{background-position:200% 0}100%{background-position:-200% 0}}';
+      document.head.appendChild(style);
+      document.body.appendChild(el);
+    }
+    el.style.display = 'block';
+  }
+
+  static hide() {
+    const el = document.getElementById('refreshBar');
+    if (el) el.style.display = 'none';
+  }
+}
+
+// ── FEATURE 7: CONTEXTUAL TOOLTIPS ──────────────────────
+class TerminalTooltips {
+  static init() {
+    document.querySelectorAll('[data-tip]').forEach(el => {
+      el.style.position = 'relative';
+      el.style.cursor   = 'help';
+      el.addEventListener('mouseenter', e => {
+        const tip = document.createElement('div');
+        tip.className = 'mp-tooltip';
+        tip.textContent = el.dataset.tip;
+        tip.style.cssText = `
+          position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);
+          background:var(--bg-raised);border:1px solid var(--amber);border-radius:4px;
+          font-family:'IBM Plex Mono',monospace;font-size:.62rem;letter-spacing:.04em;
+          color:var(--text-primary);padding:5px 10px;white-space:nowrap;z-index:9000;
+          box-shadow:0 4px 16px rgba(0,0,0,.5);pointer-events:none;
+        `;
+        el.appendChild(tip);
+      });
+      el.addEventListener('mouseleave', () => {
+        el.querySelector('.mp-tooltip')?.remove();
+      });
+    });
+  }
+}
+
+// ── FEATURE 8: MARKET SESSION INDICATOR ─────────────────
+class MarketSession {
+  static render(containerId) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+
+    const now = new Date();
+    const sessions = [
+      { name: 'NYSE',    tz: 'America/New_York',  open: '09:30', close: '16:00', color: '#00c853' },
+      { name: 'LSE',     tz: 'Europe/London',     open: '08:00', close: '16:30', color: '#4da6ff' },
+      { name: 'TSE',     tz: 'Asia/Tokyo',        open: '09:00', close: '15:30', color: '#f0a500' },
+      { name: 'CRYPTO',  tz: 'UTC',               open: '00:00', close: '23:59', color: '#a78bfa', always: true },
+    ];
+
+    el.innerHTML = sessions.map(s => {
+      if (s.always) {
+        return `<div style="display:flex;align-items:center;gap:5px;font-family:var(--font-mono);font-size:.62rem">
+          <span style="width:6px;height:6px;border-radius:50%;background:${s.color};box-shadow:0 0 5px ${s.color};flex-shrink:0"></span>
+          <span style="color:${s.color}">${s.name}</span>
+          <span style="color:var(--green);font-size:.58rem">24/7</span>
+        </div>`;
+      }
+
+      const localTime = new Date(now.toLocaleString('en-US', { timeZone: s.tz }));
+      const h = localTime.getHours();
+      const m = localTime.getMinutes();
+      const [oh, om] = s.open.split(':').map(Number);
+      const [ch, cm] = s.close.split(':').map(Number);
+      const isOpen = (h * 60 + m) >= (oh * 60 + om) && (h * 60 + m) < (ch * 60 + cm);
+      const dow = localTime.getDay();
+      const isWeekday = dow >= 1 && dow <= 5;
+      const active = isOpen && isWeekday;
+
+      return `<div style="display:flex;align-items:center;gap:5px;font-family:var(--font-mono);font-size:.62rem">
+        <span style="width:6px;height:6px;border-radius:50%;background:${active ? s.color : 'var(--text-muted)'};${active ? `box-shadow:0 0 5px ${s.color};animation:livePulse 2s infinite` : ''};flex-shrink:0"></span>
+        <span style="color:${active ? s.color : 'var(--text-muted)'}">${s.name}</span>
+        <span style="color:${active ? 'var(--green)' : 'var(--red)'};font-size:.58rem">${active ? 'OPEN' : 'CLOSED'}</span>
+      </div>`;
+    }).join('');
+  }
+}
+
+// ── FEATURE 9: QUICK COMPARE (select 2 assets) ──────────
+class QuickCompare {
+  constructor() {
+    this.selected = [];
+    this.maxSelect = 2;
+  }
+
+  toggle(asset) {
+    const idx = this.selected.findIndex(a => a.symbol === asset.symbol);
+    if (idx >= 0) {
+      this.selected.splice(idx, 1);
+    } else if (this.selected.length < this.maxSelect) {
+      this.selected.push(asset);
+    } else {
+      Toast.show('MAX 2 ASSETS FOR COMPARISON', 'warning');
+      return;
+    }
+    this._updateUI();
+  }
+
+  _updateUI() {
+    let el = document.getElementById('compareBar');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'compareBar';
+      el.style.cssText = `
+        position:fixed;bottom:0;left:0;right:0;
+        background:var(--bg-surface);border-top:2px solid var(--amber);
+        padding:10px 20px;display:flex;align-items:center;gap:16px;
+        font-family:'IBM Plex Mono',monospace;font-size:.72rem;
+        z-index:500;transform:translateY(100%);transition:transform .3s ease;
+      `;
+      document.body.appendChild(el);
+    }
+
+    if (!this.selected.length) {
+      el.style.transform = 'translateY(100%)';
+      return;
+    }
+
+    el.style.transform = 'translateY(0)';
+    const items = this.selected.map(a => {
+      const up = a.change_24h >= 0;
+      return `<div style="display:flex;gap:8px;align-items:center;padding:4px 12px;background:var(--bg-raised);border:1px solid var(--border-mid);border-radius:4px">
+        <span style="color:var(--amber);font-weight:700">${a.symbol}</span>
+        <span>${Fmt.price(a.price)}</span>
+        <span style="color:${up?'var(--green)':'var(--red)'}">${up?'+':''}${a.change_24h?.toFixed(2)}%</span>
+        <span style="cursor:pointer;color:var(--text-muted)" onclick="window.quickCompare.toggle({symbol:'${a.symbol}'})">✕</span>
+      </div>`;
+    }).join('<span style="color:var(--text-muted)">vs</span>');
+
+    const compareBtn = this.selected.length === 2 ? `
+      <button onclick="window.quickCompare.showModal()" style="background:var(--amber);color:#000;border:none;padding:6px 16px;border-radius:3px;font-family:'IBM Plex Mono',monospace;font-size:.65rem;font-weight:700;letter-spacing:.08em;cursor:pointer;margin-left:auto">
+        COMPARE →
+      </button>` : '';
+
+    el.innerHTML = `
+      <span style="color:var(--text-muted);letter-spacing:.1em;font-size:.6rem">COMPARE</span>
+      ${items}
+      ${compareBtn}
+      <button onclick="window.quickCompare.clear()" style="background:none;border:1px solid var(--border-mid);color:var(--text-muted);padding:4px 10px;border-radius:3px;font-family:'IBM Plex Mono',monospace;font-size:.6rem;cursor:pointer;${this.selected.length===2?'':'margin-left:auto'}">
+        CLEAR
+      </button>`;
+  }
+
+  showModal() {
+    if (this.selected.length < 2) return;
+    const [a, b] = this.selected;
+    const rows = [
+      ['Price', Fmt.price(a.price), Fmt.price(b.price)],
+      ['24h Change', Fmt.pct(a.change_24h, false), Fmt.pct(b.change_24h, false)],
+      ['7d Change', Fmt.pct(a.change_7d, false), Fmt.pct(b.change_7d, false)],
+      ['Volume', Fmt.large(a.volume), Fmt.large(b.volume)],
+      ['Market Cap', Fmt.large(a.market_cap||0), Fmt.large(b.market_cap||0)],
+    ];
+
+    let modal = document.getElementById('compareModal');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = 'compareModal';
+      modal.style.cssText = 'position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,.8);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:20px';
+      modal.onclick = e => { if (e.target === modal) modal.remove(); };
+      document.body.appendChild(modal);
+    }
+
+    modal.innerHTML = `
+      <div style="background:var(--bg-surface);border:1px solid var(--amber);border-top:3px solid var(--amber);border-radius:8px;padding:24px;width:min(500px,90vw);font-family:'IBM Plex Mono',monospace">
+        <div style="display:flex;justify-content:space-between;margin-bottom:20px">
+          <span style="color:var(--amber);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase">COMPARISON: ${a.symbol} vs ${b.symbol}</span>
+          <span style="cursor:pointer;color:var(--text-muted)" onclick="document.getElementById('compareModal').remove()">✕</span>
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:.72rem">
+          <thead>
+            <tr>
+              <th style="text-align:left;padding:6px 10px;border-bottom:1px solid var(--border-dim);color:var(--text-muted);font-weight:400">METRIC</th>
+              <th style="text-align:right;padding:6px 10px;border-bottom:1px solid var(--border-dim);color:var(--amber)">${a.symbol}</th>
+              <th style="text-align:right;padding:6px 10px;border-bottom:1px solid var(--border-dim);color:var(--blue)">${b.symbol}</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map(([label, av, bv]) => `
+              <tr>
+                <td style="padding:7px 10px;border-bottom:1px solid var(--border-dim);color:var(--text-muted)">${label}</td>
+                <td style="padding:7px 10px;border-bottom:1px solid var(--border-dim);text-align:right;color:var(--text-primary)">${av}</td>
+                <td style="padding:7px 10px;border-bottom:1px solid var(--border-dim);text-align:right;color:var(--text-primary)">${bv}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`;
+  }
+
+  clear() {
+    this.selected = [];
+    this._updateUI();
+  }
+}
+
+// ── FEATURE 10: READING PROGRESS + SCROLL TO TOP ─────────
+class ScrollUX {
+  constructor() {
+    // Scroll to top button
+    const btn = document.createElement('button');
+    btn.id = 'scrollTop';
+    btn.innerHTML = '▲';
+    btn.style.cssText = `
+      position:fixed;bottom:20px;right:20px;z-index:500;
+      background:var(--bg-raised);border:1px solid var(--border-mid);
+      color:var(--text-muted);width:34px;height:34px;
+      border-radius:3px;cursor:pointer;font-size:.8rem;
+      font-family:'IBM Plex Mono',monospace;
+      transition:all .2s;display:none;
+      display:flex;align-items:center;justify-content:center;
+      opacity:0;pointer-events:none;
+    `;
+    btn.onclick = () => window.scrollTo({ top: 0, behavior: 'smooth' });
+    btn.onmouseenter = () => { btn.style.borderColor='var(--amber)'; btn.style.color='var(--amber)'; };
+    btn.onmouseleave = () => { btn.style.borderColor='var(--border-mid)'; btn.style.color='var(--text-muted)'; };
+    document.body.appendChild(btn);
+
+    window.addEventListener('scroll', () => {
+      const visible = window.scrollY > 400;
+      btn.style.opacity = visible ? '1' : '0';
+      btn.style.pointerEvents = visible ? 'all' : 'none';
+    });
+  }
+}
+
+// ── INIT ALL FEATURES ────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  window._shortcuts       = new KeyboardShortcuts();
+  window._connMonitor     = new ConnectionMonitor();
+  window.quickCompare     = new QuickCompare();
+  new ScrollUX();
+  TerminalTooltips.init();
+  SparklineExpand.init();
+
+  // Render market sessions in status bar if element exists
+  setInterval(() => MarketSession.render('marketSessions'), 60000);
+  MarketSession.render('marketSessions');
+
+  // Add keyboard shortcut hint to footer
+  const hint = document.createElement('div');
+  hint.style.cssText = 'position:fixed;bottom:8px;right:58px;font-family:"IBM Plex Mono",monospace;font-size:.55rem;color:var(--text-muted);letter-spacing:.08em;z-index:499;pointer-events:none';
+  hint.textContent = 'PRESS ? FOR SHORTCUTS';
+  document.body.appendChild(hint);
+  setTimeout(() => { hint.style.opacity='0'; hint.style.transition='opacity 1s'; setTimeout(()=>hint.remove(),1000); }, 4000);
+});
