@@ -113,24 +113,38 @@
 </head>
 <body>
 <div class="page">
+<!-- STATUS BAR -->
+<div class="status-bar" id="statusBar">
+  <div class="status-bar-item"><span class="status-bar-dot"></span><span class="value">LIVE</span></div>
+  <div class="status-bar-item" id="sb-btc"><span class="label">BTC</span><span class="value">—</span></div>
+  <div class="status-bar-item" id="sb-eth"><span class="label">ETH</span><span class="value">—</span></div>
+  <div class="status-bar-item" id="sb-nvda"><span class="label">NVDA</span><span class="value">—</span></div>
+  <div class="status-bar-item" id="sb-gold"><span class="label">XAU</span><span class="value">—</span></div>
+  <div class="status-bar-item" id="sb-oil"><span class="label">OIL</span><span class="value">—</span></div>
+  <div class="ms-auto status-bar-item"><span class="label">NY</span><span class="value" id="sb-time-ny">—</span></div>
+  <div class="status-bar-item"><span class="label">LN</span><span class="value" id="sb-time-ln">—</span></div>
+  <div class="status-bar-item"><span class="label">TK</span><span class="value" id="sb-time-tk">—</span></div>
+  <div class="status-bar-item"><span class="label">BT</span><span class="value" id="sb-time-bt">—</span></div>
+</div>
+<!-- NAVBAR -->
 <nav class="navbar navbar-expand-lg">
-  <div class="container-fluid px-4">
-    <a class="navbar-brand" href="index.html">Market<span class="accent">Pulse</span></a>
-    <button class="navbar-toggler border-0" type="button" style="color:var(--text2)">
-      <i class="bi bi-list" style="font-size:1.4rem"></i>
+  <div class="container-fluid px-3">
+    <a class="navbar-brand" href="index.html">MKT<span class="accent">PULSE</span><span class="version">v6</span></a>
+    <div class="nav-divider"></div>
+    <button class="navbar-toggler border-0 d-lg-none" type="button">
+      <i class="bi bi-list"></i>
     </button>
-    <div class="collapse navbar-collapse" id="navMenu">
-      <ul class="navbar-nav ms-auto align-items-center gap-1">
-        <li class="nav-item"><a class="nav-link" href="index.html"><i class="bi bi-house me-1"></i>Home</a></li>
-        <li class="nav-item"><a class="nav-link" href="markets.html"><i class="bi bi-graph-up me-1"></i>Markets</a></li>
-        <li class="nav-item"><a class="nav-link" href="news.html"><i class="bi bi-newspaper me-1"></i>News</a></li>
-        <li class="nav-item"><a class="nav-link" href="youtube.html"><i class="bi bi-youtube me-1"></i>Videos</a></li>
-        <li class="nav-item"><a class="nav-link" href="calendar.html"><i class="bi bi-calendar3 me-1"></i>Calendar</a></li>
-        <li class="nav-item"><a class="nav-link" href="search.html"><i class="bi bi-search me-1"></i>Search</a></li>
-        <li class="nav-item ms-2"><span class="nav-dot me-1"></span><span class="mono" id="navClock" style="font-size:.75rem;color:var(--text3)"></span></li>
-        <li class="nav-item ms-2"><button class="theme-toggle" id="themeToggle">🌙</button></li>
-      </ul>
-    </div>
+    <ul class="navbar-nav d-none d-lg-flex">
+      <li class="nav-item"><a class="nav-link" href="index.html"><i class="bi bi-display"></i> Terminal</a></li>
+      <li class="nav-item"><a class="nav-link" href="markets.html"><i class="bi bi-graph-up"></i> Markets</a></li>
+      <li class="nav-item"><a class="nav-link" href="news.html"><i class="bi bi-newspaper"></i> News</a></li>
+      <li class="nav-item"><a class="nav-link" href="youtube.html"><i class="bi bi-play-circle"></i> Videos</a></li>
+      <li class="nav-item"><a class="nav-link" href="calendar.html"><i class="bi bi-calendar3"></i> Calendar</a></li>
+      <li class="nav-item"><a class="nav-link" href="tools.html"><i class="bi bi-tools"></i> Tools</a></li>
+      <li class="nav-item"><a class="nav-link" href="search.html"><i class="bi bi-search"></i> Search</a></li>
+    </ul>
+    <div class="nav-clock d-none d-lg-block" id="navClock"></div>
+    <button class="theme-toggle ms-2" id="themeToggle">☀</button>
   </div>
 </nav>
 
@@ -247,5 +261,44 @@
 <script src="assets/js/app.js"></script>
 <script src="assets/js/calendar.js"></script>
 <script></script>
+
+<script>
+// Status bar live prices + world clocks
+(async function() {
+  try {
+    const data = await window.apiClient.get('/api/watchlist', 5*60*1000);
+    const set = (id, asset, cls) => {
+      const el = document.getElementById(id);
+      if (!el || !asset) return;
+      const up = asset.change_24h >= 0;
+      el.className = `status-bar-item ${up ? 'positive' : 'negative'}`;
+      el.innerHTML = `<span class="label">${el.querySelector('.label')?.textContent || ''}</span>
+        <span class="value">${Fmt.price(asset.price)} <span style="font-size:.6rem">${up?'▲':'▼'}${Math.abs(asset.change_24h).toFixed(2)}%</span></span>`;
+    };
+    const btc  = data.crypto?.find(c=>c.symbol==='BTC');
+    const eth  = data.crypto?.find(c=>c.symbol==='ETH');
+    const nvda = data.stocks?.find(s=>s.symbol==='NVDA');
+    const gold = data.commodities?.find(c=>c.name==='Gold');
+    const oil  = data.commodities?.find(c=>c.name==='Crude Oil');
+    set('sb-btc', btc, '');
+    set('sb-eth', eth, '');
+    set('sb-nvda', nvda, '');
+    set('sb-gold', gold, '');
+    set('sb-oil', oil, '');
+  } catch(e) {}
+
+  // World clocks
+  function updateClocks() {
+    const fmt = tz => new Date().toLocaleTimeString('en-US',{timeZone:tz,hour:'2-digit',minute:'2-digit',hour12:false});
+    const ny=document.getElementById('sb-time-ny'), ln=document.getElementById('sb-time-ln');
+    const tk=document.getElementById('sb-time-tk'), bt=document.getElementById('sb-time-bt');
+    if(ny) ny.textContent=fmt('America/New_York');
+    if(ln) ln.textContent=fmt('Europe/London');
+    if(tk) tk.textContent=fmt('Asia/Tokyo');
+    if(bt) bt.textContent=fmt('Asia/Beirut');
+  }
+  updateClocks(); setInterval(updateClocks, 1000);
+})();
+</script>
 </body>
 </html>

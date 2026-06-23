@@ -2,803 +2,654 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script>
-  (function(){
-    var t=localStorage.getItem('mp-theme')||'dark';
-    document.documentElement.setAttribute('data-theme',t);
-  })();
-</script>
+<script>(function(){var t=localStorage.getItem('mp-theme')||'dark';document.documentElement.setAttribute('data-theme',t);})();</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="MarketPulse — Professional financial intelligence dashboard with live markets, news, and AI analysis">
-<title>MarketPulse — Financial Intelligence</title>
+<meta name="description" content="MarketPulse — Professional financial intelligence terminal">
+<title>MarketPulse Terminal</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
 <link href="assets/css/main.css" rel="stylesheet">
 <style>
-/* ── HERO ── */
-.hero {
-  min-height: calc(100vh - var(--nav-h));
-  display: flex;
-  align-items: center;
-  position: relative;
-  overflow: hidden;
-  padding: 80px 0 60px;
-}
-
-.hero::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(ellipse 60% 70% at 50% 50%, rgba(245,200,66,0.06) 0%, transparent 60%);
-  pointer-events: none;
-}
-
-.hero-grid {
+/* ── HOMEPAGE SPECIFIC ── */
+.terminal-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 60px;
-  align-items: center;
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-rows: auto;
+  gap: 1px;
+  background: var(--border);
+  min-height: calc(100vh - 74px);
 }
 
-.hero-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 14px;
-  border-radius: 20px;
-  background: rgba(245,200,66,0.1);
-  border: 1px solid rgba(245,200,66,0.3);
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: var(--accent);
-  letter-spacing: 0.08em;
+/* Panels span multiple cols */
+.span-2 { grid-column: span 2; }
+.span-3 { grid-column: span 3; }
+
+.t-panel {
+  background: var(--bg2);
+  display: flex; flex-direction: column;
+  min-height: 0;
+}
+
+.t-panel-head {
+  background: var(--bg3);
+  border-bottom: 1px solid var(--border);
+  padding: 5px 10px;
+  display: flex; align-items: center; justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  margin-bottom: 24px;
+  flex-shrink: 0;
+}
+.t-panel-head .p-title { color: var(--amber); font-weight: 600; display: flex; align-items: center; gap: 6px; }
+.t-panel-head .p-meta  { color: var(--text3); }
+.t-panel-head .p-link  { color: var(--blue); cursor: pointer; transition: color var(--transition); }
+.t-panel-head .p-link:hover { color: var(--amber); }
+
+.t-panel-body { padding: 10px; flex: 1; overflow: hidden; }
+
+/* ── HERO TICKER PANEL ── */
+.hero-ticker {
+  display: flex; flex-direction: column; justify-content: center;
+  padding: 16px;
 }
 
-.hero h1 {
-  font-size: clamp(2.4rem, 5vw, 3.8rem);
-  font-weight: 800;
-  letter-spacing: -0.03em;
-  line-height: 1.1;
+.hero-title {
+  font-family: var(--font-mono);
+  font-size: clamp(0.9rem, 2vw, 1.1rem);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--amber);
+  margin-bottom: 6px;
+}
+
+.hero-sub {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--text3);
+  letter-spacing: 0.06em;
   margin-bottom: 20px;
 }
 
-.hero h1 .highlight {
-  background: linear-gradient(135deg, var(--accent), var(--blue));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.hero-desc {
-  font-size: 1.05rem;
-  color: var(--text2);
-  line-height: 1.7;
-  margin-bottom: 36px;
-  max-width: 460px;
-}
-
-.hero-actions { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 48px; }
-
-.hero-stats {
-  display: flex;
-  gap: 32px;
-  padding-top: 32px;
-  border-top: 1px solid var(--border);
-}
-
-.hero-stat-val {
-  font-family: 'Syne', sans-serif;
-  font-size: 1.6rem;
-  font-weight: 800;
-  color: var(--accent);
-}
-
-.hero-stat-label { font-size: 0.78rem; color: var(--text3); margin-top: 2px; }
-
-/* ── TICKER ── */
-.ticker-wrap {
-  background: var(--bg2);
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-  overflow: hidden;
-  padding: 10px 0;
-}
-
-.ticker-track {
-  display: flex;
-  gap: 0;
-  animation: ticker 40s linear infinite;
-  width: max-content;
-}
-
-.ticker-track:hover { animation-play-state: paused; }
-
-@keyframes ticker {
-  from { transform: translateX(0); }
-  to   { transform: translateX(-50%); }
-}
-
-.ticker-item {
-  display: flex;
-  align-items: center;
+.live-price-block {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: 8px;
-  padding: 0 28px;
-  border-right: 1px solid var(--border);
-  white-space: nowrap;
-  font-family: 'DM Mono', monospace;
-  font-size: 0.8rem;
 }
 
-.ticker-sym { font-weight: 600; color: var(--text); }
-.ticker-price { color: var(--text2); }
+.lpb-item {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.lpb-item:hover { border-color: var(--amber); }
+.lpb-sym  { font-family: var(--font-mono); font-size: 0.65rem; color: var(--text3); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 2px; }
+.lpb-price { font-family: var(--font-mono); font-size: 1rem; font-weight: 600; }
+.lpb-chg  { font-family: var(--font-mono); font-size: 0.65rem; margin-top: 2px; }
 
-/* ── CAROUSEL ── */
-.featured-carousel { border-radius: var(--radius); overflow: hidden; }
-
+/* ── FEATURED CAROUSEL ── */
 .carousel-item-inner {
-  height: 420px;
-  border-radius: var(--radius);
-  overflow: hidden;
+  height: 280px;
   position: relative;
-  background: var(--bg3);
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  padding: 32px;
-}
-
-.carousel-bg {
-  position: absolute;
-  inset: 0;
-  object-fit: cover;
-  width: 100%; height: 100%;
-  opacity: 0.35;
-  transition: opacity 0.4s;
-}
-
-.carousel-bg-gradient {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(0deg, rgba(7,9,15,0.95) 0%, rgba(7,9,15,0.4) 60%, transparent 100%);
-}
-
-.carousel-content { position: relative; z-index: 2; }
-
-.carousel-cat {
-  display: inline-block;
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  margin-bottom: 12px;
-}
-
-.carousel-title {
-  font-family: 'Syne', sans-serif;
-  font-size: clamp(1.2rem, 2.5vw, 1.7rem);
-  font-weight: 700;
-  margin-bottom: 10px;
-  line-height: 1.3;
-}
-
-.carousel-desc {
-  font-size: 0.88rem;
-  color: rgba(255,255,255,0.7);
-  line-height: 1.5;
-  margin-bottom: 16px;
-  max-width: 480px;
-}
-
-.carousel-indicators button {
-  width: 24px !important;
-  height: 3px !important;
-  border-radius: 2px !important;
-  opacity: 0.4;
-}
-
-.carousel-indicators button.active { opacity: 1; background: var(--accent) !important; }
-
-.carousel-control-prev, .carousel-control-next {
-  width: 44px; height: 44px;
-  background: var(--glass2) !important;
-  backdrop-filter: blur(10px);
-  border: 1px solid var(--border2);
-  border-radius: 50%;
-  top: 50%; transform: translateY(-50%);
-  bottom: auto;
-  margin: 0 16px;
-  opacity: 1 !important;
-}
-
-.carousel-control-prev-icon, .carousel-control-next-icon {
-  width: 16px !important;
-  height: 16px !important;
-}
-
-/* ── MINI WATCHLIST ── */
-.mini-watchlist-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 14px;
-}
-
-.mini-asset {
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 16px 18px;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  cursor: pointer;
-  transition: all var(--transition);
-  text-decoration: none;
-  color: inherit;
-}
-
-.mini-asset:hover {
-  border-color: var(--border2);
-  background: var(--bg3);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow);
-  color: inherit;
-}
-
-.mini-icon {
-  width: 40px; height: 40px;
-  border-radius: 50%;
-  background: var(--bg4);
-  border: 1px solid var(--border2);
-  display: flex; align-items: center; justify-content: center;
-  overflow: hidden; flex-shrink: 0;
-}
-
-.mini-icon img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
-.mini-icon span { font-size: 0.7rem; font-weight: 700; color: var(--accent); font-family: 'DM Mono', monospace; }
-
-.mini-info { flex: 1; }
-.mini-sym { font-size: 0.8rem; font-weight: 700; letter-spacing: 0.04em; }
-.mini-name { font-size: 0.72rem; color: var(--text3); }
-.mini-price { font-family: 'DM Mono', monospace; font-size: 0.9rem; font-weight: 500; text-align: right; }
-.mini-change { text-align: right; margin-top: 3px; }
-
-/* ── NEWS PREVIEW ── */
-.news-preview-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-}
-
-.news-preview-card {
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 18px;
-  cursor: pointer;
-  transition: all var(--transition);
-  display: flex;
-  gap: 14px;
-}
-
-.news-preview-card:hover {
-  border-color: var(--border2);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow);
-}
-
-.news-preview-img {
-  width: 80px; height: 80px;
-  border-radius: var(--radius-sm);
-  object-fit: cover;
-  flex-shrink: 0;
-  background: var(--bg4);
-}
-
-.news-preview-content { flex: 1; }
-.news-preview-source {
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--accent);
-  margin-bottom: 5px;
-}
-
-.news-preview-title {
-  font-size: 0.88rem;
-  font-weight: 600;
-  line-height: 1.4;
-  margin-bottom: 6px;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
   overflow: hidden;
+  background: var(--bg3);
+  display: flex; flex-direction: column; justify-content: flex-end;
+  padding: 20px;
 }
 
-.news-preview-time { font-size: 0.72rem; color: var(--text3); }
+.c-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.25; }
+.c-gradient { position: absolute; inset: 0; background: linear-gradient(0deg, rgba(8,10,14,0.98) 0%, rgba(8,10,14,0.4) 70%, transparent 100%); }
+.c-content { position: relative; z-index: 2; }
 
-/* ── STATS STRIP ── */
-.stats-strip {
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 32px 40px;
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 32px;
-  text-align: center;
+.c-cat {
+  font-family: var(--font-mono); font-size: 0.6rem; font-weight: 600;
+  letter-spacing: 0.15em; text-transform: uppercase;
+  padding: 2px 8px; border-radius: 2px;
+  margin-bottom: 8px; display: inline-block;
 }
 
-.stats-strip-item .val {
-  font-family: 'Syne', sans-serif;
-  font-size: 2rem;
-  font-weight: 800;
-  color: var(--accent);
-}
+.c-title { font-family: var(--font-sans); font-size: clamp(0.9rem, 1.8vw, 1.2rem); font-weight: 600; line-height: 1.3; margin-bottom: 6px; }
+.c-desc  { font-size: 0.72rem; color: rgba(255,255,255,0.6); margin-bottom: 10px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
-.stats-strip-item .lbl {
-  font-size: 0.78rem;
-  color: var(--text3);
-  margin-top: 4px;
-}
+.carousel-indicators button { width: 20px !important; height: 2px !important; border-radius: 1px !important; background: var(--text3) !important; opacity: 0.5 !important; }
+.carousel-indicators button.active { background: var(--amber) !important; opacity: 1 !important; }
+.carousel-control-prev, .carousel-control-next { width: 32px; height: 32px; background: rgba(0,0,0,0.6) !important; border: 1px solid var(--border2); border-radius: 2px; top: 50%; bottom: auto; transform: translateY(-50%); opacity: 1 !important; margin: 0 8px; }
+.carousel-control-prev-icon, .carousel-control-next-icon { width: 12px !important; height: 12px !important; }
 
-/* ── MOOD STRIP ── */
-.mood-strip {
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 24px 28px;
-  display: flex;
-  align-items: center;
-  gap: 24px;
-}
+/* ── MINI TABLE ── */
+.mini-table { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 0.72rem; }
+.mini-table th { color: var(--text3); font-size: 0.58rem; letter-spacing: 0.1em; text-transform: uppercase; padding: 4px 6px; border-bottom: 1px solid var(--border); }
+.mini-table td { padding: 6px 6px; border-bottom: 1px solid var(--border); }
+.mini-table tr:last-child td { border-bottom: none; }
+.mini-table tr { cursor: pointer; transition: background var(--transition); }
+.mini-table tr:hover td { background: var(--bg3); }
 
-.mood-badge-mini {
-  padding: 8px 18px;
-  border-radius: var(--radius-sm);
-  font-family: 'Syne', sans-serif;
-  font-size: 1rem;
-  font-weight: 800;
-  flex-shrink: 0;
-  border: 1px solid;
-}
+/* ── NEWS MINI ── */
+.news-mini-item { padding: 8px 0; border-bottom: 1px solid var(--border); cursor: pointer; transition: all var(--transition); }
+.news-mini-item:last-child { border-bottom: none; }
+.news-mini-item:hover { padding-left: 6px; }
+.news-mini-src  { font-family: var(--font-mono); font-size: 0.58rem; color: var(--amber); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 2px; display: flex; justify-content: space-between; }
+.news-mini-title { font-size: 0.75rem; font-weight: 500; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
-.mood-badge-mini.bullish  { color: var(--green);  border-color: rgba(32,224,138,0.4); background: rgba(32,224,138,0.08); }
-.mood-badge-mini.bearish  { color: var(--red);    border-color: rgba(255,61,90,0.4);  background: rgba(255,61,90,0.08); }
-.mood-badge-mini.neutral  { color: var(--blue);   border-color: rgba(77,166,255,0.4); background: rgba(77,166,255,0.08); }
-.mood-badge-mini.mixed    { color: var(--accent); border-color: rgba(245,200,66,0.4); background: rgba(245,200,66,0.08); }
-
-@media (max-width: 992px) {
-  .hero-grid { grid-template-columns: 1fr; }
-  .news-preview-grid { grid-template-columns: 1fr; }
-  .stats-strip { grid-template-columns: 1fr 1fr; }
+/* ── MOOD PANEL ── */
+.mood-panel { padding: 12px; }
+.mood-sentiment {
+  font-family: var(--font-mono); font-size: 1.4rem; font-weight: 700;
+  letter-spacing: 0.05em; padding: 6px 0;
 }
+.mood-sentiment.bullish { color: var(--green); }
+.mood-sentiment.bearish { color: var(--red); }
+.mood-sentiment.neutral { color: var(--blue); }
+.mood-sentiment.mixed   { color: var(--amber); }
+.mood-analysis { font-size: 0.72rem; color: var(--text2); line-height: 1.6; margin-top: 8px; border-left: 2px solid var(--amber); padding-left: 10px; }
 
-@media (max-width: 576px) {
-  .hero-stats { flex-wrap: wrap; gap: 20px; }
-  .stats-strip { grid-template-columns: 1fr 1fr; padding: 24px; }
-  .mood-strip { flex-direction: column; text-align: center; }
-}
+/* ── CALENDAR MINI ── */
+.cal-mini-item { display: flex; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--border); align-items: center; }
+.cal-mini-item:last-child { border-bottom: none; }
+.cal-mini-date { font-family: var(--font-mono); font-size: 0.62rem; color: var(--text3); min-width: 42px; }
+.cal-mini-name { font-size: 0.72rem; font-weight: 500; flex: 1; }
+
+/* ── FG WIDGET MINI ── */
+.fg-mini { display: flex; align-items: center; gap: 12px; padding: 10px 0; }
+.fg-mini-val { font-family: var(--font-mono); font-size: 1.8rem; font-weight: 700; }
+.fg-mini-info { flex: 1; }
+.fg-mini-label { font-size: 0.72rem; font-weight: 600; }
+.fg-mini-sub   { font-family: var(--font-mono); font-size: 0.62rem; color: var(--text3); }
+
+/* ── MARKET SUMMARY ── */
+.mkt-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.mkt-sum-item { background: var(--bg3); border-radius: var(--radius); padding: 8px 10px; }
+.mkt-sum-lbl  { font-family: var(--font-mono); font-size: 0.58rem; color: var(--text3); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 3px; }
+.mkt-sum-val  { font-family: var(--font-mono); font-size: 1rem; font-weight: 600; }
+
+@media (max-width: 1200px) { .terminal-grid { grid-template-columns: 1fr 1fr; } .span-3 { grid-column: span 2; } }
+@media (max-width: 768px)  { .terminal-grid { grid-template-columns: 1fr; } .span-2,.span-3 { grid-column: span 1; } }
 </style>
 </head>
 <body>
 <div class="page">
 
-<!-- ── NAVBAR ── -->
+<!-- STATUS BAR -->
+<div class="status-bar" id="statusBar">
+  <div class="status-bar-item"><span class="status-bar-dot"></span><span class="value">LIVE</span></div>
+  <div class="status-bar-item" id="sb-btc"><span class="label">BTC</span><span class="value">—</span></div>
+  <div class="status-bar-item" id="sb-eth"><span class="label">ETH</span><span class="value">—</span></div>
+  <div class="status-bar-item" id="sb-nvda"><span class="label">NVDA</span><span class="value">—</span></div>
+  <div class="status-bar-item" id="sb-gold"><span class="label">XAU</span><span class="value">—</span></div>
+  <div class="status-bar-item" id="sb-oil"><span class="label">OIL</span><span class="value">—</span></div>
+  <div class="ms-auto status-bar-item"><span class="label">NY</span><span class="value" id="sb-time-ny">—</span></div>
+  <div class="status-bar-item"><span class="label">LN</span><span class="value" id="sb-time-ln">—</span></div>
+  <div class="status-bar-item"><span class="label">TK</span><span class="value" id="sb-time-tk">—</span></div>
+  <div class="status-bar-item"><span class="label">BT</span><span class="value" id="sb-time-bt">—</span></div>
+</div>
+
+<!-- NAVBAR -->
 <nav class="navbar navbar-expand-lg">
-  <div class="container-fluid px-4">
-    <a class="navbar-brand" href="index.html">Market<span class="accent">Pulse</span></a>
-    <button class="navbar-toggler border-0" type="button" style="color:var(--text2)">
-      <i class="bi bi-list" style="font-size:1.4rem"></i>
+  <div class="container-fluid px-3">
+    <a class="navbar-brand" href="index.html">MKT<span class="accent">PULSE</span><span class="version">v6</span></a>
+    <div class="nav-divider"></div>
+    <button class="navbar-toggler border-0 d-lg-none" type="button">
+      <i class="bi bi-list"></i>
     </button>
-    <div class="collapse navbar-collapse" id="navMenu">
-      <ul class="navbar-nav ms-auto align-items-center gap-1">
-        <li class="nav-item"><a class="nav-link" href="index.html"><i class="bi bi-house me-1"></i>Home</a></li>
-        <li class="nav-item"><a class="nav-link" href="markets.html"><i class="bi bi-graph-up me-1"></i>Markets</a></li>
-        <li class="nav-item"><a class="nav-link" href="news.html"><i class="bi bi-newspaper me-1"></i>News</a></li>
-        <li class="nav-item"><a class="nav-link" href="youtube.html"><i class="bi bi-youtube me-1"></i>Videos</a></li>
-        <li class="nav-item"><a class="nav-link" href="calendar.html"><i class="bi bi-calendar3 me-1"></i>Calendar</a></li>
-        <li class="nav-item"><a class="nav-link" href="tools.html"><i class="bi bi-tools me-1"></i>Tools</a></li>
-        <li class="nav-item"><a class="nav-link" href="search.html"><i class="bi bi-search me-1"></i>Search</a></li>
-        <li class="nav-item ms-2"><span class="nav-dot me-1"></span><span class="mono" id="navClock" style="font-size:.75rem;color:var(--text3)"></span></li>
-        <li class="nav-item ms-2"><button class="theme-toggle" id="themeToggle">🌙</button></li>
-      </ul>
-    </div>
+    <ul class="navbar-nav d-none d-lg-flex">
+      <li class="nav-item"><a class="nav-link" href="index.html"><i class="bi bi-display"></i> Terminal</a></li>
+      <li class="nav-item"><a class="nav-link" href="markets.html"><i class="bi bi-graph-up"></i> Markets</a></li>
+      <li class="nav-item"><a class="nav-link" href="news.html"><i class="bi bi-newspaper"></i> News</a></li>
+      <li class="nav-item"><a class="nav-link" href="youtube.html"><i class="bi bi-play-circle"></i> Videos</a></li>
+      <li class="nav-item"><a class="nav-link" href="calendar.html"><i class="bi bi-calendar3"></i> Calendar</a></li>
+      <li class="nav-item"><a class="nav-link" href="tools.html"><i class="bi bi-tools"></i> Tools</a></li>
+      <li class="nav-item"><a class="nav-link" href="search.html"><i class="bi bi-search"></i> Search</a></li>
+    </ul>
+    <div class="nav-clock d-none d-lg-block" id="navClock"></div>
+    <button class="theme-toggle ms-2" id="themeToggle">☀</button>
   </div>
 </nav>
 
-<!-- ── HERO ── -->
-<section class="hero">
-  <div class="container-fluid px-4">
-    <div class="hero-grid">
-      <div class="fade-up">
-        <div class="hero-tag">
-          <span class="nav-dot"></span> Live Markets
-        </div>
-        <h1>Your <span class="highlight">Financial Intelligence</span> Hub</h1>
-        <p class="hero-desc">Real-time market data, AI-powered analysis, curated news, and macro economic calendar — everything you need to make smarter investment decisions.</p>
-        <div class="hero-actions">
-          <a href="markets.html" class="btn-mp btn-mp-primary"><i class="bi bi-graph-up"></i> View Markets</a>
-          <a href="news.html" class="btn-mp btn-mp-ghost"><i class="bi bi-newspaper"></i> Latest News</a>
-        </div>
-        <div class="hero-stats">
-          <div>
-            <div class="hero-stat-val" id="statCryptos">6</div>
-            <div class="hero-stat-label">Cryptocurrencies</div>
-          </div>
-          <div>
-            <div class="hero-stat-val" id="statStocks">6</div>
-            <div class="hero-stat-label">Stocks</div>
-          </div>
-          <div>
-            <div class="hero-stat-val" id="statCommodities">5</div>
-            <div class="hero-stat-label">Commodities</div>
-          </div>
-          <div>
-            <div class="hero-stat-val">Live</div>
-            <div class="hero-stat-label">AI Analysis</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- FEATURED BOOTSTRAP CAROUSEL -->
-      <div class="fade-up fade-up-delay-2">
-        <div id="featuredCarousel" class="carousel slide featured-carousel" data-bs-ride="carousel" data-bs-interval="4500">
-          <div class="carousel-indicators">
-            <button type="button" data-bs-target="#featuredCarousel" data-bs-slide-to="0" class="active"></button>
-            <button type="button" data-bs-target="#featuredCarousel" data-bs-slide-to="1"></button>
-            <button type="button" data-bs-target="#featuredCarousel" data-bs-slide-to="2"></button>
-            <button type="button" data-bs-target="#featuredCarousel" data-bs-slide-to="3"></button>
-            <button type="button" data-bs-target="#featuredCarousel" data-bs-slide-to="4"></button>
-          </div>
-          <div class="carousel-inner" id="carouselInner">
-            <!-- Filled by JS -->
-          </div>
-          <button class="carousel-control-prev" type="button" data-bs-target="#featuredCarousel" data-bs-slide="prev">
-            <span class="carousel-control-prev-icon"></span>
-          </button>
-          <button class="carousel-control-next" type="button" data-bs-target="#featuredCarousel" data-bs-slide="next">
-            <span class="carousel-control-next-icon"></span>
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ── TICKER ── -->
-<div class="ticker-wrap">
-  <div class="ticker-track" id="tickerTrack">
-    <div class="ticker-item"><span class="ticker-sym">Loading...</span></div>
+<!-- TICKER TAPE -->
+<div class="ticker-tape">
+  <div class="ticker-inner" id="tickerInner">
+    <div class="ticker-item"><span class="ticker-sym">LOADING</span><span class="ticker-price">MARKET DATA...</span></div>
   </div>
 </div>
 
-<!-- ── MAIN CONTENT ── -->
-<main class="py-5">
-  <div class="container-fluid px-4">
+<!-- TERMINAL GRID -->
+<div class="terminal-grid">
 
-    <!-- AI MOOD -->
-    <div class="mood-strip fade-up mb-5" id="moodStrip">
-      <div class="mood-badge-mini mixed skeleton" id="moodBadge" style="min-width:80px;min-height:36px">&nbsp;</div>
-      <div style="flex:1">
-        <div style="font-size:0.72rem;color:var(--text3);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:4px">AI Market Mood</div>
-        <div class="skeleton" id="moodText" style="min-height:20px;max-width:600px">&nbsp;</div>
-      </div>
-      <a href="calendar.html" class="btn-mp btn-mp-ghost" style="flex-shrink:0">Full Analysis →</a>
+  <!-- [1] HERO / LIVE PRICES -->
+  <div class="t-panel">
+    <div class="t-panel-head">
+      <span class="p-title"><i class="bi bi-display"></i> MARKETPULSE TERMINAL</span>
+      <span class="p-meta" id="lastUpdate">—</span>
     </div>
-
-    <!-- WATCHLIST PREVIEW -->
-    <div class="mb-5">
-      <div class="section-heading fade-up">
-        <h2><i class="bi bi-graph-up-arrow me-2" style="color:var(--accent)"></i>Live Markets</h2>
-        <div class="line"></div>
-        <a href="markets.html" class="btn-mp btn-mp-ghost" style="padding:6px 14px;font-size:0.8rem">View All →</a>
-      </div>
-
-      <!-- Tabs -->
-      <div class="filter-chips fade-up mb-3">
-        <span class="chip active" onclick="filterMiniWatchlist('crypto', this)">Crypto</span>
-        <span class="chip" onclick="filterMiniWatchlist('stocks', this)">Stocks</span>
-        <span class="chip" onclick="filterMiniWatchlist('commodities', this)">Commodities</span>
-      </div>
-
-      <div class="mini-watchlist-row fade-up" id="miniWatchlist">
-        <!-- skeleton -->
-        ${Array(6).fill('<div class="mini-asset skeleton" style="min-height:72px"></div>').join('')}
+    <div class="t-panel-body hero-ticker">
+      <div class="hero-title">FINANCIAL INTELLIGENCE</div>
+      <div class="hero-sub">REAL-TIME DATA · AI ANALYSIS · MACRO CALENDAR</div>
+      <div class="live-price-block" id="heroPrices">
+        <div class="lpb-item skeleton" style="min-height:60px"></div>
+        <div class="lpb-item skeleton" style="min-height:60px"></div>
+        <div class="lpb-item skeleton" style="min-height:60px"></div>
+        <div class="lpb-item skeleton" style="min-height:60px"></div>
       </div>
     </div>
-
-    <!-- NEWS PREVIEW -->
-    <div class="mb-5">
-      <div class="section-heading fade-up">
-        <h2><i class="bi bi-newspaper me-2" style="color:var(--blue)"></i>Latest News</h2>
-        <div class="line"></div>
-        <a href="news.html" class="btn-mp btn-mp-ghost" style="padding:6px 14px;font-size:0.8rem">View All →</a>
-      </div>
-      <div class="news-preview-grid" id="newsPreview">
-        <!-- filled by JS -->
-      </div>
-    </div>
-
-    <!-- STATS STRIP -->
-    <div class="stats-strip fade-up">
-      <div class="stats-strip-item">
-        <div class="val" id="counterCryptos">0</div>
-        <div class="lbl">Cryptocurrencies Tracked</div>
-      </div>
-      <div class="stats-strip-item">
-        <div class="val" id="counterStocks">0</div>
-        <div class="lbl">Stocks Monitored</div>
-      </div>
-      <div class="stats-strip-item">
-        <div class="val" id="counterNews">0</div>
-        <div class="lbl">News Articles Today</div>
-      </div>
-      <div class="stats-strip-item">
-        <div class="val" id="counterEvents">0</div>
-        <div class="lbl">Upcoming Macro Events</div>
-      </div>
-    </div>
-
   </div>
-</main>
 
-<!-- ── FOOTER ── -->
+  <!-- [2,3] FEATURED CAROUSEL -->
+  <div class="t-panel span-2">
+    <div class="t-panel-head">
+      <span class="p-title"><i class="bi bi-star"></i> FEATURED</span>
+      <a class="p-link" href="news.html">ALL NEWS →</a>
+    </div>
+    <div id="featuredCarousel" class="carousel slide" data-bs-ride="carousel" data-bs-interval="5000" style="height:100%">
+      <div class="carousel-indicators" id="carouselIndicators"></div>
+      <div class="carousel-inner" id="carouselInner" style="height:100%">
+        <div class="carousel-item active"><div class="carousel-item-inner"><div class="c-gradient"></div><div class="c-content"><div class="skeleton" style="height:16px;width:60%;margin-bottom:8px"></div><div class="skeleton" style="height:24px;margin-bottom:6px"></div></div></div></div>
+      </div>
+      <button class="carousel-control-prev" type="button" data-bs-target="#featuredCarousel" data-bs-slide="prev"><span class="carousel-control-prev-icon"></span></button>
+      <button class="carousel-control-next" type="button" data-bs-target="#featuredCarousel" data-bs-slide="next"><span class="carousel-control-next-icon"></span></button>
+    </div>
+  </div>
+
+  <!-- [4] CRYPTO TABLE -->
+  <div class="t-panel">
+    <div class="t-panel-head">
+      <span class="p-title"><i class="bi bi-currency-bitcoin"></i> CRYPTO</span>
+      <a class="p-link" href="markets.html">FULL TABLE →</a>
+    </div>
+    <div class="t-panel-body" style="padding:0;overflow-x:auto">
+      <table class="mini-table" id="cryptoMini">
+        <thead><tr><th>ASSET</th><th>PRICE</th><th>24H</th><th>7D</th></tr></thead>
+        <tbody id="cryptoMiniBody">
+          <tr><td colspan="4" style="padding:20px;text-align:center;color:var(--text3);font-family:var(--font-mono);font-size:.7rem">LOADING...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- [5] STOCKS TABLE -->
+  <div class="t-panel">
+    <div class="t-panel-head">
+      <span class="p-title"><i class="bi bi-graph-up-arrow"></i> EQUITIES</span>
+      <a class="p-link" href="markets.html">FULL TABLE →</a>
+    </div>
+    <div class="t-panel-body" style="padding:0;overflow-x:auto">
+      <table class="mini-table" id="stocksMini">
+        <thead><tr><th>ASSET</th><th>PRICE</th><th>24H</th><th>VOL</th></tr></thead>
+        <tbody id="stocksMiniBody">
+          <tr><td colspan="4" style="padding:20px;text-align:center;color:var(--text3);font-family:var(--font-mono);font-size:.7rem">LOADING...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- [6] COMMODITIES TABLE -->
+  <div class="t-panel">
+    <div class="t-panel-head">
+      <span class="p-title"><i class="bi bi-basket"></i> COMMODITIES</span>
+      <a class="p-link" href="markets.html">FULL TABLE →</a>
+    </div>
+    <div class="t-panel-body" style="padding:0;overflow-x:auto">
+      <table class="mini-table" id="commodMini">
+        <thead><tr><th>ASSET</th><th>PRICE</th><th>24H</th><th>7D</th></tr></thead>
+        <tbody id="commodMiniBody">
+          <tr><td colspan="4" style="padding:20px;text-align:center;color:var(--text3);font-family:var(--font-mono);font-size:.7rem">LOADING...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- [7] AI MOOD -->
+  <div class="t-panel">
+    <div class="t-panel-head">
+      <span class="p-title"><i class="bi bi-robot"></i> AI SENTIMENT</span>
+      <button class="p-link btn-terminal" onclick="homePage.refreshMood()" style="border:none;background:none;padding:0;font-size:.62rem;letter-spacing:.1em">↻ REFRESH</button>
+    </div>
+    <div class="mood-panel">
+      <div style="font-family:var(--font-mono);font-size:.6rem;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px">MARKET SENTIMENT</div>
+      <div class="mood-sentiment skeleton" id="moodSentiment" style="min-height:36px">&nbsp;</div>
+      <div class="mood-analysis skeleton" id="moodAnalysis" style="min-height:60px;margin-top:8px">&nbsp;</div>
+      <div style="font-family:var(--font-mono);font-size:.6rem;color:var(--text3);margin-top:8px" id="moodTime">—</div>
+    </div>
+  </div>
+
+  <!-- [8] NEWS FEED -->
+  <div class="t-panel span-2">
+    <div class="t-panel-head">
+      <span class="p-title"><i class="bi bi-rss"></i> LIVE NEWS FEED</span>
+      <a class="p-link" href="news.html">ALL ARTICLES →</a>
+    </div>
+    <div class="t-panel-body" style="overflow-y:auto;max-height:260px" id="newsMini">
+      <div style="color:var(--text3);font-family:var(--font-mono);font-size:.7rem;text-align:center;padding:20px">LOADING NEWS...</div>
+    </div>
+  </div>
+
+  <!-- [9] FEAR & GREED -->
+  <div class="t-panel">
+    <div class="t-panel-head">
+      <span class="p-title"><i class="bi bi-speedometer2"></i> FEAR & GREED</span>
+      <a class="p-link" href="tools.html">TOOLS →</a>
+    </div>
+    <div class="t-panel-body">
+      <div class="fg-mini" id="fgMini">
+        <div class="fg-mini-val skeleton" style="width:60px;height:40px"></div>
+        <div class="fg-mini-info"><div class="skeleton" style="height:14px;margin-bottom:6px"></div><div class="skeleton" style="height:10px;width:80%"></div></div>
+      </div>
+      <div class="fg-bar"><div class="fg-indicator" id="fgInd" style="left:50%"></div></div>
+      <div style="display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:.55rem;color:var(--text3);margin-top:4px">
+        <span>EXT FEAR</span><span>FEAR</span><span>NEUTRAL</span><span>GREED</span><span>EXT GREED</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- [10] MACRO CALENDAR MINI -->
+  <div class="t-panel">
+    <div class="t-panel-head">
+      <span class="p-title"><i class="bi bi-calendar-event"></i> UPCOMING EVENTS</span>
+      <a class="p-link" href="calendar.html">FULL CALENDAR →</a>
+    </div>
+    <div class="t-panel-body" style="overflow-y:auto;max-height:200px" id="calMini">
+      <div style="color:var(--text3);font-family:var(--font-mono);font-size:.7rem;text-align:center;padding:20px">LOADING...</div>
+    </div>
+  </div>
+
+  <!-- [11] MARKET SUMMARY + HEATMAP -->
+  <div class="t-panel span-2">
+    <div class="t-panel-head">
+      <span class="p-title"><i class="bi bi-grid-3x3"></i> MARKET HEATMAP — 24H PERFORMANCE</span>
+      <div class="chip-row mb-0" style="margin:0">
+        <span class="chip active" style="padding:2px 8px" onclick="homePage.setHeatmapTab('crypto',this)">CRYPTO</span>
+        <span class="chip" style="padding:2px 8px" onclick="homePage.setHeatmapTab('stocks',this)">STOCKS</span>
+        <span class="chip" style="padding:2px 8px" onclick="homePage.setHeatmapTab('commodities',this)">COMMOD</span>
+      </div>
+    </div>
+    <div class="t-panel-body">
+      <div class="heatmap-grid" id="hmGrid">
+        <div style="color:var(--text3);font-family:var(--font-mono);font-size:.7rem;grid-column:1/-1;text-align:center;padding:20px">LOADING...</div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- terminal-grid -->
+
+<!-- FOOTER -->
 <footer>
   <div class="container-fluid px-4">
     <div class="row align-items-center">
-      <div class="col-md-4">
-        <div class="footer-brand">Market<span class="accent">Pulse</span></div>
-        <p class="mt-2">Financial intelligence for modern investors.</p>
-      </div>
-      <div class="col-md-4 text-center">
-        <div class="d-flex justify-content-center gap-3 mt-3 mt-md-0">
-          <a href="markets.html" style="color:var(--text3);font-size:0.85rem">Markets</a>
-          <a href="news.html" style="color:var(--text3);font-size:0.85rem">News</a>
-          <a href="youtube.html" style="color:var(--text3);font-size:0.85rem">Videos</a>
-          <a href="calendar.html" style="color:var(--text3);font-size:0.85rem">Calendar</a>
+      <div class="col-md-3"><div class="footer-brand">MKT<span class="accent">PULSE</span></div><p class="mt-1">Professional financial intelligence terminal.</p></div>
+      <div class="col-md-6 text-center">
+        <div style="display:flex;justify-content:center;gap:16px;flex-wrap:wrap">
+          <a href="markets.html">MARKETS</a><a href="news.html">NEWS</a>
+          <a href="youtube.html">VIDEOS</a><a href="calendar.html">CALENDAR</a>
+          <a href="tools.html">TOOLS</a><a href="search.html">SEARCH</a>
         </div>
       </div>
-      <div class="col-md-4 text-md-end mt-3 mt-md-0">
-        <p>Data: CoinGecko · Yahoo Finance · NewsAPI</p>
-      </div>
+      <div class="col-md-3 text-md-end mt-3 mt-md-0"><p>CoinGecko · Yahoo Finance · NewsAPI · Finnhub</p></div>
     </div>
-    <hr style="border-color:var(--border);margin:20px 0">
-    <p class="text-center" style="font-size:0.78rem">© 2026 MarketPulse. University Project.</p>
+    <hr style="border-color:var(--border);margin:16px 0">
+    <p class="text-center">© 2026 MARKETPULSE — UNIVERSITY PROJECT — ALL DATA FOR EDUCATIONAL USE</p>
   </div>
 </footer>
-
-</div><!-- .page -->
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="assets/js/app.js"></script>
 <script>
-// ── HOME PAGE ES6 CLASS ──────────────────────────────────
 class HomePage {
   constructor() {
-    this.watchlistData = {};
-    this.currentTab = 'crypto';
+    this.data       = {};
+    this.hmTab      = 'crypto';
     this.init();
   }
 
   async init() {
-    await Promise.all([
-      this.loadCarousel(),
-      this.loadWatchlist(),
-      this.loadNews(),
-      this.loadMood(),
-    ]);
-    this.loadCalendarCount();
+    await Promise.all([this.loadWatchlist(), this.loadNews(), this.loadMood(), this.loadFG(), this.loadCalendar()]);
+    this.loadCarousel();
   }
 
-  // ── CAROUSEL ────────────────────────────────────────────
-  async loadCarousel() {
-    const slides = [
-      {
-        title: 'Bitcoin Approaches New All-Time High',
-        desc: 'BTC surges past $70,000 as institutional demand intensifies and ETF inflows reach record levels.',
-        cat: 'Crypto', catColor: 'rgba(245,200,66,0.9)',
-        bg: 'https://images.unsplash.com/photo-1621761191319-c6fb62004040?w=800&q=60',
-        link: 'markets.html', cta: 'View BTC →'
-      },
-      {
-        title: 'Fed Signals Potential Rate Cuts in Q3 2026',
-        desc: 'Federal Reserve minutes reveal growing consensus for easing monetary policy amid cooling inflation.',
-        cat: 'Macro', catColor: 'rgba(77,166,255,0.9)',
-        bg: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=800&q=60',
-        link: 'calendar.html', cta: 'View Calendar →'
-      },
-      {
-        title: 'NVIDIA Breaks $1T Market Cap Again',
-        desc: 'AI chip demand continues to push NVDA to record valuations as data center spending accelerates.',
-        cat: 'Stocks', catColor: 'rgba(32,224,138,0.9)',
-        bg: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&q=60',
-        link: 'markets.html', cta: 'View Stocks →'
-      },
-      {
-        title: 'Gold Hits $2,400 — Safe Haven Demand Surges',
-        desc: 'Geopolitical tensions in the Middle East drive investors toward traditional safe-haven assets.',
-        cat: 'Commodities', catColor: 'rgba(245,160,66,0.9)',
-        bg: 'https://images.unsplash.com/photo-1610375461246-83df859d849d?w=800&q=60',
-        link: 'markets.html', cta: 'View Commodities →'
-      },
-      {
-        title: 'DeFi Total Value Locked Crosses $200B',
-        desc: 'Decentralized finance protocols see explosive growth as Ethereum Layer 2 fees hit record lows.',
-        cat: 'DeFi', catColor: 'rgba(167,139,250,0.9)',
-        bg: 'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=800&q=60',
-        link: 'news.html', cta: 'Read More →'
-      },
-    ];
-
-    const inner = document.getElementById('carouselInner');
-    inner.innerHTML = slides.map((s, i) => `
-      <div class="carousel-item ${i === 0 ? 'active' : ''}">
-        <div class="carousel-item-inner">
-          <img class="carousel-bg" src="${s.bg}" alt="" loading="lazy">
-          <div class="carousel-bg-gradient"></div>
-          <div class="carousel-content">
-            <span class="carousel-cat" style="background:${s.catColor};color:#000;font-weight:700">${s.cat}</span>
-            <div class="carousel-title">${s.title}</div>
-            <div class="carousel-desc">${s.desc}</div>
-            <a href="${s.link}" class="btn-mp btn-mp-primary" style="width:fit-content">${s.cta}</a>
-          </div>
-        </div>
-      </div>
-    `).join('');
-  }
-
-  // ── WATCHLIST ────────────────────────────────────────────
   async loadWatchlist() {
     try {
-      this.watchlistData = await window.apiClient.get('/api/watchlist');
-      this.renderMiniWatchlist(this.currentTab);
+      this.data = await window.apiClient.get('/api/watchlist', 5*60*1000);
+      this.renderHeroPrices();
+      this.renderMiniTable('cryptoMiniBody', this.data.crypto||[], ['symbol','price','change_24h','change_7d']);
+      this.renderMiniTable('stocksMiniBody', this.data.stocks||[], ['symbol','price','change_24h','volume']);
+      this.renderMiniTable('commodMiniBody', this.data.commodities||[], ['symbol','price','change_24h','change_7d']);
+      this.renderHeatmap();
       this.buildTicker();
-      this.animateCounters();
+      const el = document.getElementById('lastUpdate');
+      if (el) el.textContent = `UPD: ${new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:false})}`;
     } catch(e) {
-      document.getElementById('miniWatchlist').innerHTML =
-        '<div style="color:var(--text3);padding:20px;grid-column:1/-1">⚠ Start the backend: <code>uvicorn main:app --port 8000</code></div>';
+      ['cryptoMiniBody','stocksMiniBody','commodMiniBody'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = `<tr><td colspan="4" style="padding:16px;text-align:center;color:var(--text3);font-family:var(--font-mono);font-size:.68rem">⚠ START BACKEND: uvicorn main:app --port 8000</td></tr>`;
+      });
     }
   }
 
-  renderMiniWatchlist(tab) {
-    const assets = this.watchlistData[tab] || [];
-    const container = document.getElementById('miniWatchlist');
-    container.innerHTML = assets.slice(0, 6).map(a => {
-      const iconHtml = a.image
-        ? `<img src="${a.image}" alt="${a.symbol}">`
-        : `<span>${a.symbol.substring(0,3)}</span>`;
-      return `
-        <a href="markets.html" class="mini-asset">
-          <div class="mini-icon">${iconHtml}</div>
-          <div class="mini-info">
-            <div class="mini-sym">${a.symbol}</div>
-            <div class="mini-name">${a.name}</div>
-          </div>
-          <div>
-            <div class="mini-price">${Fmt.price(a.price)}</div>
-            <div class="mini-change">${Fmt.pct(a.change_24h)}</div>
-          </div>
-        </a>`;
+  renderHeroPrices() {
+    const btc  = this.data.crypto?.find(c=>c.symbol==='BTC');
+    const eth  = this.data.crypto?.find(c=>c.symbol==='ETH');
+    const nvda = this.data.stocks?.find(s=>s.symbol==='NVDA');
+    const gold = this.data.commodities?.find(c=>c.name==='Gold');
+    const items = [btc,eth,nvda,gold].filter(Boolean);
+    document.getElementById('heroPrices').innerHTML = items.map(a => {
+      const up = a.change_24h >= 0;
+      return `<div class="lpb-item" onclick="window.location.href='markets.html'">
+        <div class="lpb-sym">${a.symbol}</div>
+        <div class="lpb-price" style="color:${up?'var(--green)':'var(--red)'}">${Fmt.price(a.price)}</div>
+        <div class="lpb-chg" style="color:${up?'var(--green)':'var(--red)'}">${up?'▲':'▼'} ${Math.abs(a.change_24h).toFixed(2)}%</div>
+      </div>`;
     }).join('');
+  }
+
+  renderMiniTable(tbodyId, assets, cols) {
+    const tbody = document.getElementById(tbodyId);
+    if (!tbody) return;
+    tbody.innerHTML = assets.map(a => {
+      const cells = cols.map(col => {
+        if (col==='price')      return `<td class="price-cell">${Fmt.price(a.price)}</td>`;
+        if (col==='change_24h') return `<td>${Fmt.pct(a.change_24h)}</td>`;
+        if (col==='change_7d')  return `<td>${Fmt.pct(a.change_7d)}</td>`;
+        if (col==='volume')     return `<td class="muted-cell">${Fmt.large(a.volume)}</td>`;
+        if (col==='symbol')     return `<td><span style="color:var(--amber);font-family:var(--font-mono);font-size:.72rem;font-weight:600">${a.symbol}</span></td>`;
+        return `<td>${a[col]||'—'}</td>`;
+      }).join('');
+      return `<tr class="row" onclick="window.location.href='markets.html'">${cells}</tr>`;
+    }).join('');
+  }
+
+  renderHeatmap() {
+    const assets = this.data[this.hmTab] || [];
+    const grid   = document.getElementById('hmGrid');
+    if (!grid) return;
+    grid.innerHTML = assets.map(a => {
+      const pct   = a.change_24h || 0;
+      const abs   = Math.abs(pct);
+      const alpha = Math.min(0.85, 0.1 + abs * 0.06);
+      const bg    = pct >= 0 ? `rgba(0,200,83,${alpha})` : `rgba(255,23,68,${alpha})`;
+      return `<div class="hm-cell" style="background:${bg}">
+        <div class="hm-sym">${a.symbol}</div>
+        <div class="hm-pct" style="color:${pct>=0?'var(--green)':'var(--red)'}">${pct>=0?'+':''}${pct.toFixed(2)}%</div>
+      </div>`;
+    }).join('');
+  }
+
+  setHeatmapTab(tab, el) {
+    document.querySelectorAll('.t-panel-head .chip').forEach(c=>c.classList.remove('active'));
+    el.classList.add('active');
+    this.hmTab = tab;
+    this.renderHeatmap();
   }
 
   buildTicker() {
     const all = [
-      ...(this.watchlistData.crypto || []),
-      ...(this.watchlistData.stocks || []),
-      ...(this.watchlistData.commodities || []),
+      ...(this.data.crypto||[]),
+      ...(this.data.stocks||[]),
+      ...(this.data.commodities||[]),
     ];
-    const html = all.map(a =>
-      `<div class="ticker-item">
+    const html = all.map(a => {
+      const up = a.change_24h >= 0;
+      return `<div class="ticker-item">
         <span class="ticker-sym">${a.symbol}</span>
         <span class="ticker-price">${Fmt.price(a.price)}</span>
-        ${Fmt.pct(a.change_24h)}
-      </div>`
+        <span class="ticker-chg ${up?'change-up':'change-down'}">${up?'▲':'▼'}${Math.abs(a.change_24h).toFixed(2)}%</span>
+      </div>`;
+    }).join('');
+    const t = document.getElementById('tickerInner');
+    if (t) t.innerHTML = html + html;
+  }
+
+  loadCarousel() {
+    const slides = [
+      { title:'Bitcoin Near All-Time High', desc:'BTC surges past $70,000 as institutional demand intensifies and ETF inflows reach record levels.', cat:'CRYPTO', catColor:'var(--amber)', bg:'https://images.unsplash.com/photo-1621761191319-c6fb62004040?w=800&q=60', link:'markets.html' },
+      { title:'Fed Signals Rate Cuts in Q3 2026', desc:'Federal Reserve minutes reveal growing consensus for easing monetary policy amid cooling inflation data.', cat:'MACRO', catColor:'var(--blue)', bg:'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=800&q=60', link:'calendar.html' },
+      { title:'NVIDIA Breaks $1T Market Cap Again', desc:'AI chip demand continues to push NVDA to record valuations as data center spending accelerates globally.', cat:'EQUITIES', catColor:'var(--green)', bg:'https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&q=60', link:'markets.html' },
+      { title:'Gold Hits $2,400 — Safe Haven Surge', desc:'Geopolitical tensions drive investors toward traditional safe-haven assets. Central banks accumulating.', cat:'COMMODITIES', catColor:'#ff8f00', bg:'https://images.unsplash.com/photo-1610375461246-83df859d849d?w=800&q=60', link:'markets.html' },
+      { title:'DeFi TVL Crosses $200B Milestone', desc:'Decentralized finance protocols see explosive growth as Ethereum Layer 2 fees hit record lows.', cat:'DEFI', catColor:'var(--purple)', bg:'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=800&q=60', link:'news.html' },
+    ];
+
+    const indicators = document.getElementById('carouselIndicators');
+    const inner      = document.getElementById('carouselInner');
+    if (!indicators || !inner) return;
+
+    indicators.innerHTML = slides.map((_,i) =>
+      `<button type="button" data-bs-target="#featuredCarousel" data-bs-slide-to="${i}" ${i===0?'class="active"':''}></button>`
     ).join('');
-    const track = document.getElementById('tickerTrack');
-    track.innerHTML = html + html; // duplicate for seamless loop
-  }
 
-  animateCounters() {
-    const crypto = (this.watchlistData.crypto || []).length;
-    const stocks = (this.watchlistData.stocks || []).length;
-    this.countUp('counterCryptos', crypto);
-    this.countUp('counterStocks', stocks);
-  }
-
-  countUp(id, target, duration = 1500) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    let start = 0;
-    const step = target / (duration / 16);
-    const timer = setInterval(() => {
-      start = Math.min(start + step, target);
-      el.textContent = Math.floor(start);
-      if (start >= target) clearInterval(timer);
-    }, 16);
-  }
-
-  // ── NEWS ────────────────────────────────────────────────
-  async loadNews() {
-    const container = document.getElementById('newsPreview');
-    container.innerHTML = Array(4).fill(`
-      <div class="news-preview-card">
-        <div class="news-preview-img skeleton"></div>
-        <div class="news-preview-content">
-          <div class="skeleton" style="height:10px;width:60%;margin-bottom:8px"></div>
-          <div class="skeleton" style="height:14px;margin-bottom:6px"></div>
-          <div class="skeleton" style="height:14px;width:80%"></div>
+    inner.innerHTML = slides.map((s,i) => `
+      <div class="carousel-item ${i===0?'active':''}" style="height:100%">
+        <div class="carousel-item-inner" onclick="window.location.href='${s.link}'" style="cursor:pointer;height:100%">
+          <img class="c-bg" src="${s.bg}" alt="" loading="lazy">
+          <div class="c-gradient"></div>
+          <div class="c-content">
+            <span class="c-cat" style="background:${s.catColor};color:#000;font-weight:700">${s.cat}</span>
+            <div class="c-title">${s.title}</div>
+            <div class="c-desc">${s.desc}</div>
+            <span style="font-family:var(--font-mono);font-size:.62rem;color:var(--amber);letter-spacing:.08em">READ MORE →</span>
+          </div>
         </div>
       </div>`).join('');
+  }
 
+  async loadNews() {
     try {
-      const articles = await window.apiClient.get('/api/news');
-      this.countUp('counterNews', articles.length, 1000);
-      container.innerHTML = articles.slice(0, 4).map(a => `
-        <div class="news-preview-card" onclick="window.open('${a.url}','_blank')">
-          ${a.image
-            ? `<img class="news-preview-img" src="${a.image}" alt="" onerror="this.style.display='none'">`
-            : `<div class="news-preview-img" style="display:flex;align-items:center;justify-content:center;background:var(--bg4);font-size:1.4rem">📰</div>`
-          }
-          <div class="news-preview-content">
-            <div class="news-preview-source">${a.source}</div>
-            <div class="news-preview-title">${a.title}</div>
-            <div class="news-preview-time">${Fmt.timeAgo(a.published_at)}</div>
+      const articles = await window.apiClient.get('/api/news', 30*60*1000);
+      const el = document.getElementById('newsMini');
+      if (!el) return;
+      el.innerHTML = articles.slice(0,8).map(a => `
+        <div class="news-mini-item" onclick="window.open('${a.url}','_blank')">
+          <div class="news-mini-src">
+            <span>${a.source?.toUpperCase()}</span>
+            <span>${Fmt.timeAgo(a.published_at)}</span>
           </div>
+          <div class="news-mini-title">${a.title}</div>
         </div>`).join('');
     } catch(e) {
-      container.innerHTML = '<div style="color:var(--text3);padding:20px">Add NewsAPI key to backend for live news.</div>';
+      document.getElementById('newsMini').innerHTML = '<div style="color:var(--text3);font-family:var(--font-mono);font-size:.7rem;padding:16px">NEWS UNAVAILABLE — ADD NEWSAPI KEY</div>';
     }
   }
 
-  // ── MOOD ────────────────────────────────────────────────
   async loadMood() {
     try {
-      const data = await window.apiClient.get('/api/mood', 2 * 60 * 60 * 1000);
-      const badge = document.getElementById('moodBadge');
-      const text  = document.getElementById('moodText');
-      badge.className = `mood-badge-mini ${data.sentiment.toLowerCase()}`;
-      badge.textContent = data.sentiment;
-      text.className = '';
-      text.style.fontSize = '0.88rem';
-      text.style.color = 'var(--text2)';
-      text.textContent = data.analysis?.split('.')[0] + '.';
+      const data = await window.apiClient.get('/api/mood', 2*60*60*1000);
+      const sent = document.getElementById('moodSentiment');
+      const ana  = document.getElementById('moodAnalysis');
+      const time = document.getElementById('moodTime');
+      if (sent) { sent.className = `mood-sentiment ${(data.sentiment||'mixed').toLowerCase()}`; sent.textContent = data.sentiment?.toUpperCase()||'MIXED'; }
+      if (ana)  { ana.className = 'mood-analysis'; ana.textContent = data.analysis||'—'; }
+      if (time && data.generated_at) time.textContent = `UPDATED: ${new Date(data.generated_at).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:false})}`;
     } catch(e) {
-      document.getElementById('moodBadge').textContent = 'N/A';
-      document.getElementById('moodText').textContent = 'Add Anthropic API key for AI market mood.';
+      const sent = document.getElementById('moodSentiment');
+      const ana  = document.getElementById('moodAnalysis');
+      if (sent) { sent.className = 'mood-sentiment mixed'; sent.textContent = 'N/A'; }
+      if (ana)  { ana.className = 'mood-analysis'; ana.textContent = 'Add ANTHROPIC_KEY to enable AI sentiment analysis.'; }
     }
   }
 
-  async loadCalendarCount() {
+  async refreshMood() {
+    window.apiClient._cache.delete('/api/mood');
+    const sent = document.getElementById('moodSentiment');
+    const ana  = document.getElementById('moodAnalysis');
+    if (sent) { sent.className='mood-sentiment mixed skeleton'; sent.textContent='\u00a0'; }
+    if (ana)  { ana.className='mood-analysis skeleton'; ana.textContent='\u00a0'; }
+    await this.loadMood();
+    Toast.show('SENTIMENT REFRESHED', 'success');
+  }
+
+  async loadFG() {
     try {
-      const events = await window.apiClient.get('/api/calendar');
-      this.countUp('counterEvents', events.length, 1000);
+      const data  = await window.apiClient.get('/api/fear-greed', 60*60*1000);
+      const cur   = data.current || {};
+      const val   = parseInt(cur.value||50);
+      const label = cur.value_classification||'Neutral';
+      const colors = {'Extreme Fear':'var(--red)','Fear':'#ff8f00','Neutral':'var(--amber)','Greed':'#69f0ae','Extreme Greed':'var(--green)'};
+      const color  = colors[label]||'var(--amber)';
+      const fgEl   = document.getElementById('fgMini');
+      const indEl  = document.getElementById('fgInd');
+      if (fgEl) fgEl.innerHTML = `
+        <div class="fg-mini-val" style="color:${color}">${val}</div>
+        <div class="fg-mini-info">
+          <div class="fg-mini-label" style="color:${color}">${label.toUpperCase()}</div>
+          <div class="fg-mini-sub">CRYPTO FEAR & GREED INDEX</div>
+        </div>`;
+      if (indEl) indEl.style.left = `${val}%`;
+    } catch(e) {}
+  }
+
+  async loadCalendar() {
+    try {
+      const events = await window.apiClient.get('/api/calendar', 60*60*1000);
+      const el     = document.getElementById('calMini');
+      if (!el) return;
+      const today  = new Date().toISOString().split('T')[0];
+      const next6  = events.filter(e=>e.date>=today).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,6);
+      el.innerHTML = next6.map(e => {
+        const d = new Date(e.date+'T00:00:00');
+        const dateStr = isNaN(d)?e.date:d.toLocaleDateString('en-US',{month:'short',day:'numeric'}).toUpperCase();
+        return `<div class="cal-mini-item">
+          <span class="cal-mini-date">${dateStr}</span>
+          <span class="cal-mini-name">${e.event}</span>
+          <span class="imp-badge ${e.importance}" style="font-size:.55rem">${e.importance.substring(0,1).toUpperCase()}</span>
+        </div>`;
+      }).join('');
     } catch(e) {}
   }
 }
 
-function filterMiniWatchlist(tab, el) {
-  document.querySelectorAll('.filter-chips .chip').forEach(c => c.classList.remove('active'));
-  el.classList.add('active');
-  window.homePage.currentTab = tab;
-  window.homePage.renderMiniWatchlist(tab);
+// Status bar + world clocks
+async function initStatusBar() {
+  try {
+    const data = await window.apiClient.get('/api/watchlist', 5*60*1000);
+    const set = (id, asset) => {
+      const el = document.getElementById(id);
+      if (!el || !asset) return;
+      const up = asset.change_24h >= 0;
+      el.className = `status-bar-item ${up?'positive':'negative'}`;
+      el.innerHTML = `<span class="label">${el.querySelector('.label')?.textContent||''}</span><span class="value">${Fmt.price(asset.price)} <span style="font-size:.58rem">${up?'▲':'▼'}${Math.abs(asset.change_24h).toFixed(2)}%</span></span>`;
+    };
+    set('sb-btc',  data.crypto?.find(c=>c.symbol==='BTC'));
+    set('sb-eth',  data.crypto?.find(c=>c.symbol==='ETH'));
+    set('sb-nvda', data.stocks?.find(s=>s.symbol==='NVDA'));
+    set('sb-gold', data.commodities?.find(c=>c.name==='Gold'));
+    set('sb-oil',  data.commodities?.find(c=>c.name==='Crude Oil'));
+  } catch(e) {}
+
+  function clocks() {
+    const fmt = tz => new Date().toLocaleTimeString('en-US',{timeZone:tz,hour:'2-digit',minute:'2-digit',hour12:false});
+    const s=(id,v)=>{ const e=document.getElementById(id); if(e) e.textContent=v; };
+    s('sb-time-ny', fmt('America/New_York'));
+    s('sb-time-ln', fmt('Europe/London'));
+    s('sb-time-tk', fmt('Asia/Tokyo'));
+    s('sb-time-bt', fmt('Asia/Beirut'));
+  }
+  clocks(); setInterval(clocks, 1000);
 }
 
-window.homePage = new HomePage();
-</script>
-
-<button class="scroll-top" id="scrollTopBtn" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Back to top">↑</button>
-<script>
-window.addEventListener('scroll', function(){
-  var btn = document.getElementById('scrollTopBtn');
-  if(btn) btn.classList.toggle('visible', window.scrollY > 400);
+document.addEventListener('DOMContentLoaded', () => {
+  window.homePage = new HomePage();
+  initStatusBar();
 });
 </script>
 </body>

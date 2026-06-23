@@ -230,33 +230,65 @@ def _fallback_calendar():
     ]
 
 # ── FOREX RATES ───────────────────────────────────────────
+# Returns a flat USD-base rate table: {"EUR":1.0842,"GBP":1.2701,...}
+# All rates = how many USD per 1 unit of that currency
+# So EUR=1.0842 means 1 EUR = 1.0842 USD
 @app.get("/api/forex")
 async def get_forex():
     path = f"{CACHE_DIR}/forex.json"
     if cache_valid(path, 60): return read_cache(path)
-    pairs = ["EUR/USD","GBP/USD","USD/JPY","USD/CHF","AUD/USD","USD/CAD","USD/LBP"]
-    result = []
+
+    # Fetch all rates with USD as base from Finnhub
+    # This gives us USD/XXX rates directly
+    rates_usd_base = {}
     async with httpx.AsyncClient(timeout=10) as client:
-        for pair in pairs:
-            try:
-                base, quote = pair.split("/")
-                r = await client.get(
-                    f"https://finnhub.io/api/v1/forex/rates?base={base}&token={FINNHUB_KEY}")
-                data = r.json()
-                rate = data.get("quote",{}).get(quote)
-                if rate:
-                    result.append({"pair": pair, "rate": round(rate,4), "base": base, "quote": quote})
-            except: pass
-    if not result:
-        result = [
-            {"pair":"EUR/USD","rate":1.0842,"base":"EUR","quote":"USD"},
-            {"pair":"GBP/USD","rate":1.2701,"base":"GBP","quote":"USD"},
-            {"pair":"USD/JPY","rate":157.23,"base":"USD","quote":"JPY"},
-            {"pair":"AUD/USD","rate":0.6612,"base":"AUD","quote":"USD"},
-            {"pair":"USD/LBP","rate":89500,"base":"USD","quote":"LBP"},
-        ]
-    write_cache(path, result)
-    return result
+        try:
+            r = await client.get(
+                f"https://finnhub.io/api/v1/forex/rates?base=USD&token={FINNHUB_KEY}")
+            data = r.json()
+            quotes = data.get("quote", {})
+            # quotes["EUR"] = 0.9223 means 1 USD = 0.9223 EUR
+            # We want: 1 EUR = ? USD → invert
+            for currency, rate_per_usd in quotes.items():
+                if rate_per_usd and rate_per_usd > 0:
+                    # rate_per_usd = units of currency per 1 USD
+                    # So 1 unit of currency = 1/rate_per_usd USD
+                    rates_usd_base[currency] = round(1 / rate_per_usd, 6)
+            rates_usd_base["USD"] = 1.0
+        except Exception as e:
+            print(f"Finnhub forex error: {e}")
+
+    # Also fetch crypto rates via CoinGecko
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            r = await client.get(
+                "https://api.coingecko.com/api/v3/simple/price",
+                params={"ids":"bitcoin,ethereum","vs_currencies":"usd"})
+            cdata = r.json()
+            if cdata.get("bitcoin"):
+                rates_usd_base["BTC"] = cdata["bitcoin"]["usd"]
+            if cdata.get("ethereum"):
+                rates_usd_base["ETH"] = cdata["ethereum"]["usd"]
+    except: pass
+
+    # Fallback if API failed
+    if len(rates_usd_base) < 3:
+        rates_usd_base = {
+            "USD": 1.0,
+            "EUR": 1.0842,
+            "GBP": 1.2701,
+            "JPY": 0.00636,
+            "CHF": 1.1092,
+            "AUD": 0.6612,
+            "CAD": 0.7312,
+            "CHF": 1.1092,
+            "LBP": 0.0000112,
+            "BTC": 67500.0,
+            "ETH": 3500.0,
+        }
+
+    write_cache(path, rates_usd_base)
+    return rates_usd_base
 
 # ── FEAR & GREED INDEX ────────────────────────────────────
 @app.get("/api/fear-greed")
@@ -334,6 +366,135 @@ Lines 2-4: 2-3 sentences of specific professional analysis."""
         return result
     except Exception as e:
         return {"sentiment":"Mixed","analysis":f"AI analysis error: {e}","generated_at":datetime.now().isoformat()}
+
+# ── MARKET ANALYSIS ──────────────────────────────────────
+@app.get("/api/analysis")
+async def get_analysis():
+    """Algorithmic market analysis — works without AI key"""
+    path = f"{CACHE_DIR}/analysis.json"
+    if cache_valid(path, 30): return read_cache(path)
+
+    try:
+        watchlist = await get_watchlist()
+        fear_greed_data = {"value": 50, "label": "Neutral"}
+        try:
+            fg = await get_fear_greed()
+            fear_greed_data = {"value": int(fg["current"].get("value",50)), "label": fg["current"].get("value_classification","Neutral")}
+        except: pass
+
+        crypto = watchlist.get("crypto", [])
+        stocks = watchlist.get("stocks", [])
+        commodities = watchlist.get("commodities", [])
+        all_assets = crypto + stocks + commodities
+
+        # ── Algorithmic analysis ─────────────────────────────
+        gainers = [a for a in all_assets if a["change_24h"] > 0]
+        losers  = [a for a in all_assets if a["change_24h"] < 0]
+        top_gainer = max(all_assets, key=lambda x: x["change_24h"], default=None)
+        top_loser  = min(all_assets, key=lambda x: x["change_24h"], default=None)
+        btc = next((c for c in crypto if c["symbol"]=="BTC"), None)
+        eth = next((c for c in crypto if c["symbol"]=="ETH"), None)
+        gold = next((c for c in commodities if "Gold" in c["name"]), None)
+        oil  = next((c for c in commodities if "Crude" in c["name"]), None)
+        nvda = next((s for s in stocks if s["symbol"]=="NVDA"), None)
+
+        # Determine overall market mood algorithmically
+        avg_crypto_change = sum(c["change_24h"] for c in crypto) / len(crypto) if crypto else 0
+        avg_stock_change  = sum(s["change_24h"] for s in stocks) / len(stocks) if stocks else 0
+        fg_val = fear_greed_data["value"]
+
+        # Score: positive = bullish signal
+        score = 0
+        score += 2 if avg_crypto_change > 1 else (1 if avg_crypto_change > 0 else (-1 if avg_crypto_change < -1 else 0))
+        score += 2 if avg_stock_change > 0.5 else (1 if avg_stock_change > 0 else (-1 if avg_stock_change < -0.5 else 0))
+        score += 1 if fg_val > 60 else (-1 if fg_val < 40 else 0)
+        score += 1 if btc and btc["change_24h"] > 0 else (-1 if btc and btc["change_24h"] < -2 else 0)
+
+        if score >= 4:    overall = "BULLISH"
+        elif score >= 1:  overall = "MILDLY BULLISH"
+        elif score == 0:  overall = "NEUTRAL"
+        elif score >= -2: overall = "MILDLY BEARISH"
+        else:             overall = "BEARISH"
+
+        # Key insights
+        insights = []
+
+        if btc and abs(btc["change_24h"]) > 2:
+            direction = "surging" if btc["change_24h"] > 0 else "declining"
+            insights.append(f"Bitcoin is {direction} {abs(btc['change_24h']):.1f}% — expect correlated crypto moves")
+
+        if gold and gold["change_24h"] > 1:
+            insights.append(f"Gold rising {gold['change_24h']:.1f}% signals safe-haven demand — watch for risk-off rotation")
+        elif gold and gold["change_24h"] < -1:
+            insights.append(f"Gold down {abs(gold['change_24h']):.1f}% suggests risk appetite improving")
+
+        if oil and abs(oil["change_24h"]) > 2:
+            direction = "rising" if oil["change_24h"] > 0 else "falling"
+            insights.append(f"Crude oil {direction} {abs(oil['change_24h']):.1f}% — inflation and geopolitical risk factor")
+
+        if nvda and nvda["change_24h"] > 2:
+            insights.append(f"NVDA up {nvda['change_24h']:.1f}% — AI sector momentum positive, risk assets favored")
+
+        if fg_val < 30:
+            insights.append(f"Fear & Greed at {fg_val} (Extreme Fear) — historically a buying opportunity")
+        elif fg_val > 75:
+            insights.append(f"Fear & Greed at {fg_val} (Extreme Greed) — market may be overextended, caution warranted")
+
+        if len(gainers) > len(losers) * 2:
+            insights.append(f"Broad market rally: {len(gainers)}/{len(all_assets)} assets gaining — strong risk-on sentiment")
+        elif len(losers) > len(gainers) * 2:
+            insights.append(f"Broad selloff: {len(losers)}/{len(all_assets)} assets declining — risk-off environment")
+
+        # Cross-asset correlation signal
+        if btc and gold:
+            if btc["change_24h"] > 1 and gold["change_24h"] > 1:
+                insights.append("BTC and Gold both rising — dual safe-haven + risk-on signal, unusual divergence")
+            elif btc["change_24h"] < -1 and gold["change_24h"] > 1:
+                insights.append("BTC falling while Gold rises — classic risk-off rotation, watch USD strength")
+
+        # Price alerts
+        alerts = []
+        if btc and btc["price"] > 70000:
+            alerts.append(f"BTC above $70K — key psychological resistance level")
+        if btc and btc["price"] < 50000:
+            alerts.append(f"BTC below $50K — watch for support at this level")
+
+        result = {
+            "overall": overall,
+            "score": score,
+            "fear_greed": fear_greed_data,
+            "insights": insights[:5],
+            "alerts": alerts[:3],
+            "top_gainer": {"symbol": top_gainer["symbol"], "change": top_gainer["change_24h"]} if top_gainer else None,
+            "top_loser":  {"symbol": top_loser["symbol"],  "change": top_loser["change_24h"]}  if top_loser  else None,
+            "avg_crypto_change": round(avg_crypto_change, 2),
+            "avg_stock_change":  round(avg_stock_change, 2),
+            "gainers": len(gainers),
+            "losers":  len(losers),
+            "generated_at": datetime.now().isoformat(),
+        }
+
+        # If Anthropic key available, enhance with AI summary
+        if ANTHROPIC_KEY:
+            try:
+                summary_prompt = f"""You are a Bloomberg terminal analyst. In 2-3 sentences max, give a sharp professional market summary.
+Data: Overall={overall}, BTC={btc['change_24h'] if btc else 'N/A'}%, Avg crypto={avg_crypto_change:.1f}%, Avg stocks={avg_stock_change:.1f}%, F&G={fg_val} ({fear_greed_data['label']})
+Top gainer: {top_gainer['symbol'] if top_gainer else 'N/A'} ({top_gainer['change_24h'] if top_gainer else 0:.1f}%)
+Key insight: {insights[0] if insights else 'Markets mixed'}
+Be direct, use numbers, no fluff. Start with the overall signal."""
+                async with httpx.AsyncClient(timeout=15) as client:
+                    r = await client.post("https://api.anthropic.com/v1/messages",
+                        headers={"x-api-key":ANTHROPIC_KEY,"anthropic-version":"2023-06-01","content-type":"application/json"},
+                        json={"model":"claude-haiku-4-5-20251001","max_tokens":150,"messages":[{"role":"user","content":summary_prompt}]})
+                    ai_text = r.json()["content"][0]["text"].strip()
+                    result["ai_summary"] = ai_text
+            except: pass
+
+        write_cache(path, result)
+        return result
+
+    except Exception as e:
+        return {"overall":"N/A","score":0,"insights":[f"Analysis error: {str(e)}"],"generated_at":datetime.now().isoformat()}
 
 @app.get("/api/clear-cache")
 async def clear_cache():

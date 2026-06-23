@@ -2,305 +2,225 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script>
-  (function(){
-    var t=localStorage.getItem('mp-theme')||'dark';
-    document.documentElement.setAttribute('data-theme',t);
-  })();
-</script>
+<script>(function(){var t=localStorage.getItem('mp-theme')||'dark';document.documentElement.setAttribute('data-theme',t);})();</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Markets — MarketPulse</title>
+<title>Markets — MarketPulse Terminal</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
 <link href="assets/css/main.css" rel="stylesheet">
 <style>
-.page-hero {
-  padding: 48px 0 36px;
-  border-bottom: 1px solid var(--border);
-  margin-bottom: 40px;
+.markets-layout { display: grid; grid-template-columns: 1fr 260px; gap: 1px; background: var(--border); min-height: calc(100vh - 74px); }
+.markets-main   { background: var(--bg); }
+.markets-side   { background: var(--bg2); border-left: 1px solid var(--border); }
+
+.page-bar {
+  background: var(--bg2); border-bottom: 1px solid var(--border);
+  padding: 8px 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
 }
+.page-bar h1 { font-family: var(--font-mono); font-size: 0.85rem; font-weight: 600; letter-spacing: 0.08em; color: var(--amber); margin: 0; }
 
-.page-hero h1 { font-size: 2.2rem; font-weight: 800; letter-spacing: -0.02em; }
-.page-hero p  { color: var(--text2); margin-top: 8px; font-size: 0.95rem; }
+.kpi-strip { display: grid; grid-template-columns: repeat(5,1fr); gap: 1px; background: var(--border); border-bottom: 1px solid var(--border); }
+.kpi-strip-cell { background: var(--bg2); padding: 10px 14px; }
+.kpi-strip-cell .lbl { font-family: var(--font-mono); font-size: 0.58rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text3); margin-bottom: 3px; }
+.kpi-strip-cell .val { font-family: var(--font-mono); font-size: 0.95rem; font-weight: 600; }
+.kpi-strip-cell .sub { font-family: var(--font-mono); font-size: 0.62rem; margin-top: 1px; }
 
-/* ── SUMMARY CARDS ── */
-.summary-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 14px;
-  margin-bottom: 36px;
-}
+.table-toolbar { padding: 10px 16px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; border-bottom: 1px solid var(--border); background: var(--bg2); }
 
-.summary-card {
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 18px 20px;
-  transition: all var(--transition);
-}
+.fav-btn { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 0.85rem; transition: all 0.15s; padding: 2px 4px; }
+.fav-btn:hover, .fav-btn.active { color: var(--amber); transform: scale(1.2); }
 
-.summary-card:hover { border-color: var(--border2); transform: translateY(-2px); }
+.side-panel { border-bottom: 1px solid var(--border); }
+.side-panel-head { padding: 8px 12px; background: var(--bg3); border-bottom: 1px solid var(--border); font-family: var(--font-mono); font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--amber); }
+.side-panel-body { padding: 10px 12px; }
 
-.summary-card .lbl  { font-size: 0.72rem; color: var(--text3); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px; }
-.summary-card .val  { font-family: 'Syne', sans-serif; font-size: 1.5rem; font-weight: 800; }
-.summary-card .sub  { font-size: 0.78rem; color: var(--text3); margin-top: 4px; }
+.fg-bar-sm { height: 4px; border-radius: 2px; background: linear-gradient(to right,#ff1744,#ff8f00,#f0a500,#69f0ae,#00c853); position: relative; margin: 6px 0; }
+.fg-indicator-sm { position: absolute; top: -3px; width: 10px; height: 10px; border-radius: 50%; background: var(--text); border: 2px solid var(--bg); transform: translateX(-50%); transition: left 0.5s ease; }
 
-/* ── TABLE ── */
-.market-table {
-  width: 100%;
-  border-collapse: collapse;
-}
+.hm-grid-sm { display: grid; grid-template-columns: repeat(3,1fr); gap: 3px; }
+.hm-cell-sm { border-radius: 3px; padding: 6px 4px; text-align: center; font-family: var(--font-mono); font-size: 0.62rem; }
+.hm-sym-sm  { font-weight: 600; margin-bottom: 1px; }
+.hm-pct-sm  { font-size: 0.7rem; }
 
-.market-table th {
-  font-family: 'DM Mono', monospace;
-  font-size: 0.68rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--text3);
-  padding: 10px 16px;
-  border-bottom: 1px solid var(--border);
-  text-align: left;
-  cursor: pointer;
-  white-space: nowrap;
-  user-select: none;
-}
-
-.market-table th:hover { color: var(--text2); }
-.market-table th.sorted { color: var(--accent); }
-.market-table th.sorted::after { content: ' ↓'; }
-.market-table th.sorted.asc::after { content: ' ↑'; }
-
-.market-table tr.asset-row {
-  cursor: pointer;
-  transition: background var(--transition);
-}
-
-.market-table tr.asset-row:hover td { background: var(--bg2); }
-
-.market-table td {
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--border);
-  font-size: 0.88rem;
-  vertical-align: middle;
-}
-
-.rank-cell { color: var(--text3); font-family: 'DM Mono', monospace; font-size: 0.78rem; }
-
-.asset-cell { display: flex; align-items: center; gap: 12px; }
-
-.asset-ico {
-  width: 38px; height: 38px;
-  border-radius: 50%;
-  background: var(--bg4);
-  border: 1px solid var(--border2);
-  display: flex; align-items: center; justify-content: center;
-  overflow: hidden; flex-shrink: 0;
-}
-
-.asset-ico img  { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
-.asset-ico span { font-size: 0.68rem; font-weight: 700; color: var(--accent); font-family: 'DM Mono', monospace; }
-
-.asset-lbl strong { font-size: 0.88rem; font-weight: 600; display: block; }
-.asset-lbl span   { font-size: 0.72rem; color: var(--text3); }
-
-.price-cell { font-family: 'DM Mono', monospace; font-size: 0.9rem; font-weight: 500; }
-
-.vol-cell { font-family: 'DM Mono', monospace; font-size: 0.78rem; color: var(--text2); }
-
-.spark-cell { width: 110px; }
-
-.fav-btn {
-  background: none; border: none;
-  color: var(--text3); font-size: 1rem;
-  cursor: pointer; padding: 4px;
-  transition: all var(--transition);
-}
-
-.fav-btn:hover, .fav-btn.active { color: var(--accent); transform: scale(1.2); }
-
-/* ── CHART MODAL ── */
-.chart-overlay {
-  display: none;
-  position: fixed; inset: 0;
-  background: rgba(0,0,0,0.75);
-  backdrop-filter: blur(10px);
-  z-index: 1050;
-  align-items: center;
-  justify-content: center;
-}
-
-.chart-overlay.open { display: flex; }
-
-.chart-modal {
-  background: var(--bg2);
-  border: 1px solid var(--border2);
-  border-radius: 20px;
-  padding: 32px;
-  width: min(720px, 95vw);
-  max-height: 90vh;
-  overflow-y: auto;
-  position: relative;
-  animation: modalIn 0.25s ease;
-}
-
-@keyframes modalIn {
-  from { opacity: 0; transform: scale(0.95) translateY(12px); }
-  to   { opacity: 1; transform: scale(1) translateY(0); }
-}
-
-.modal-close-btn {
-  position: absolute; top: 16px; right: 20px;
-  background: var(--bg3); border: 1px solid var(--border2);
-  color: var(--text2); width: 32px; height: 32px;
-  border-radius: 50%; font-size: 1rem;
-  cursor: pointer; display: flex; align-items: center; justify-content: center;
-  transition: all var(--transition);
-}
-
-.modal-close-btn:hover { color: var(--text); border-color: var(--accent); }
-
-.modal-header-info { margin-bottom: 24px; padding-right: 40px; }
-.modal-name  { font-family: 'Syne', sans-serif; font-size: 1.5rem; font-weight: 800; }
-.modal-sub   { color: var(--text3); font-size: 0.85rem; margin-top: 4px; }
-
-.modal-stats-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  margin-top: 20px;
-}
-
-.modal-stat {
-  background: var(--bg3);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 12px 14px;
-}
-
-.modal-stat .lbl { font-size: 0.68rem; color: var(--text3); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 4px; }
-.modal-stat .val { font-family: 'DM Mono', monospace; font-size: 0.95rem; font-weight: 500; }
-
-@media (max-width: 768px) {
-  .modal-stats-grid { grid-template-columns: 1fr 1fr; }
-  .market-table th:nth-child(6),
-  .market-table td:nth-child(6),
-  .market-table th:nth-child(7),
-  .market-table td:nth-child(7) { display: none; }
-}
+@media (max-width: 1100px) { .markets-layout { grid-template-columns: 1fr; } .markets-side { display: none; } .kpi-strip { grid-template-columns: repeat(3,1fr); } }
+@media (max-width: 600px)  { .kpi-strip { grid-template-columns: repeat(2,1fr); } }
 </style>
 </head>
 <body>
 <div class="page">
 
+<!-- STATUS BAR -->
+<div class="status-bar" id="statusBar">
+  <div class="status-bar-item"><span class="status-bar-dot"></span><span class="value">LIVE</span></div>
+  <div class="status-bar-item" id="sb-btc"><span class="label">BTC</span><span class="value">—</span></div>
+  <div class="status-bar-item" id="sb-eth"><span class="label">ETH</span><span class="value">—</span></div>
+  <div class="status-bar-item" id="sb-nvda"><span class="label">NVDA</span><span class="value">—</span></div>
+  <div class="status-bar-item" id="sb-gold"><span class="label">XAU</span><span class="value">—</span></div>
+  <div class="status-bar-item" id="sb-oil"><span class="label">OIL</span><span class="value">—</span></div>
+  <div class="ms-auto status-bar-item"><span class="label">NY</span><span class="value" id="sb-time-ny">—</span></div>
+  <div class="status-bar-item"><span class="label">LN</span><span class="value" id="sb-time-ln">—</span></div>
+  <div class="status-bar-item"><span class="label">TK</span><span class="value" id="sb-time-tk">—</span></div>
+  <div class="status-bar-item"><span class="label">BT</span><span class="value" id="sb-time-bt">—</span></div>
+</div>
 <nav class="navbar navbar-expand-lg">
-  <div class="container-fluid px-4">
-    <a class="navbar-brand" href="index.html">Market<span class="accent">Pulse</span></a>
-    <button class="navbar-toggler border-0" type="button" style="color:var(--text2)">
-      <i class="bi bi-list" style="font-size:1.4rem"></i>
-    </button>
-    <div class="collapse navbar-collapse" id="navMenu">
-      <ul class="navbar-nav ms-auto align-items-center gap-1">
-        <li class="nav-item"><a class="nav-link" href="index.html"><i class="bi bi-house me-1"></i>Home</a></li>
-        <li class="nav-item"><a class="nav-link" href="markets.html"><i class="bi bi-graph-up me-1"></i>Markets</a></li>
-        <li class="nav-item"><a class="nav-link" href="news.html"><i class="bi bi-newspaper me-1"></i>News</a></li>
-        <li class="nav-item"><a class="nav-link" href="youtube.html"><i class="bi bi-youtube me-1"></i>Videos</a></li>
-        <li class="nav-item"><a class="nav-link" href="calendar.html"><i class="bi bi-calendar3 me-1"></i>Calendar</a></li>
-        <li class="nav-item"><a class="nav-link" href="tools.html"><i class="bi bi-tools me-1"></i>Tools</a></li>
-        <li class="nav-item"><a class="nav-link" href="search.html"><i class="bi bi-search me-1"></i>Search</a></li>
-        <li class="nav-item ms-2"><span class="nav-dot me-1"></span><span class="mono" id="navClock" style="font-size:.75rem;color:var(--text3)"></span></li>
-        <li class="nav-item ms-2"><button class="theme-toggle" id="themeToggle">🌙</button></li>
-      </ul>
-    </div>
+  <div class="container-fluid px-3">
+    <a class="navbar-brand" href="index.html">MKT<span class="accent">PULSE</span><span class="version">v6</span></a>
+    <div class="nav-divider"></div>
+    <button class="navbar-toggler border-0 d-lg-none" type="button"><i class="bi bi-list"></i></button>
+    <ul class="navbar-nav d-none d-lg-flex">
+      <li class="nav-item"><a class="nav-link" href="index.html"><i class="bi bi-display"></i> Terminal</a></li>
+      <li class="nav-item"><a class="nav-link" href="markets.html"><i class="bi bi-graph-up"></i> Markets</a></li>
+      <li class="nav-item"><a class="nav-link" href="news.html"><i class="bi bi-newspaper"></i> News</a></li>
+      <li class="nav-item"><a class="nav-link" href="youtube.html"><i class="bi bi-play-circle"></i> Videos</a></li>
+      <li class="nav-item"><a class="nav-link" href="calendar.html"><i class="bi bi-calendar3"></i> Calendar</a></li>
+      <li class="nav-item"><a class="nav-link" href="tools.html"><i class="bi bi-tools"></i> Tools</a></li>
+      <li class="nav-item"><a class="nav-link" href="search.html"><i class="bi bi-search"></i> Search</a></li>
+    </ul>
+    <div class="nav-clock d-none d-lg-block" id="navClock"></div>
+    <button class="theme-toggle ms-2" id="themeToggle">☀</button>
   </div>
 </nav>
 
-<main>
-  <div class="container-fluid px-4">
-
-    <div class="page-hero fade-up">
-      <h1><i class="bi bi-graph-up-arrow me-3" style="color:var(--accent)"></i>Live Markets</h1>
-      <p>Real-time prices for cryptocurrencies, stocks, and commodities. Click any asset for detailed chart.</p>
+<div class="markets-layout">
+  <!-- MAIN -->
+  <div class="markets-main">
+    <div class="page-bar">
+      <h1><i class="bi bi-graph-up-arrow me-2"></i>MARKETS — LIVE PRICES</h1>
+      <div class="ms-auto d-flex align-items-center gap-2">
+        <span class="status-bar-dot"></span>
+        <span style="font-family:var(--font-mono);font-size:.62rem;color:var(--text3)" id="mktUpdateTime">—</span>
+        <button class="btn-terminal" onclick="marketsPage.reload()"><i class="bi bi-arrow-clockwise"></i> REFRESH</button>
+      </div>
     </div>
 
-    <!-- SUMMARY -->
-    <div class="summary-cards fade-up" id="summaryCards">
-      <div class="summary-card skeleton" style="min-height:80px"></div>
-      <div class="summary-card skeleton" style="min-height:80px"></div>
-      <div class="summary-card skeleton" style="min-height:80px"></div>
-      <div class="summary-card skeleton" style="min-height:80px"></div>
+    <!-- KPI STRIP -->
+    <div class="kpi-strip" id="kpiStrip">
+      <div class="kpi-strip-cell"><div class="lbl">TOTAL ASSETS</div><div class="val skeleton" style="height:20px;width:40px"></div></div>
+      <div class="kpi-strip-cell"><div class="lbl">GAINERS</div><div class="val skeleton" style="height:20px;width:30px"></div></div>
+      <div class="kpi-strip-cell"><div class="lbl">LOSERS</div><div class="val skeleton" style="height:20px;width:30px"></div></div>
+      <div class="kpi-strip-cell"><div class="lbl">BTC PRICE</div><div class="val skeleton" style="height:20px;width:80px"></div></div>
+      <div class="kpi-strip-cell"><div class="lbl">FAVORITES</div><div class="val skeleton" style="height:20px;width:30px"></div></div>
     </div>
 
-    <!-- FILTERS -->
-    <div class="d-flex flex-wrap align-items-center gap-3 mb-3 fade-up">
-      <div class="filter-chips mb-0">
-        <span class="chip active" onclick="marketsPage.setTab('crypto',this)">Crypto</span>
-        <span class="chip" onclick="marketsPage.setTab('stocks',this)">Stocks</span>
-        <span class="chip" onclick="marketsPage.setTab('commodities',this)">Commodities</span>
+    <!-- TOOLBAR -->
+    <div class="table-toolbar">
+      <div class="chip-row mb-0">
+        <span class="chip active" onclick="marketsPage.setTab('crypto',this)">CRYPTO</span>
+        <span class="chip" onclick="marketsPage.setTab('stocks',this)">STOCKS</span>
+        <span class="chip" onclick="marketsPage.setTab('commodities',this)">COMMODITIES</span>
       </div>
-      <div class="search-bar ms-auto" style="max-width:280px">
-        <i class="bi bi-search" style="color:var(--text3)"></i>
-        <input type="text" id="assetSearch" placeholder="Search assets..." oninput="marketsPage.search(this.value)">
+      <div class="terminal-search ms-auto" style="max-width:240px">
+        <i class="bi bi-search s-icon"></i>
+        <input type="text" id="assetSearch" placeholder="SEARCH ASSETS..." oninput="marketsPage.search(this.value)">
+        <button class="s-clear" onclick="marketsPage.clearSearch()">✕</button>
       </div>
-      <button class="btn-mp btn-mp-ghost" onclick="marketsPage.reload()">
-        <i class="bi bi-arrow-clockwise"></i> Refresh
-      </button>
+      <button class="btn-terminal" onclick="marketsPage.exportCSV()"><i class="bi bi-download"></i> CSV</button>
     </div>
 
     <!-- TABLE -->
-    <div class="mp-card fade-up" style="overflow:hidden">
-      <div style="overflow-x:auto">
-        <table class="market-table">
-          <thead>
-            <tr>
-              <th onclick="marketsPage.sort('rank')">#</th>
-              <th>Asset</th>
-              <th onclick="marketsPage.sort('price')">Price</th>
-              <th onclick="marketsPage.sort('change_24h')">24h %</th>
-              <th onclick="marketsPage.sort('change_7d')">7d %</th>
-              <th onclick="marketsPage.sort('volume')">Volume</th>
-              <th onclick="marketsPage.sort('market_cap')">Market Cap</th>
-              <th>7d Chart</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody id="marketTableBody">
-            <tr><td colspan="9" class="text-center py-5"><div class="spinner-border spinner-border-sm me-2" style="color:var(--accent)"></div>Loading market data...</td></tr>
-          </tbody>
-        </table>
+    <div style="overflow-x:auto">
+      <table class="data-table" id="mktTable">
+        <thead>
+          <tr>
+            <th onclick="marketsPage.sort('rank')">#</th>
+            <th>ASSET</th>
+            <th onclick="marketsPage.sort('price')">PRICE</th>
+            <th onclick="marketsPage.sort('change_24h')">24H %</th>
+            <th onclick="marketsPage.sort('change_7d')">7D %</th>
+            <th onclick="marketsPage.sort('volume')">VOLUME</th>
+            <th onclick="marketsPage.sort('market_cap')">MKT CAP</th>
+            <th>7D CHART</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="mktBody">
+          <tr><td colspan="9" style="text-align:center;padding:40px;color:var(--text3);font-family:var(--font-mono);font-size:.72rem">
+            <div class="spinner-border spinner-border-sm me-2" style="color:var(--amber)"></div>LOADING MARKET DATA...
+          </td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div style="padding:8px 14px;font-family:var(--font-mono);font-size:.6rem;color:var(--text3);border-top:1px solid var(--border);background:var(--bg2)">
+      DATA: COINGECKO · YAHOO FINANCE · UPDATES EVERY 5 MIN · CLICK ROW FOR CHART
+    </div>
+  </div>
+
+  <!-- SIDEBAR -->
+  <div class="markets-side">
+    <!-- Fear & Greed -->
+    <div class="side-panel">
+      <div class="side-panel-head">FEAR & GREED INDEX</div>
+      <div class="side-panel-body">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="font-family:var(--font-mono);font-size:1.6rem;font-weight:700" id="sideFgVal">—</div>
+          <div>
+            <div style="font-family:var(--font-mono);font-size:.72rem;font-weight:600" id="sideFgLabel">LOADING</div>
+            <div style="font-family:var(--font-mono);font-size:.58rem;color:var(--text3)">CRYPTO SENTIMENT</div>
+          </div>
+        </div>
+        <div class="fg-bar-sm"><div class="fg-indicator-sm" id="sideFgInd" style="left:50%"></div></div>
+        <div style="display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:.52rem;color:var(--text3)">
+          <span>FEAR</span><span>NEUTRAL</span><span>GREED</span>
+        </div>
       </div>
     </div>
 
-    <div class="mt-3 fade-up" style="font-size:0.75rem;color:var(--text3)">
-      <span class="nav-dot me-1"></span> Prices update every 5 minutes · Data: CoinGecko & Yahoo Finance
+    <!-- Heatmap -->
+    <div class="side-panel">
+      <div class="side-panel-head">CRYPTO HEATMAP — 24H</div>
+      <div class="side-panel-body">
+        <div class="hm-grid-sm" id="sideHeatmap">
+          <div style="color:var(--text3);font-size:.62rem;grid-column:1/-1;padding:10px;text-align:center">LOADING...</div>
+        </div>
+      </div>
     </div>
 
+    <!-- Favorites -->
+    <div class="side-panel">
+      <div class="side-panel-head">MY WATCHLIST (⭐ FAVORITES)</div>
+      <div class="side-panel-body" id="sideFavorites">
+        <div style="color:var(--text3);font-family:var(--font-mono);font-size:.65rem;text-align:center;padding:16px">
+          NO FAVORITES YET<br>CLICK ☆ TO ADD
+        </div>
+      </div>
+    </div>
+
+    <!-- Market Stats -->
+    <div class="side-panel">
+      <div class="side-panel-head">MARKET OVERVIEW</div>
+      <div class="side-panel-body" id="sideStats">
+        <div style="color:var(--text3);font-family:var(--font-mono);font-size:.65rem">LOADING...</div>
+      </div>
+    </div>
   </div>
-</main>
+</div>
+
+<!-- CHART MODAL -->
+<div class="modal-overlay" id="chartOverlay" onclick="if(event.target===this)marketsPage.closeModal()">
+  <div class="modal-box" style="width:min(800px,95vw)">
+    <div class="modal-head">
+      <span class="modal-title" id="modalTitle">—</span>
+      <button class="modal-close" onclick="marketsPage.closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="font-family:var(--font-mono);font-size:.62rem;color:var(--text3);margin-bottom:12px" id="modalSub">—</div>
+      <canvas id="modalChart" height="200"></canvas>
+      <div class="modal-stats" id="modalStats"></div>
+    </div>
+  </div>
+</div>
 
 <footer>
   <div class="container-fluid px-4">
     <div class="row align-items-center">
-      <div class="col-md-6"><div class="footer-brand">Market<span class="accent">Pulse</span></div><p class="mt-1">Financial intelligence for modern investors.</p></div>
-      <div class="col-md-6 text-md-end mt-3 mt-md-0"><p>Data provided by CoinGecko · Yahoo Finance</p></div>
+      <div class="col-md-6"><div class="footer-brand">MKT<span class="accent">PULSE</span></div><p class="mt-1">Professional financial intelligence terminal.</p></div>
+      <div class="col-md-6 text-md-end"><p>Data: CoinGecko · Yahoo Finance</p></div>
     </div>
-    <hr style="border-color:var(--border);margin:20px 0">
-    <p class="text-center" style="font-size:0.78rem">© 2026 MarketPulse. University Project.</p>
+    <hr style="border-color:var(--border);margin:14px 0">
+    <p class="text-center">© 2026 MARKETPULSE — UNIVERSITY PROJECT</p>
   </div>
 </footer>
-
-</div>
-
-<!-- CHART MODAL -->
-<div class="chart-overlay" id="chartOverlay" onclick="if(event.target===this)marketsPage.closeModal()">
-  <div class="chart-modal">
-    <button class="modal-close-btn" onclick="marketsPage.closeModal()">✕</button>
-    <div class="modal-header-info">
-      <div class="modal-name" id="modalName">—</div>
-      <div class="modal-sub" id="modalSub">—</div>
-    </div>
-    <canvas id="modalChart" height="200"></canvas>
-    <div class="modal-stats-grid" id="modalStats"></div>
-  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
@@ -308,219 +228,18 @@
 <script src="assets/js/app.js"></script>
 <script src="assets/js/markets.js"></script>
 <script>
-class MarketsPage {
-  constructor() {
-    this.data       = {};
-    this.currentTab = 'crypto';
-    this.sortKey    = 'rank';
-    this.sortAsc    = true;
-    this.query      = '';
-    this.modalChart = null;
-    this.init();
-  }
-
-  async init() {
-    await this.reload();
-    setInterval(() => this.reload(), 5 * 60 * 1000);
-  }
-
-  async reload() {
-    try {
-      this.data = await window.apiClient.get('/api/watchlist', 0); // force fresh
-      this.renderSummary();
-      this.renderTable();
-    } catch(e) {
-      document.getElementById('marketTableBody').innerHTML =
-        `<tr><td colspan="9" class="text-center py-5" style="color:var(--text3)">
-          ⚠ Backend not running.<br><small>Run: <code>uvicorn main:app --port 8000</code></small>
-        </td></tr>`;
-    }
-  }
-
-  renderSummary() {
-    const crypto = this.data.crypto || [];
-    const stocks = this.data.stocks || [];
-    const commod = this.data.commodities || [];
-    const all    = [...crypto, ...stocks, ...commod];
-    const gainers = all.filter(a => a.change_24h > 0).length;
-    const losers  = all.filter(a => a.change_24h < 0).length;
-    const btc = crypto.find(c => c.symbol === 'BTC');
-
-    document.getElementById('summaryCards').innerHTML = `
-      <div class="summary-card">
-        <div class="lbl">Total Assets</div>
-        <div class="val">${all.length}</div>
-        <div class="sub">Across 3 categories</div>
-      </div>
-      <div class="summary-card">
-        <div class="lbl">Gainers / Losers</div>
-        <div class="val" style="color:var(--green)">${gainers} <span style="color:var(--text3);font-size:1rem">/</span> <span style="color:var(--red)">${losers}</span></div>
-        <div class="sub">24h performance</div>
-      </div>
-      <div class="summary-card">
-        <div class="lbl">Bitcoin Price</div>
-        <div class="val">${btc ? Fmt.price(btc.price) : '—'}</div>
-        <div class="sub">${btc ? Fmt.pct(btc.change_24h) : ''} 24h</div>
-      </div>
-      <div class="summary-card">
-        <div class="lbl">Favorites</div>
-        <div class="val">${window.favoritesManager.count()} <span style="color:var(--accent);font-size:1.2rem">⭐</span></div>
-        <div class="sub">Saved assets</div>
-      </div>`;
-  }
-
-  renderTable() {
-    let assets = [...(this.data[this.currentTab] || [])];
-
-    // Search
-    if (this.query) {
-      const q = this.query.toLowerCase();
-      assets = assets.filter(a => a.name.toLowerCase().includes(q) || a.symbol.toLowerCase().includes(q));
-    }
-
-    // Sort
-    assets.sort((a, b) => {
-      let av = a[this.sortKey] ?? 0;
-      let bv = b[this.sortKey] ?? 0;
-      return this.sortAsc ? av - bv : bv - av;
-    });
-
-    // Update th classes
-    document.querySelectorAll('.market-table th').forEach(th => {
-      th.classList.remove('sorted', 'asc');
-    });
-
-    const tbody = document.getElementById('marketTableBody');
-
-    if (!assets.length) {
-      tbody.innerHTML = `<tr><td colspan="9" class="text-center py-5" style="color:var(--text3)">No assets found.</td></tr>`;
-      return;
-    }
-
-    tbody.innerHTML = assets.map((a, i) => {
-      const sparkId = `spark-${this.currentTab}-${i}`;
-      const iconHtml = a.image
-        ? `<img src="${a.image}" alt="${a.symbol}">`
-        : `<span>${a.symbol.substring(0,3)}</span>`;
-      const isFav = window.favoritesManager.has(a.symbol);
-      return `
-        <tr class="asset-row" onclick="marketsPage.openModal('${this.currentTab}', ${i})">
-          <td class="rank-cell">${i + 1}</td>
-          <td>
-            <div class="asset-cell">
-              <div class="asset-ico">${iconHtml}</div>
-              <div class="asset-lbl">
-                <strong>${a.name}</strong>
-                <span>${a.symbol}</span>
-              </div>
-            </div>
-          </td>
-          <td class="price-cell">${Fmt.price(a.price)}</td>
-          <td>${Fmt.pct(a.change_24h)}</td>
-          <td>${Fmt.pct(a.change_7d)}</td>
-          <td class="vol-cell">${Fmt.large(a.volume)}</td>
-          <td class="vol-cell">${Fmt.large(a.market_cap || 0)}</td>
-          <td class="spark-cell">
-            <canvas id="${sparkId}" width="110" height="36"></canvas>
-          </td>
-          <td>
-            <button class="fav-btn ${isFav ? 'active' : ''}" onclick="event.stopPropagation();marketsPage.toggleFav('${a.symbol}',this,'${a.name}')">
-              ${isFav ? '⭐' : '☆'}
-            </button>
-          </td>
-        </tr>`;
-    }).join('');
-
-    requestAnimationFrame(() => {
-      assets.forEach((a, i) => {
-        Sparkline.draw(`spark-${this.currentTab}-${i}`, a.sparkline, a.change_7d >= 0);
-      });
-    });
-  }
-
-  setTab(tab, el) {
-    document.querySelectorAll('.filter-chips .chip').forEach(c => c.classList.remove('active'));
-    el.classList.add('active');
-    this.currentTab = tab;
-    this.renderTable();
-  }
-
-  sort(key) {
-    if (this.sortKey === key) this.sortAsc = !this.sortAsc;
-    else { this.sortKey = key; this.sortAsc = false; }
-    this.renderTable();
-  }
-
-  search(q) { this.query = q; this.renderTable(); }
-
-  toggleFav(symbol, btn, name) {
-    const active = window.favoritesManager.toggle(symbol, { name });
-    btn.textContent = active ? '⭐' : '☆';
-    btn.classList.toggle('active', active);
-    this.renderSummary();
-  }
-
-  openModal(tab, index) {
-    const a = (this.data[tab] || [])[index];
-    if (!a) return;
-
-    document.getElementById('modalName').textContent = `${a.name} (${a.symbol})`;
-    document.getElementById('modalSub').textContent  = `7-day price history · ${Fmt.price(a.price)}`;
-
-    const color = a.change_7d >= 0 ? '#20e08a' : '#ff3d5a';
-    const ctx = document.getElementById('modalChart').getContext('2d');
-    if (this.modalChart) this.modalChart.destroy();
-
-    this.modalChart = new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: (a.sparkline || []).map((_, i) => i),
-        datasets: [{
-          data: a.sparkline || [],
-          borderColor: color,
-          borderWidth: 2,
-          fill: true,
-          backgroundColor: a.change_7d >= 0 ? 'rgba(32,224,138,0.07)' : 'rgba(255,61,90,0.07)',
-          tension: 0.4,
-          pointRadius: 0,
-          pointHoverRadius: 5,
-        }]
-      },
-      options: {
-        responsive: true,
-        plugins: { legend: { display: false } },
-        scales: {
-          y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#5a6478', font: { family: 'DM Mono', size: 11 } } },
-          x: { display: false }
-        }
-      }
-    });
-
-    document.getElementById('modalStats').innerHTML = `
-      <div class="modal-stat"><div class="lbl">Price</div><div class="val">${Fmt.price(a.price)}</div></div>
-      <div class="modal-stat"><div class="lbl">24h Change</div><div class="val" style="color:${a.change_24h>=0?'var(--green)':'var(--red)'}">${a.change_24h>=0?'+':''}${a.change_24h}%</div></div>
-      <div class="modal-stat"><div class="lbl">7d Change</div><div class="val" style="color:${a.change_7d>=0?'var(--green)':'var(--red)'}">${a.change_7d>=0?'+':''}${a.change_7d}%</div></div>
-      ${a.market_cap ? `<div class="modal-stat"><div class="lbl">Market Cap</div><div class="val">${Fmt.large(a.market_cap)}</div></div>` : ''}
-      <div class="modal-stat"><div class="lbl">Volume 24h</div><div class="val">${Fmt.large(a.volume)}</div></div>
-      <div class="modal-stat"><div class="lbl">Symbol</div><div class="val">${a.symbol}</div></div>`;
-
-    document.getElementById('chartOverlay').classList.add('open');
-  }
-
-  closeModal() {
-    document.getElementById('chartOverlay').classList.remove('open');
-  }
-}
-
-window.marketsPage = new MarketsPage();
-</script>
-
-<button class="scroll-top" id="scrollTopBtn" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Back to top">↑</button>
-<script>
-window.addEventListener('scroll', function(){
-  var btn = document.getElementById('scrollTopBtn');
-  if(btn) btn.classList.toggle('visible', window.scrollY > 400);
-});
+// Status bar + clocks
+(async function(){
+  try {
+    const data = await window.apiClient.get('/api/watchlist',5*60*1000);
+    const set=(id,a)=>{const el=document.getElementById(id);if(!el||!a)return;const up=a.change_24h>=0;el.className=`status-bar-item ${up?'positive':'negative'}`;el.innerHTML=`<span class="label">${el.querySelector('.label')?.textContent||''}</span><span class="value">${Fmt.price(a.price)} <span style="font-size:.58rem">${up?'▲':'▼'}${Math.abs(a.change_24h).toFixed(2)}%</span></span>`;};
+    set('sb-btc',data.crypto?.find(c=>c.symbol==='BTC'));set('sb-eth',data.crypto?.find(c=>c.symbol==='ETH'));
+    set('sb-nvda',data.stocks?.find(s=>s.symbol==='NVDA'));set('sb-gold',data.commodities?.find(c=>c.name==='Gold'));
+    set('sb-oil',data.commodities?.find(c=>c.name==='Crude Oil'));
+  }catch(e){}
+  function clocks(){const fmt=tz=>new Date().toLocaleTimeString('en-US',{timeZone:tz,hour:'2-digit',minute:'2-digit',hour12:false});const s=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};s('sb-time-ny',fmt('America/New_York'));s('sb-time-ln',fmt('Europe/London'));s('sb-time-tk',fmt('Asia/Tokyo'));s('sb-time-bt',fmt('Asia/Beirut'));}
+  clocks();setInterval(clocks,1000);
+})();
 </script>
 </body>
 </html>

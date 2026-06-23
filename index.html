@@ -1,226 +1,87 @@
 // ═══════════════════════════════════════════════════════
-// MARKETPULSE — NEWS PAGE LOGIC v2
-// Calls backend proxy — fixes NewsAPI CORS issue
+// MARKETPULSE — NEWS PAGE v6 (Bloomberg Terminal)
 // ═══════════════════════════════════════════════════════
-
 class NewsManager {
   constructor() {
-    this.allArticles = [];
-    this.category    = 'all';
-    this.sortBy      = 'date';
-    this.query       = '';
-    this.page        = 1;
-    this.perPage     = 9;
-    this._debounce   = null;
+    this.allArticles=[]; this.category='all'; this.sortBy='date';
+    this.query=''; this.page=1; this.perPage=12; this._debounce=null;
     this.init();
   }
+  async init() { await this.fetchFromBackend('all',''); }
 
-  async init() {
-    await this.fetchFromBackend('all', '');
-  }
-
-  // ── FETCH via backend proxy (fixes CORS) ─────────────
-  async fetchFromBackend(category = 'all', q = '') {
+  async fetchFromBackend(category='all', q='') {
     this.showSkeletons();
     try {
-      let url = `${window.apiClient.base}/api/news?category=${category}`;
-      if (q) url += `&q=${encodeURIComponent(q)}`;
-
+      let url=`${window.apiClient.base}/api/news?category=${category}`;
+      if(q) url+=`&q=${encodeURIComponent(q)}`;
       const res = await fetch(url);
-      if (!res.ok) throw new Error(`Backend returned ${res.status}`);
+      if(!res.ok) throw new Error(`HTTP ${res.status}`);
       const articles = await res.json();
-
-      if (!Array.isArray(articles)) throw new Error('Invalid response');
-
+      if(!Array.isArray(articles)) throw new Error('Invalid response');
       this.allArticles = articles;
       this.buildBreakingCarousel();
       this.render();
-
-    } catch(e) {
-      console.error('News fetch error:', e);
-      this.showError(e.message);
-    }
+    } catch(e) { this.showError(e.message); }
   }
 
   buildBreakingCarousel() {
-    const top        = this.allArticles.slice(0, 5);
-    const indicators = document.getElementById('breakingIndicators');
-    const inner      = document.getElementById('breakingInner');
-    if (!indicators || !inner || !top.length) return;
-
-    indicators.innerHTML = top.map((_, i) =>
-      `<button type="button" data-bs-target="#breakingCarousel"
-        data-bs-slide-to="${i}" ${i === 0 ? 'class="active"' : ''}></button>`
-    ).join('');
-
-    inner.innerHTML = top.map((a, i) => `
-      <div class="carousel-item ${i === 0 ? 'active' : ''}"
-        onclick="window.open('${a.url}','_blank')" style="cursor:pointer">
+    const top=this.allArticles.slice(0,5);
+    const ind=document.getElementById('breakingIndicators');
+    const inner=document.getElementById('breakingInner');
+    if(!ind||!inner||!top.length) return;
+    ind.innerHTML=top.map((_,i)=>`<button type="button" data-bs-target="#breakingCarousel" data-bs-slide-to="${i}" ${i===0?'class="active"':''}></button>`).join('');
+    inner.innerHTML=top.map((a,i)=>`
+      <div class="carousel-item ${i===0?'active':''}" onclick="window.open('${a.url}','_blank')" style="cursor:pointer">
         <div class="carousel-item-inner">
-          ${a.image ? `<img class="carousel-bg" src="${a.image}" alt=""
-            onerror="this.style.display='none'">` : ''}
-          <div class="carousel-bg-gradient"></div>
-          <div class="carousel-content">
-            <span class="breaking-tag">Breaking</span>
-            <div class="breaking-title">${a.title}</div>
-            <div class="breaking-meta">${a.source} · ${Fmt.timeAgo(a.published_at)}</div>
+          ${a.image?`<img class="c-bg" src="${a.image}" alt="" onerror="this.style.display='none'">`:''} 
+          <div class="c-gradient"></div>
+          <div class="c-content">
+            <span class="c-cat" style="background:var(--red);color:#fff">BREAKING</span>
+            <div class="c-title">${a.title}</div>
+            <div style="font-family:var(--font-mono);font-size:.62rem;color:rgba(255,255,255,.5)">${a.source?.toUpperCase()} · ${Fmt.timeAgo(a.published_at)}</div>
           </div>
         </div>
       </div>`).join('');
   }
 
   getFiltered() {
-    let articles = [...this.allArticles];
-
-    // Client-side search filter on top of what backend returned
-    if (this.query) {
-      const q = this.query.toLowerCase();
-      articles = articles.filter(a =>
-        (a.title || '').toLowerCase().includes(q) ||
-        (a.description || '').toLowerCase().includes(q) ||
-        (a.source || '').toLowerCase().includes(q)
-      );
-    }
-
-    if (this.sortBy === 'source') {
-      articles.sort((a, b) => (a.source || '').localeCompare(b.source || ''));
-    } else {
-      articles.sort((a, b) => new Date(b.published_at) - new Date(a.published_at));
-    }
-
+    let articles=[...this.allArticles];
+    if(this.query){const q=this.query.toLowerCase();articles=articles.filter(a=>(a.title||'').toLowerCase().includes(q)||(a.source||'').toLowerCase().includes(q));}
+    if(this.sortBy==='source') articles.sort((a,b)=>(a.source||'').localeCompare(b.source||''));
+    else articles.sort((a,b)=>new Date(b.published_at)-new Date(a.published_at));
     return articles;
   }
 
   render() {
-    const articles  = this.getFiltered();
-    const paginated = articles.slice(0, this.page * this.perPage);
-
-    const countEl = document.getElementById('articleCount');
-    if (countEl) countEl.textContent = articles.length;
-
-    const loadMore = document.getElementById('loadMoreWrap');
-    if (loadMore) loadMore.style.display = articles.length > paginated.length ? 'block' : 'none';
-
-    const grid = document.getElementById('newsGrid');
-    if (!grid) return;
-
-    if (!articles.length) {
-      grid.innerHTML = `
-        <div class="news-offline">
-          <div class="icon">🔍</div>
-          <h3>No articles found</h3>
-          <p>Try a different search term or category.</p>
-        </div>`;
-      return;
-    }
-
-    grid.innerHTML = paginated.map(a => `
+    const articles=this.getFiltered(); const paginated=articles.slice(0,this.page*this.perPage);
+    const countEl=document.getElementById('articleCount'); if(countEl) countEl.textContent=articles.length;
+    const lm=document.getElementById('loadMoreWrap'); if(lm) lm.style.display=articles.length>paginated.length?'block':'none';
+    const grid=document.getElementById('newsGrid'); if(!grid) return;
+    if(!articles.length){grid.innerHTML=`<div class="empty-state"><div style="font-family:var(--font-mono);font-size:.72rem;color:var(--text3);text-align:center;padding:40px;grid-column:1/-1">NO ARTICLES FOUND — TRY DIFFERENT TERMS</div></div>`;return;}
+    grid.innerHTML=paginated.map(a=>`
       <div class="news-card fade-up" onclick="window.open('${a.url}','_blank')">
-        <div class="news-img">
-          ${a.image
-            ? `<img src="${a.image}" alt="" loading="lazy"
-                onerror="this.parentElement.innerHTML='<div class=news-img-placeholder>📰</div>'">`
-            : '<div class="news-img-placeholder">📰</div>'}
-        </div>
+        <div class="news-img">${a.image?`<img src="${a.image}" alt="" loading="lazy" onerror="this.parentElement.innerHTML='<div class=news-img-placeholder>📰</div>'">`:`<div class="news-img-placeholder">📰</div>`}</div>
         <div class="news-body">
-          <div class="news-source-row">
-            <span class="news-source">${a.source || 'Unknown'}</span>
-            <span class="news-date">${Fmt.timeAgo(a.published_at)}</span>
-          </div>
-          <div class="news-title">${a.title || 'Untitled'}</div>
-          <div class="news-desc">${a.description || ''}</div>
-          <div class="news-footer">
-            <span class="news-read">Read article →</span>
-            <button class="news-fav"
-              onclick="event.stopPropagation();
-                       this.textContent=this.textContent==='☆'?'⭐':'☆';
-                       this.classList.toggle('active')">☆</button>
-          </div>
+          <div class="news-source">${a.source||'UNKNOWN'}</div>
+          <div class="news-title">${a.title||'Untitled'}</div>
+          <div class="news-meta"><span>${a.description?(a.description.substring(0,60)+'...'):''}</span><span>${Fmt.timeAgo(a.published_at)}</span></div>
         </div>
       </div>`).join('');
-
     window.scrollAnimator?.refresh();
   }
 
-  // Category — fetch new data from backend
-  setCategory(cat, el) {
-    document.querySelectorAll('.filter-chips .chip').forEach(c => c.classList.remove('active'));
-    el.classList.add('active');
-    this.category = cat;
-    this.page     = 1;
-    this.query    = '';
-    const searchEl = document.getElementById('newsSearch');
-    if (searchEl) searchEl.value = '';
-    this.fetchFromBackend(cat, '');
-  }
-
-  // Sort — client-side only
-  setSort(val) { this.sortBy = val; this.render(); }
-
-  // Search — debounced, calls backend for new results
-  search(q) {
-    this.query = q;
-    this.page  = 1;
-
-    // Update clear button visibility
-    const bar = document.querySelector('.search-bar');
-    if (bar) bar.classList.toggle('has-value', q.length > 0);
-
-    clearTimeout(this._debounce);
-    this._debounce = setTimeout(() => {
-      if (q.length === 0) {
-        this.fetchFromBackend(this.category, '');
-      } else if (q.length >= 2) {
-        this.fetchFromBackend('all', q);
-      }
-    }, 400);
-  }
-
-  clearSearch() {
-    this.query = '';
-    const el = document.getElementById('newsSearch');
-    if (el) { el.value = ''; el.focus(); }
-    const bar = document.querySelector('.search-bar');
-    if (bar) bar.classList.remove('has-value');
-    this.fetchFromBackend(this.category, '');
-  }
-
-  loadMore() { this.page++; this.render(); Toast.show('More articles loaded'); }
-
-  showSkeletons() {
-    const grid = document.getElementById('newsGrid');
-    if (!grid) return;
-    grid.innerHTML = Array(9).fill(`
-      <div class="news-card">
-        <div class="news-img skeleton"></div>
-        <div class="news-body">
-          <div class="skeleton" style="height:10px;width:40%;margin-bottom:10px"></div>
-          <div class="skeleton" style="height:14px;margin-bottom:6px"></div>
-          <div class="skeleton" style="height:14px;width:75%;margin-bottom:6px"></div>
-          <div class="skeleton" style="height:14px;width:55%"></div>
-        </div>
-      </div>`).join('');
-  }
-
-  showError(msg) {
-    const grid = document.getElementById('newsGrid');
-    if (!grid) return;
-    grid.innerHTML = `
-      <div class="news-offline">
-        <div class="icon">⚠️</div>
-        <h3>News unavailable</h3>
-        <p>Make sure the backend is running: <code>uvicorn main:app --port 8000</code><br>
-        ${msg ? `<small style="color:var(--text3)">${msg}</small>` : ''}</p>
-      </div>`;
-  }
+  setCategory(cat,el){document.querySelectorAll('.chip-row .chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');this.category=cat;this.page=1;this.query='';const s=document.getElementById('newsSearch');if(s)s.value='';this.fetchFromBackend(cat,'');}
+  setSort(val){this.sortBy=val;this.render();}
+  search(q){this.query=q;this.page=1;const bar=document.querySelector('.terminal-search');if(bar)bar.classList.toggle('has-value',q.length>0);clearTimeout(this._debounce);this._debounce=setTimeout(()=>{if(q.length===0)this.fetchFromBackend(this.category,'');else if(q.length>=2)this.fetchFromBackend('all',q);},400);}
+  clearSearch(){this.query='';const el=document.getElementById('newsSearch');if(el){el.value='';el.focus();}document.querySelector('.terminal-search')?.classList.remove('has-value');this.fetchFromBackend(this.category,'');}
+  loadMore(){this.page++;this.render();Toast.show('MORE ARTICLES LOADED');}
+  showSkeletons(){const g=document.getElementById('newsGrid');if(!g)return;g.innerHTML=Array(12).fill(`<div class="news-card"><div class="news-img skeleton"></div><div class="news-body"><div class="skeleton" style="height:10px;width:40%;margin-bottom:8px"></div><div class="skeleton" style="height:14px;margin-bottom:5px"></div><div class="skeleton" style="height:14px;width:70%"></div></div></div>`).join('');}
+  showError(msg){const g=document.getElementById('newsGrid');if(!g)return;g.innerHTML=`<div style="grid-column:1/-1;text-align:center;padding:40px;font-family:var(--font-mono);font-size:.72rem;color:var(--text3)">⚠ BACKEND OFFLINE — ${msg||'START: uvicorn main:app --port 8000'}</div>`;}
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  window.newsManager = new NewsManager();
-});
-
-function setNewsCategory(cat, el)  { window.newsManager?.setCategory(cat, el); }
-function setNewsSort(val)          { window.newsManager?.setSort(val); }
-function searchNews(q)             { window.newsManager?.search(q); }
-function clearNewsSearch()         { window.newsManager?.clearSearch(); }
-function loadMoreNews()            { window.newsManager?.loadMore(); }
+document.addEventListener('DOMContentLoaded',()=>{ window.newsManager=new NewsManager(); });
+function setNewsCategory(cat,el){window.newsManager?.setCategory(cat,el);}
+function setNewsSort(val){window.newsManager?.setSort(val);}
+function searchNews(q){window.newsManager?.search(q);}
+function clearNewsSearch(){window.newsManager?.clearSearch();}
+function loadMoreNews(){window.newsManager?.loadMore();}
