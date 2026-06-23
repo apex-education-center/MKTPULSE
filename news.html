@@ -2,112 +2,127 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script>(function(){var t=localStorage.getItem('mp-theme')||'dark';document.documentElement.setAttribute('data-theme',t);})();</script>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="MarketPulse — Professional financial intelligence terminal">
-<title>MarketPulse Terminal</title>
+<script src="assets/js/theme-boot.js"></script>
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>News — MarketPulse</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="assets/css/main.css" rel="stylesheet">
 <style>
-/* ── HOMEPAGE-SPECIFIC STYLES ── */
-
-/* Hero panel */
-.hero-title {
-  font-family: var(--font-mono);
-  font-size: clamp(0.95rem, 2vw, 1.15rem);
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  color: var(--amber);
-  margin-bottom: 6px;
+/* ── BREAKING CAROUSEL — fixed height ── */
+.breaking-wrap { padding:0 16px 14px; }
+.breaking-label {
+  font-family:var(--font-mono);font-size:.6rem;font-weight:700;
+  letter-spacing:.15em;text-transform:uppercase;
+  color:var(--red);padding:10px 0 6px;
+  display:flex;align-items:center;gap:8px;
 }
-.hero-sub {
-  font-family: var(--font-mono);
-  font-size: 0.64rem;
-  color: var(--text-muted);
-  letter-spacing: 0.06em;
-  margin-bottom: 18px;
+.blink-dot {
+  width:6px;height:6px;border-radius:50%;background:var(--red);
+  box-shadow:0 0 5px var(--red);animation:pulse 1.5s ease-in-out infinite;
 }
 
-/* Live price grid (hero) */
-.live-price-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
-}
-.lp-item {
-  background: var(--bg-raised);
-  border: 1px solid var(--border-soft);
-  border-radius: var(--radius-sm);
-  padding: 10px 12px;
-  cursor: pointer;
-  transition: all var(--transition);
-}
-.lp-item:hover { border-color: var(--border-mid); background: var(--bg-overlay); }
-.lp-sym   { font-family: var(--font-mono); font-size: 0.62rem; color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 4px; display: block; }
-.lp-price { font-family: var(--font-mono); font-size: 1.05rem; font-weight: 700; color: var(--text-primary); display: block; margin-bottom: 3px; }
-.lp-chg   { font-family: var(--font-mono); font-size: 0.66rem; display: block; }
-
-/* Featured carousel */
-.carousel-slide {
-  height: 280px;
+/* CRITICAL: fixed height carousel — no more full-screen image */
+.breaking-slide {
+  height: 200px;          /* fixed — never taller */
   position: relative;
   overflow: hidden;
   background: var(--bg-raised);
-  display: flex; flex-direction: column; justify-content: flex-end;
-  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 16px 20px;
+  border-radius: var(--radius);
 }
-.cs-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.22; }
-.cs-gradient { position: absolute; inset: 0; background: linear-gradient(0deg, var(--bg-base) 0%, rgba(7,11,16,0.45) 65%, transparent 100%); }
-.cs-content { position: relative; z-index: 2; }
-.cs-cat {
-  font-family: var(--font-mono); font-size: 0.6rem; font-weight: 700;
-  letter-spacing: 0.15em; text-transform: uppercase;
-  padding: 2px 8px; border-radius: 2px; margin-bottom: 8px; display: inline-block;
+.bs-bg {
+  position:absolute;inset:0;width:100%;height:100%;
+  object-fit:cover;opacity:0.22;
 }
-.cs-title { font-family: var(--font-sans); font-size: clamp(0.9rem, 1.8vw, 1.15rem); font-weight: 600; line-height: 1.3; margin-bottom: 6px; color: var(--text-primary); }
-.cs-desc  { font-size: 0.72rem; color: rgba(255,255,255,0.55); margin-bottom: 8px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.cs-cta   { font-family: var(--font-mono); font-size: 0.6rem; color: var(--amber); letter-spacing: 0.08em; }
-
-.carousel-indicators button { width: 18px !important; height: 2px !important; border-radius: 1px !important; background: var(--text-muted) !important; opacity: 0.5 !important; }
-.carousel-indicators button.active { background: var(--amber) !important; opacity: 1 !important; }
-.carousel-control-prev, .carousel-control-next {
-  width: 30px; height: 30px;
-  background: rgba(0,0,0,0.6) !important;
-  border: 1px solid var(--border-mid);
-  border-radius: 2px; top: 50%; bottom: auto;
-  transform: translateY(-50%); opacity: 1 !important; margin: 0 8px;
+.bs-gradient {
+  position:absolute;inset:0;
+  background:linear-gradient(0deg,var(--bg-base) 0%,rgba(7,11,16,.3) 100%);
 }
-.carousel-control-prev-icon, .carousel-control-next-icon { width: 12px !important; height: 12px !important; }
-
-/* Mood panel */
-.mood-sentiment {
-  font-family: var(--font-mono); font-size: 1.35rem; font-weight: 700;
-  letter-spacing: 0.05em; padding: 4px 0;
+.bs-content { position:relative;z-index:2; }
+.bs-tag {
+  font-family:var(--font-mono);font-size:.58rem;font-weight:700;
+  letter-spacing:.15em;text-transform:uppercase;
+  background:var(--red);color:#fff;padding:2px 7px;
+  border-radius:2px;margin-bottom:6px;display:inline-block;
 }
-.mood-sentiment.bullish { color: var(--green); }
-.mood-sentiment.bearish { color: var(--red); }
-.mood-sentiment.neutral { color: var(--blue); }
-.mood-sentiment.mixed   { color: var(--amber); }
+.bs-title {
+  font-size:clamp(.85rem,1.6vw,1.05rem);font-weight:600;
+  line-height:1.3;color:var(--text-primary);margin-bottom:4px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+}
+.bs-meta { font-family:var(--font-mono);font-size:.6rem;color:rgba(255,255,255,.5); }
 
-/* Fear & Greed mini */
-.fg-mini { display: flex; align-items: center; gap: 12px; padding: 6px 0 10px; }
-.fg-mini-val   { font-family: var(--font-mono); font-size: 1.7rem; font-weight: 700; line-height: 1; }
-.fg-mini-info  { flex: 1; }
-.fg-mini-label { font-size: 0.7rem; font-weight: 600; }
-.fg-mini-sub   { font-family: var(--font-mono); font-size: 0.6rem; color: var(--text-muted); margin-top: 2px; }
+.carousel-indicators button {
+  width:16px!important;height:2px!important;border-radius:1px!important;
+  background:var(--text-muted)!important;opacity:.5!important;
+}
+.carousel-indicators button.active { background:var(--amber)!important;opacity:1!important; }
+.carousel-control-prev,.carousel-control-next {
+  width:28px;height:28px;
+  background:rgba(0,0,0,.6)!important;
+  border:1px solid var(--border-mid);border-radius:2px;
+  top:50%;bottom:auto;transform:translateY(-50%);
+  opacity:1!important;margin:0 6px;
+}
 
-/* Calendar mini */
-.cal-mini-item { display: flex; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--border-dim); align-items: center; }
-.cal-mini-item:last-child { border-bottom: none; }
-.cal-mini-date { font-family: var(--font-mono); font-size: 0.6rem; color: var(--text-muted); min-width: 40px; }
-.cal-mini-name { font-size: 0.74rem; font-weight: 500; flex: 1; color: var(--text-primary); }
+/* ── TIME FILTER CHIPS ── */
+.time-chips {
+  display:flex;flex-wrap:wrap;gap:5px;
+  padding:8px 16px;
+  background:var(--bg-surface);
+  border-bottom:1px solid var(--border-dim);
+}
+.time-chip {
+  font-family:var(--font-mono);font-size:.62rem;letter-spacing:.07em;text-transform:uppercase;
+  padding:4px 12px;border-radius:2px;
+  border:1px solid var(--border-mid);
+  background:var(--bg-raised);color:var(--text-muted);
+  cursor:pointer;transition:all var(--transition);
+  display:flex;align-items:center;gap:6px;
+}
+.time-chip:hover { border-color:var(--amber);color:var(--amber); }
+.time-chip.active { background:var(--amber-dim);border-color:var(--amber);color:var(--amber);font-weight:600; }
+.time-chip .tc-count {
+  background:var(--bg-overlay);border-radius:10px;
+  padding:0 6px;font-size:.58rem;color:var(--text-muted);
+}
+.time-chip.active .tc-count { background:rgba(240,165,0,.2);color:var(--amber); }
 
-/* Live TV panel */
-.tv-wrap { display: flex; flex-direction: column; min-height: 360px; }
+/* ── NEWS GRID ── */
+.news-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;padding:16px; }
 
-@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.35} }
+/* ── NEWS CARD ── */
+.news-card {
+  background:var(--bg-surface);border:1px solid var(--border-soft);
+  border-radius:var(--radius);overflow:hidden;
+  cursor:pointer;transition:all var(--transition);
+  display:flex;flex-direction:column;
+}
+.news-card:hover { border-color:var(--amber);transform:translateY(-2px);box-shadow:var(--shadow); }
+.nc-img {
+  height:150px;           /* fixed card image height */
+  background:var(--bg-raised);overflow:hidden;flex-shrink:0;
+}
+.nc-img img { width:100%;height:100%;object-fit:cover;transition:transform .4s; }
+.news-card:hover .nc-img img { transform:scale(1.04); }
+.nc-placeholder { width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:2rem;color:var(--text-muted);background:var(--bg-overlay); }
+.nc-body { padding:11px 13px;flex:1;display:flex;flex-direction:column;gap:5px; }
+.nc-src-row { display:flex;justify-content:space-between;align-items:center; }
+.nc-src  { font-family:var(--font-mono);font-size:.62rem;color:var(--amber);letter-spacing:.08em;text-transform:uppercase;font-weight:600; }
+.nc-time { font-family:var(--font-mono);font-size:.62rem;color:var(--text-muted); }
+.nc-title{ font-size:.82rem;font-weight:500;line-height:1.45;flex:1;
+  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden; }
+.nc-desc { font-size:.75rem;color:var(--text-secondary);line-height:1.4;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden; }
+.nc-footer { display:flex;justify-content:space-between;align-items:center;
+  padding-top:7px;border-top:1px solid var(--border-dim);margin-top:auto; }
+
+@media(max-width:600px){ .news-grid{grid-template-columns:1fr;padding:10px;} }
 </style>
 </head>
 <body>
@@ -115,661 +130,139 @@
 
 <!-- STATUS BAR -->
 <div class="status-bar" id="statusBar">
-  <div class="sb-item"><span class="sb-live-dot"></span><span class="sb-value" style="font-size:.6rem;letter-spacing:.06em">LIVE</span></div>
-  <div class="sb-item" id="sb-btc"><span class="sb-label">BTC</span><span class="sb-value">—</span></div>
-  <div class="sb-item" id="sb-eth"><span class="sb-label">ETH</span><span class="sb-value">—</span></div>
-  <div class="sb-item" id="sb-nvda"><span class="sb-label">NVDA</span><span class="sb-value">—</span></div>
-  <div class="sb-item" id="sb-gold"><span class="sb-label">XAU</span><span class="sb-value">—</span></div>
-  <div class="sb-item" id="sb-oil"><span class="sb-label">OIL</span><span class="sb-value">—</span></div>
-  <div id="sb-watchlist" style="display:flex;align-items:center;height:100%"></div>
-  <div id="marketSessions" style="display:flex;align-items:center;margin-left:auto;height:100%"></div>
-  <div class="sb-clocks" style="border-left:1px solid var(--border-dim)">
-    <div class="sb-item"><span class="sb-label">NY</span><span class="sb-value" id="sb-ny">—</span></div>
-    <div class="sb-item"><span class="sb-label">LN</span><span class="sb-value" id="sb-ln">—</span></div>
-    <div class="sb-item"><span class="sb-label">TK</span><span class="sb-value" id="sb-tk">—</span></div>
-    <div class="sb-item"><span class="sb-label">BT</span><span class="sb-value" id="sb-bt">—</span></div>
+  <div class="sb-row sb-row-top">
+    <div class="sb-item"><span class="sb-live-dot"></span><span class="sb-value" style="font-size:.6rem;letter-spacing:.06em">LIVE</span></div>
+    <div class="sb-item" id="sb-btc"><span class="sb-label">BTC</span><span class="sb-value">—</span></div>
+    <div class="sb-item" id="sb-eth"><span class="sb-label">ETH</span><span class="sb-value">—</span></div>
+    <div class="sb-item" id="sb-nvda"><span class="sb-label">NVDA</span><span class="sb-value">—</span></div>
+    <div class="sb-item" id="sb-gold"><span class="sb-label">XAU</span><span class="sb-value">—</span></div>
+    <div class="sb-item" id="sb-oil"><span class="sb-label">OIL</span><span class="sb-value">—</span></div>
+    <div id="sb-watchlist" style="display:flex;align-items:center;height:100%;flex:1;overflow:hidden"></div>
+  </div>
+  <div class="sb-row sb-row-meta">
+    <div id="marketSessions"></div>
+    <div class="sb-clocks">
+      <div class="sb-item"><span class="sb-label">NY</span><span class="sb-value" id="sb-ny">—</span></div>
+      <div class="sb-item"><span class="sb-label">LN</span><span class="sb-value" id="sb-ln">—</span></div>
+      <div class="sb-item"><span class="sb-label">TK</span><span class="sb-value" id="sb-tk">—</span></div>
+      <div class="sb-item"><span class="sb-label">BT</span><span class="sb-value" id="sb-bt">—</span></div>
+    </div>
   </div>
 </div>
+
 <!-- NAVBAR -->
 <nav class="navbar">
   <a class="navbar-brand" href="index.html">MKT<span class="accent">PULSE</span><span class="ver">v9</span></a>
   <div class="nav-sep"></div>
   <ul class="nav-links">
-      <li><a class="nav-link" href="index.html"><i class="bi bi-display"></i> Terminal</a></li>
-      <li><a class="nav-link" href="markets.html"><i class="bi bi-graph-up"></i> Markets</a></li>
-      <li><a class="nav-link" href="news.html"><i class="bi bi-newspaper"></i> News</a></li>
-      <li><a class="nav-link" href="youtube.html"><i class="bi bi-play-circle"></i> Videos</a></li>
-      <li><a class="nav-link" href="calendar.html"><i class="bi bi-calendar3"></i> Calendar</a></li>
-      <li><a class="nav-link" href="tools.html"><i class="bi bi-tools"></i> Tools</a></li>
-      <li><a class="nav-link" href="search.html"><i class="bi bi-search"></i> Search</a></li>
+    <li><a class="nav-link" href="index.html"><i class="bi bi-display"></i> Terminal</a></li>
+    <li><a class="nav-link" href="markets.html"><i class="bi bi-graph-up"></i> Markets</a></li>
+    <li><a class="nav-link active" href="news.html"><i class="bi bi-newspaper"></i> News</a></li>
+    <li><a class="nav-link" href="youtube.html"><i class="bi bi-play-circle"></i> Videos</a></li>
+    <li><a class="nav-link" href="calendar.html"><i class="bi bi-calendar3"></i> Calendar</a></li>
+    <li><a class="nav-link" href="tools.html"><i class="bi bi-tools"></i> Tools</a></li>
+    <li><a class="nav-link" href="search.html"><i class="bi bi-search"></i> Search</a></li>
   </ul>
   <div class="nav-clock d-none d-lg-block" id="navClock"></div>
-  <button class="theme-btn" id="themeToggle" title="Toggle theme">☀</button>
-  <button class="hamburger" id="hamburgerBtn"><i class="bi bi-list"></i></button>
+  <div class="nav-actions">
+    <button class="theme-btn" id="themeToggle">☀</button>
+    <button class="hamburger" id="hamburgerBtn"><i class="bi bi-list"></i></button>
+  </div>
 </nav>
 
-<!-- TICKER TAPE -->
-<div class="ticker-tape">
-  <div class="ticker-track" id="tickerInner">
-    <div class="ticker-item"><span class="ticker-sym">LOADING</span><span class="ticker-price">MARKET DATA...</span></div>
+<!-- PAGE TOOLBAR -->
+<div class="page-toolbar">
+  <h1 class="pt-title"><i class="bi bi-rss"></i> LIVE NEWS FEED</h1>
+  <div class="ms-auto d-flex align-items-center gap-2 flex-wrap">
+    <div class="search-bar" style="width:220px" id="newsSearchBar">
+      <i class="bi bi-search s-icon"></i>
+      <input id="newsSearch" type="text" placeholder="SEARCH NEWS..."
+             oninput="searchNews(this.value);document.getElementById('newsSearchBar').classList.toggle('has-val',this.value.length>0)">
+      <button class="s-clear" onclick="clearNewsSearch()">✕</button>
+    </div>
+    <select onchange="setNewsSort(this.value)" class="t-select" style="width:130px;padding:5px 8px;font-size:.66rem">
+      <option value="date">SORT: LATEST</option>
+      <option value="source">SORT: SOURCE</option>
+    </select>
+    <span style="font-family:var(--font-mono);font-size:.62rem;color:var(--text-muted)" id="articleCount">—</span>
   </div>
 </div>
 
-<!-- TERMINAL GRID -->
-<div class="terminal-grid">
-
-  <!-- [1] HERO / LIVE PRICES -->
-  <div class="tg-cell">
-    <div class="panel-head">
-      <span class="ph-title"><i class="bi bi-display"></i> MARKETPULSE TERMINAL</span>
-      <span class="ph-meta" id="lastUpdate">—</span>
-    </div>
-    <div class="tg-body-p">
-      <div class="hero-title">FINANCIAL INTELLIGENCE</div>
-      <div class="hero-sub">REAL-TIME DATA · AI ANALYSIS · MACRO CALENDAR</div>
-      <div class="live-price-grid" id="heroPrices">
-        <div class="lp-item skeleton" style="min-height:60px"></div>
-        <div class="lp-item skeleton" style="min-height:60px"></div>
-        <div class="lp-item skeleton" style="min-height:60px"></div>
-        <div class="lp-item skeleton" style="min-height:60px"></div>
-      </div>
-    </div>
+<!-- CATEGORY CHIPS -->
+<div style="padding:8px 16px;border-bottom:1px solid var(--border-dim);background:var(--bg-surface)">
+  <div class="chip-row">
+    <span class="chip cat-chip active" onclick="setNewsCategory('all',this)">ALL</span>
+    <span class="chip cat-chip" onclick="setNewsCategory('crypto',this)">CRYPTO</span>
+    <span class="chip cat-chip" onclick="setNewsCategory('stocks',this)">STOCKS</span>
+    <span class="chip cat-chip" onclick="setNewsCategory('macro',this)">MACRO</span>
+    <span class="chip cat-chip" onclick="setNewsCategory('commodities',this)">COMMODITIES</span>
+    <span class="chip cat-chip" onclick="setNewsCategory('tech',this)">TECHNOLOGY</span>
   </div>
+</div>
 
-  <!-- [2,3] FEATURED CAROUSEL -->
-  <div class="tg-cell tg-span2">
-    <div class="panel-head">
-      <span class="ph-title"><i class="bi bi-star"></i> FEATURED</span>
-      <a class="ph-link" href="news.html">ALL NEWS →</a>
-    </div>
-    <div id="featuredCarousel" class="carousel slide" data-bs-ride="carousel" data-bs-interval="5000" style="height:100%">
-      <div class="carousel-indicators" id="carouselIndicators"></div>
-      <div class="carousel-inner" id="carouselInner" style="height:100%">
-        <div class="carousel-item active"><div class="carousel-slide"><div class="cs-gradient"></div><div class="cs-content"><div class="skeleton" style="height:16px;width:60%;margin-bottom:8px"></div><div class="skeleton" style="height:24px;margin-bottom:6px"></div></div></div></div>
-      </div>
-      <button class="carousel-control-prev" type="button" data-bs-target="#featuredCarousel" data-bs-slide="prev"><span class="carousel-control-prev-icon"></span></button>
-      <button class="carousel-control-next" type="button" data-bs-target="#featuredCarousel" data-bs-slide="next"><span class="carousel-control-next-icon"></span></button>
-    </div>
-  </div>
+<!-- TIME FILTER CHIPS -->
+<div class="time-chips">
+  <span class="time-chip active" onclick="setNewsTimeFilter('all',this)">
+    ALL TIME <span class="tc-count" id="tc-all">—</span>
+  </span>
+  <span class="time-chip" onclick="setNewsTimeFilter('today',this)">
+    TODAY <span class="tc-count" id="tc-today">—</span>
+  </span>
+  <span class="time-chip" onclick="setNewsTimeFilter('week',this)">
+    THIS WEEK <span class="tc-count" id="tc-week">—</span>
+  </span>
+  <span class="time-chip" onclick="setNewsTimeFilter('month',this)">
+    THIS MONTH <span class="tc-count" id="tc-month">—</span>
+  </span>
+</div>
 
-  <!-- [4] CRYPTO TABLE -->
-  <div class="tg-cell">
-    <div class="panel-head">
-      <span class="ph-title"><i class="bi bi-currency-bitcoin"></i> CRYPTO</span>
-      <a class="ph-link" href="markets.html">FULL TABLE →</a>
-    </div>
-    <div class="tg-body" style="padding:0;overflow-x:auto">
-      <table class="mini-table" id="cryptoMini">
-        <thead><tr><th style="padding:6px 10px;font-family:var(--font-mono);font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);background:var(--bg-raised);border-bottom:1px solid var(--border-soft)">ASSET</th><th style="padding:6px 10px;font-family:var(--font-mono);font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);background:var(--bg-raised);border-bottom:1px solid var(--border-soft);text-align:right">PRICE</th><th style="padding:6px 10px;font-family:var(--font-mono);font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);background:var(--bg-raised);border-bottom:1px solid var(--border-soft);text-align:right">24H %</th><th style="padding:6px 10px;font-family:var(--font-mono);font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);background:var(--bg-raised);border-bottom:1px solid var(--border-soft);text-align:right">7D %</th><th style="padding:6px 10px;font-family:var(--font-mono);font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);background:var(--bg-raised);border-bottom:1px solid var(--border-soft);text-align:right">CHART</th></tr></thead>
-        <tbody id="cryptoMiniBody">
-          <tr><td colspan="4" style="padding:20px;text-align:center;color:var(--text-muted);font-family:var(--font-mono);font-size:.7rem">LOADING...</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- [5] STOCKS TABLE -->
-  <div class="tg-cell">
-    <div class="panel-head">
-      <span class="ph-title"><i class="bi bi-graph-up-arrow"></i> EQUITIES</span>
-      <a class="ph-link" href="markets.html">FULL TABLE →</a>
-    </div>
-    <div class="tg-body" style="padding:0;overflow-x:auto">
-      <table class="mini-table" id="stocksMini">
-        <thead><tr><th style="padding:6px 10px;font-family:var(--font-mono);font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);background:var(--bg-raised);border-bottom:1px solid var(--border-soft)">ASSET</th><th style="padding:6px 10px;font-family:var(--font-mono);font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);background:var(--bg-raised);border-bottom:1px solid var(--border-soft);text-align:right">PRICE</th><th style="padding:6px 10px;font-family:var(--font-mono);font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);background:var(--bg-raised);border-bottom:1px solid var(--border-soft);text-align:right">24H %</th><th style="padding:6px 10px;font-family:var(--font-mono);font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);background:var(--bg-raised);border-bottom:1px solid var(--border-soft);text-align:right">VOL</th><th style="padding:6px 10px;font-family:var(--font-mono);font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);background:var(--bg-raised);border-bottom:1px solid var(--border-soft);text-align:right">CHART</th></tr></thead>
-        <tbody id="stocksMiniBody">
-          <tr><td colspan="4" style="padding:20px;text-align:center;color:var(--text-muted);font-family:var(--font-mono);font-size:.7rem">LOADING...</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- [6] COMMODITIES TABLE -->
-  <div class="tg-cell">
-    <div class="panel-head">
-      <span class="ph-title"><i class="bi bi-basket"></i> COMMODITIES</span>
-      <a class="ph-link" href="markets.html">FULL TABLE →</a>
-    </div>
-    <div class="tg-body" style="padding:0;overflow-x:auto">
-      <table class="mini-table" id="commodMini">
-        <thead><tr><th style="padding:6px 10px;font-family:var(--font-mono);font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);background:var(--bg-raised);border-bottom:1px solid var(--border-soft)">ASSET</th><th style="padding:6px 10px;font-family:var(--font-mono);font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);background:var(--bg-raised);border-bottom:1px solid var(--border-soft);text-align:right">PRICE</th><th style="padding:6px 10px;font-family:var(--font-mono);font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);background:var(--bg-raised);border-bottom:1px solid var(--border-soft);text-align:right">24H %</th><th style="padding:6px 10px;font-family:var(--font-mono);font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);background:var(--bg-raised);border-bottom:1px solid var(--border-soft);text-align:right">7D %</th><th style="padding:6px 10px;font-family:var(--font-mono);font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);background:var(--bg-raised);border-bottom:1px solid var(--border-soft);text-align:right">CHART</th></tr></thead>
-        <tbody id="commodMiniBody">
-          <tr><td colspan="4" style="padding:20px;text-align:center;color:var(--text-muted);font-family:var(--font-mono);font-size:.7rem">LOADING...</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- [7] AI MARKET ANALYSIS (DeepSeek) -->
-  <div class="tg-cell">
-    <div class="panel-head">
-      <span class="ph-title"><i class="bi bi-robot"></i> AI ANALYSIS</span>
-      <button onclick="homePage.refreshAnalysis()" style="background:none;border:none;cursor:pointer;font-family:var(--font-mono);font-size:.6rem;color:var(--blue);letter-spacing:.08em;padding:0">↻</button>
-    </div>
-    <div class="tg-body" id="termAnalysisPanel" style="overflow-y:auto;padding:10px">
-      <div style="text-align:center;padding:16px;color:var(--text-muted);font-family:var(--font-mono);font-size:.68rem">
-        <div class="spinner-border spinner-border-sm" style="color:var(--amber);width:.9rem;height:.9rem;border-width:2px"></div>
-        <div style="margin-top:6px">LOADING ANALYSIS...</div>
-      </div>
-    </div>
-  </div>
-  </div>
-
-  <!-- [8] NEWS FEED -->
-  <div class="tg-cell tg-span2">
-    <div class="panel-head">
-      <span class="ph-title"><i class="bi bi-rss"></i> LIVE NEWS FEED</span>
-      <a class="ph-link" href="news.html">ALL ARTICLES →</a>
-    </div>
-    <div class="tg-body" style="overflow-y:auto;max-height:260px;padding:0 10px 10px" id="newsMini">
-      <div style="color:var(--text-muted);font-family:var(--font-mono);font-size:.7rem;text-align:center;padding:20px">LOADING NEWS...</div>
-    </div>
-  </div>
-
-  <!-- [9] FEAR & GREED -->
-  <div class="tg-cell">
-    <div class="panel-head">
-      <span class="ph-title"><i class="bi bi-speedometer2"></i> FEAR & GREED</span>
-      <a class="ph-link" href="tools.html">TOOLS →</a>
-    </div>
-    <div class="tg-body-p">
-      <div class="fg-mini" id="fgMini">
-        <div class="fg-mini-val skeleton" style="width:60px;height:40px"></div>
-        <div class="fg-mini-info"><div class="skeleton" style="height:14px;margin-bottom:6px"></div><div class="skeleton" style="height:10px;width:80%"></div></div>
-      </div>
-      <div class="fg-bar"><div class="fg-indicator" id="fgInd" style="left:50%"></div></div>
-      <div style="display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:.55rem;color:var(--text-muted);margin-top:4px">
-        <span>EXT FEAR</span><span>FEAR</span><span>NEUTRAL</span><span>GREED</span><span>EXT GREED</span>
-      </div>
-    </div>
-  </div>
-
-  <!-- [10] MACRO CALENDAR MINI -->
-  <div class="tg-cell">
-    <div class="panel-head">
-      <span class="ph-title"><i class="bi bi-calendar-event"></i> UPCOMING EVENTS</span>
-      <a class="ph-link" href="calendar.html">FULL CALENDAR →</a>
-    </div>
-    <div class="tg-body" style="overflow-y:auto;max-height:200px;padding:8px 10px" id="calMini">
-      <div style="color:var(--text-muted);font-family:var(--font-mono);font-size:.7rem;text-align:center;padding:20px">LOADING...</div>
-    </div>
-  </div>
-
-  <!-- [11] MARKET SUMMARY + HEATMAP -->
-  <div class="tg-cell tg-span2">
-    <div class="panel-head">
-      <span class="ph-title"><i class="bi bi-grid-3x3"></i> MARKET HEATMAP — 24H PERFORMANCE</span>
-      <div class="chip-row mb-0" style="margin:0">
-        <span class="chip active" style="padding:2px 8px" onclick="homePage.setHeatmapTab('crypto',this)">CRYPTO</span>
-        <span class="chip" style="padding:2px 8px" onclick="homePage.setHeatmapTab('stocks',this)">STOCKS</span>
-        <span class="chip" style="padding:2px 8px" onclick="homePage.setHeatmapTab('commodities',this)">COMMOD</span>
-      </div>
-    </div>
-    <div class="tg-body-p">
-      <div class="heatmap-grid" id="hmGrid">
-        <div style="color:var(--text-muted);font-family:var(--font-mono);font-size:.7rem;grid-column:1/-1;text-align:center;padding:20px">LOADING...</div>
-      </div>
-    </div>
-  </div>
-
-
-  <!-- LIVE TV NEWS PANEL -->
-  <div class="tg-cell tg-span3">
-    <div class="panel-head">
-      <span class="ph-title">
-        <span style="width:7px;height:7px;border-radius:50%;background:var(--red);box-shadow:0 0 6px var(--red);display:inline-block;animation:pulse 1.5s ease-in-out infinite"></span>
-        LIVE NEWS CHANNELS
-      </span>
-      <span class="ph-meta" id="tvViewers">YOUTUBE LIVE STREAMS</span>
-    </div>
-    <div class="tv-wrap">
-      <div class="tv-channels" id="liveChannelBar">
-        <button class="tv-btn live" onclick="liveTv.setChannel('bloomberg')" data-ch="bloomberg">BLOOMBERG</button>
-        <button class="tv-btn" onclick="liveTv.setChannel('skynews')"   data-ch="skynews">SKY NEWS</button>
-        <button class="tv-btn" onclick="liveTv.setChannel('euronews')"  data-ch="euronews">EURONEWS</button>
-        <button class="tv-btn" onclick="liveTv.setChannel('dw')"        data-ch="dw">DW NEWS</button>
-        <button class="tv-btn" onclick="liveTv.setChannel('cnbc')"      data-ch="cnbc">CNBC</button>
-        <button class="tv-btn" onclick="liveTv.setChannel('cnn')"       data-ch="cnn">CNN</button>
-        <button class="tv-btn" onclick="liveTv.setChannel('france24')"  data-ch="france24">FRANCE 24</button>
-        <button class="tv-btn" onclick="liveTv.setChannel('alarabiya')" data-ch="alarabiya">AL ARABIYA</button>
-        <button class="tv-btn" onclick="liveTv.setChannel('aljazeera')" data-ch="aljazeera">AL JAZEERA</button>
-      </div>
-
-      <div class="tv-embed-zone" id="liveEmbedZone">
-        <div class="tv-idle" id="tvIdle">
-          <i class="bi bi-play-circle"></i>
-          <div>SELECT A CHANNEL TO START STREAMING</div>
-          <div style="font-size:.6rem;color:var(--text-muted)">Live broadcasts via YouTube — requires internet connection</div>
+<!-- BREAKING CAROUSEL -->
+<div class="breaking-wrap">
+  <div class="breaking-label"><span class="blink-dot"></span>BREAKING NEWS</div>
+  <div id="breakingCarousel" class="carousel slide" data-bs-ride="carousel" data-bs-interval="5000">
+    <div class="carousel-indicators" id="breakingIndicators"></div>
+    <div class="carousel-inner" id="breakingInner">
+      <div class="carousel-item active">
+        <div class="breaking-slide">
+          <div class="bs-gradient"></div>
+          <div class="bs-content">
+            <span class="bs-tag skeleton" style="width:80px;height:18px;display:inline-block"></span>
+            <div class="bs-title skeleton" style="height:18px;width:60%;margin-top:8px"></div>
+          </div>
         </div>
       </div>
-
-      <div class="tv-controls">
-        <div class="tv-live-dot">
-          <span style="width:6px;height:6px;border-radius:50%;background:var(--red);animation:pulse 1.5s ease-in-out infinite;display:inline-block"></span>
-          LIVE
-        </div>
-        <div class="tv-ch-name" id="liveChannelName">NO CHANNEL SELECTED</div>
-        <button class="btn" onclick="liveTv.stop()" style="padding:3px 10px;font-size:.6rem">■ STOP</button>
-        <button class="btn" onclick="liveTv.toggleMute()" id="liveMuteBtn" style="padding:3px 10px;font-size:.6rem">🔇 UNMUTE</button>
-        <button class="btn" onclick="liveTv.fullscreen()" style="padding:3px 10px;font-size:.6rem">⛶ FULLSCREEN</button>
-      </div>
     </div>
+    <button class="carousel-control-prev" type="button" data-bs-target="#breakingCarousel" data-bs-slide="prev"><span class="carousel-control-prev-icon"></span></button>
+    <button class="carousel-control-next" type="button" data-bs-target="#breakingCarousel" data-bs-slide="next"><span class="carousel-control-next-icon"></span></button>
   </div>
+</div>
 
-</div><!-- terminal-grid --></div><!-- terminal-grid -->
+<!-- NEWS GRID -->
+<div class="news-grid" id="newsGrid"></div>
 
-<!-- FOOTER -->
+<!-- LOAD MORE -->
+<div id="loadMoreWrap" style="display:none;text-align:center;padding:20px 0 30px">
+  <button class="btn" onclick="loadMoreNews()"><i class="bi bi-arrow-down-circle me-1"></i>LOAD MORE ARTICLES</button>
+</div>
+
 <footer>
   <div class="container-fluid px-4">
     <div class="row align-items-center">
-      <div class="col-md-3"><div class="footer-brand">MKT<span class="accent">PULSE</span></div><p class="mt-1">Professional financial intelligence terminal.</p></div>
-      <div class="col-md-6 text-center">
-        <div style="display:flex;justify-content:center;gap:16px;flex-wrap:wrap">
-          <a href="markets.html">MARKETS</a><a href="news.html">NEWS</a>
-          <a href="youtube.html">VIDEOS</a><a href="calendar.html">CALENDAR</a>
-          <a href="tools.html">TOOLS</a><a href="search.html">SEARCH</a>
-        </div>
-      </div>
-      <div class="col-md-3 text-md-end mt-3 mt-md-0"><p>CoinGecko · Yahoo Finance · NewsAPI · Finnhub</p></div>
+      <div class="col-md-6"><div class="footer-brand">MKT<span class="accent">PULSE</span></div><p class="mt-1">Professional financial intelligence terminal.</p></div>
+      <div class="col-md-6 text-md-end"><p style="font-size:.65rem">News: NewsAPI · All time = last 30 days (API limit)</p></div>
     </div>
-    <hr style="border-color:var(--border-dim);margin:16px 0">
-    <p class="text-center">© 2026 MARKETPULSE — UNIVERSITY PROJECT — ALL DATA FOR EDUCATIONAL USE</p>
+    <hr style="border-color:var(--border-dim);margin:14px 0">
+    <p class="text-center" style="font-size:.65rem">© 2026 MARKETPULSE — UNIVERSITY PROJECT</p>
   </div>
 </footer>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.7/dist/hls.min.js"></script>
+<script src="assets/js/alerts.js"></script>
 <script src="assets/js/app.js"></script>
-<script>
-class HomePage {
-  constructor() {
-    this.data       = {};
-    this.hmTab      = 'crypto';
-    this.init();
-  }
-
-  async init() {
-    await Promise.all([this.loadWatchlist(), this.loadNews(), this.loadFG(), this.loadCalendar()]);
-    this.loadAnalysis();
-    this.loadCarousel();
-  }
-
-  async loadWatchlist() {
-    try {
-      this.data = await window.apiClient.get('/api/watchlist', 5*60*1000);
-      this.renderHeroPrices();
-      this.renderMiniTable('cryptoMiniBody', this.data.crypto||[], ['symbol','price','change_24h','change_7d']);
-      this.renderMiniTable('stocksMiniBody', this.data.stocks||[], ['symbol','price','change_24h','volume']);
-      this.renderMiniTable('commodMiniBody', this.data.commodities||[], ['symbol','price','change_24h','change_7d']);
-      this.renderHeatmap();
-      this.buildTicker();
-      const el = document.getElementById('lastUpdate');
-      if (el) el.textContent = `UPD: ${new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:false})}`;
-    } catch(e) {
-      ['cryptoMiniBody','stocksMiniBody','commodMiniBody'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.innerHTML = `<tr><td colspan="4" style="padding:16px;text-align:center;color:var(--text-muted);font-family:var(--font-mono);font-size:.68rem">⚠ START BACKEND: uvicorn main:app --port 8000</td></tr>`;
-      });
-    }
-  }
-
-  renderHeroPrices() {
-    const btc  = this.data.crypto?.find(c=>c.symbol==='BTC');
-    const eth  = this.data.crypto?.find(c=>c.symbol==='ETH');
-    const nvda = this.data.stocks?.find(s=>s.symbol==='NVDA');
-    const gold = this.data.commodities?.find(c=>c.name==='Gold');
-    const items = [btc,eth,nvda,gold].filter(Boolean);
-    document.getElementById('heroPrices').innerHTML = items.map(a => {
-      const up = a.change_24h >= 0;
-      return `<div class="lp-item" onclick="window.location.href='markets.html'">
-        <div class="lp-sym">${a.symbol}</div>
-        <div class="lp-price" style="color:${up?'var(--green)':'var(--red)'}">${Fmt.price(a.price)}</div>
-        <div class="lp-chg" style="color:${up?'var(--green)':'var(--red)'}">${up?'▲':'▼'} ${Math.abs(a.change_24h).toFixed(2)}%</div>
-      </div>`;
-    }).join('');
-  }
-
-  renderMiniTable(tbodyId, assets, cols) {
-    const tbody = document.getElementById(tbodyId);
-    if (!tbody) return;
-    if (!assets.length) {
-      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text-muted);font-family:var(--font-mono);font-size:.68rem">NO DATA — START BACKEND</td></tr>`;
-      return;
-    }
-    const tableId = tbodyId + '_spark';
-    const isStock = cols.includes('volume');
-
-    tbody.innerHTML = assets.map((a, i) => {
-      const up24 = (a.change_24h || 0) >= 0;
-      const up7d  = (a.change_7d  || 0) >= 0;
-      const sparkId = `mtsp_${tbodyId}_${i}`;
-
-      const iconHtml = a.image
-        ? `<img src="${a.image}" style="width:28px;height:28px;border-radius:50%;flex-shrink:0;border:1px solid var(--border-mid)" onerror="this.style.display='none'">`
-        : `<div style="width:28px;height:28px;border-radius:50%;background:var(--bg-overlay);border:1px solid var(--border-mid);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:.5rem;color:var(--amber);flex-shrink:0">${a.symbol.substring(0,3)}</div>`;
-
-      const volOrChg7 = isStock
-        ? `<td style="text-align:right;padding:8px 10px;font-family:var(--font-mono);font-size:.7rem;color:var(--text-secondary);white-space:nowrap;vertical-align:middle">${Fmt.large(a.volume)}</td>`
-        : `<td style="text-align:right;padding:8px 10px;vertical-align:middle;white-space:nowrap">
-            <span style="font-family:var(--font-mono);font-size:.7rem;font-weight:600;
-              color:${up7d?'var(--green)':'var(--red)'};
-              background:${up7d?'rgba(0,200,83,.1)':'rgba(246,36,89,.1)'};
-              padding:2px 7px;border-radius:2px;display:inline-block">
-              ${up7d?'▲':'▼'} ${Math.abs(a.change_7d||0).toFixed(2)}%
-            </span>
-           </td>`;
-
-      return `<tr style="border-bottom:1px solid var(--border-dim);cursor:pointer;transition:background .15s"
-                  onmouseover="this.style.background='var(--bg-raised)'"
-                  onmouseout="this.style.background=''"
-                  onclick="window.location.href='markets.html'">
-        <!-- ASSET: icon + full name + symbol -->
-        <td style="padding:8px 10px;vertical-align:middle">
-          <div style="display:flex;align-items:center;gap:9px">
-            ${iconHtml}
-            <div style="min-width:0">
-              <div style="font-family:var(--font-sans);font-size:.8rem;font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:110px">${a.name}</div>
-              <div style="font-family:var(--font-mono);font-size:.6rem;color:var(--text-muted);margin-top:1px">${a.symbol}</div>
-            </div>
-          </div>
-        </td>
-        <!-- PRICE -->
-        <td style="text-align:right;padding:8px 10px;font-family:var(--font-mono);font-size:.82rem;font-weight:600;color:var(--text-primary);white-space:nowrap;vertical-align:middle">
-          ${Fmt.price(a.price)}
-        </td>
-        <!-- 24H -->
-        <td style="text-align:right;padding:8px 10px;vertical-align:middle;white-space:nowrap">
-          <span style="font-family:var(--font-mono);font-size:.7rem;font-weight:600;
-            color:${up24?'var(--green)':'var(--red)'};
-            background:${up24?'rgba(0,200,83,.1)':'rgba(246,36,89,.1)'};
-            padding:2px 7px;border-radius:2px;display:inline-block">
-            ${up24?'▲':'▼'} ${Math.abs(a.change_24h||0).toFixed(2)}%
-          </span>
-        </td>
-        <!-- 7D or VOL -->
-        ${volOrChg7}
-        <!-- SPARKLINE -->
-        <td style="padding:8px 10px;text-align:right;vertical-align:middle">
-          <canvas id="${sparkId}" width="72" height="26" style="display:block;margin-left:auto"></canvas>
-        </td>
-      </tr>`;
-    }).join('');
-
-    // Draw sparklines after DOM update
-    requestAnimationFrame(() => {
-      assets.forEach((a, i) => {
-        if (a.sparkline?.length) {
-          Sparkline.draw(`mtsp_${tbodyId}_${i}`, a.sparkline, (a.change_7d||0) >= 0);
-        }
-      });
-    });
-  }
-
-  renderHeatmap() {
-    const assets = this.data[this.hmTab] || [];
-    const grid   = document.getElementById('hmGrid');
-    if (!grid) return;
-    grid.innerHTML = assets.map(a => {
-      const pct   = a.change_24h || 0;
-      const abs   = Math.abs(pct);
-      const alpha = Math.min(0.85, 0.1 + abs * 0.06);
-      const bg    = pct >= 0 ? `rgba(0,200,83,${alpha})` : `rgba(255,23,68,${alpha})`;
-      return `<div class="hm-cell" style="background:${bg}">
-        <div class="hm-sym">${a.symbol}</div>
-        <div class="hm-pct" style="color:${pct>=0?'var(--green)':'var(--red)'}">${pct>=0?'+':''}${pct.toFixed(2)}%</div>
-      </div>`;
-    }).join('');
-  }
-
-  setHeatmapTab(tab, el) {
-    document.querySelectorAll('.panel-head .chip').forEach(c=>c.classList.remove('active'));
-    el.classList.add('active');
-    this.hmTab = tab;
-    this.renderHeatmap();
-  }
-
-  buildTicker() {
-    const all = [
-      ...(this.data.crypto||[]),
-      ...(this.data.stocks||[]),
-      ...(this.data.commodities||[]),
-    ];
-    const html = all.map(a => {
-      const up = (a.change_24h || 0) >= 0;
-      return `<div class="ticker-item">
-        <span class="ti-sym">${a.symbol}</span>
-        <span class="ti-price">${Fmt.price(a.price)}</span>
-        <span class="ti-chg ${up?'up':'down'}">${up?'▲':'▼'}${Math.abs(a.change_24h||0).toFixed(2)}%</span>
-      </div>`;
-    }).join('');
-    const t = document.getElementById('tickerInner');
-    // Duplicate for seamless loop
-    if (t) t.innerHTML = html + html;
-  }
-
-  loadCarousel() {
-    const slides = [
-      { title:'Bitcoin Near All-Time High', desc:'BTC surges past $70,000 as institutional demand intensifies and ETF inflows reach record levels.', cat:'CRYPTO', catColor:'var(--amber)', bg:'https://images.unsplash.com/photo-1621761191319-c6fb62004040?w=800&q=60', link:'markets.html' },
-      { title:'Fed Signals Rate Cuts in Q3 2026', desc:'Federal Reserve minutes reveal growing consensus for easing monetary policy amid cooling inflation data.', cat:'MACRO', catColor:'var(--blue)', bg:'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=800&q=60', link:'calendar.html' },
-      { title:'NVIDIA Breaks $1T Market Cap Again', desc:'AI chip demand continues to push NVDA to record valuations as data center spending accelerates globally.', cat:'EQUITIES', catColor:'var(--green)', bg:'https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&q=60', link:'markets.html' },
-      { title:'Gold Hits $2,400 — Safe Haven Surge', desc:'Geopolitical tensions drive investors toward traditional safe-haven assets. Central banks accumulating.', cat:'COMMODITIES', catColor:'#ff8f00', bg:'https://images.unsplash.com/photo-1610375461246-83df859d849d?w=800&q=60', link:'markets.html' },
-      { title:'DeFi TVL Crosses $200B Milestone', desc:'Decentralized finance protocols see explosive growth as Ethereum Layer 2 fees hit record lows.', cat:'DEFI', catColor:'var(--purple)', bg:'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=800&q=60', link:'news.html' },
-    ];
-
-    const indicators = document.getElementById('carouselIndicators');
-    const inner      = document.getElementById('carouselInner');
-    if (!indicators || !inner) return;
-
-    indicators.innerHTML = slides.map((_,i) =>
-      `<button type="button" data-bs-target="#featuredCarousel" data-bs-slide-to="${i}" ${i===0?'class="active"':''}></button>`
-    ).join('');
-
-    inner.innerHTML = slides.map((s,i) => `
-      <div class="carousel-item ${i===0?'active':''}" style="height:100%">
-        <div class="carousel-slide" onclick="window.location.href='${s.link}'" style="cursor:pointer;height:100%">
-          <img class="cs-bg" src="${s.bg}" alt="" loading="lazy">
-          <div class="cs-gradient"></div>
-          <div class="cs-content">
-            <span class="cs-cat" style="background:${s.catColor};color:#000;font-weight:700">${s.cat}</span>
-            <div class="cs-title">${s.title}</div>
-            <div class="cs-desc">${s.desc}</div>
-            <span style="font-family:var(--font-mono);font-size:.62rem;color:var(--amber);letter-spacing:.08em">READ MORE →</span>
-          </div>
-        </div>
-      </div>`).join('');
-  }
-
-  async loadNews() {
-    try {
-      const articles = await window.apiClient.get('/api/news', 30*60*1000);
-      const el = document.getElementById('newsMini');
-      if (!el) return;
-      el.innerHTML = articles.slice(0,8).map(a => `
-        <div class="news-mini-item" onclick="window.open('${a.url}','_blank')">
-          <div class="news-mini-src">
-            <span>${a.source?.toUpperCase()}</span>
-            <span>${Fmt.timeAgo(a.published_at)}</span>
-          </div>
-          <div class="news-mini-title">${a.title}</div>
-        </div>`).join('');
-    } catch(e) {
-      document.getElementById('newsMini').innerHTML = '<div style="color:var(--text-muted);font-family:var(--font-mono);font-size:.7rem;padding:16px">NEWS UNAVAILABLE — ADD NEWSAPI KEY</div>';
-    }
-  }
-
-  async loadFG() {
-    try {
-      const data  = await window.apiClient.get('/api/fear-greed', 60*60*1000);
-      const cur   = data.current || {};
-      const val   = parseInt(cur.value||50);
-      const label = cur.value_classification||'Neutral';
-      const colors = {'Extreme Fear':'var(--red)','Fear':'#ff8f00','Neutral':'var(--amber)','Greed':'#69f0ae','Extreme Greed':'var(--green)'};
-      const color  = colors[label]||'var(--amber)';
-      const fgEl   = document.getElementById('fgMini');
-      const indEl  = document.getElementById('fgInd');
-      if (fgEl) fgEl.innerHTML = `
-        <div class="fg-mini-val" style="color:${color}">${val}</div>
-        <div class="fg-mini-info">
-          <div class="fg-mini-label" style="color:${color}">${label.toUpperCase()}</div>
-          <div class="fg-mini-sub">CRYPTO FEAR & GREED INDEX</div>
-        </div>`;
-      if (indEl) indEl.style.left = `${val}%`;
-    } catch(e) {}
-  }
-
-  async loadCalendar() {
-    try {
-      const events = await window.apiClient.get('/api/calendar', 60*60*1000);
-      const el     = document.getElementById('calMini');
-      if (!el) return;
-      const today  = new Date().toISOString().split('T')[0];
-      const next6  = events.filter(e=>e.date>=today).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,6);
-      el.innerHTML = next6.map(e => {
-        const d = new Date(e.date+'T00:00:00');
-        const dateStr = isNaN(d)?e.date:d.toLocaleDateString('en-US',{month:'short',day:'numeric'}).toUpperCase();
-        return `<div class="cal-mini-item">
-          <span class="cal-mini-date">${dateStr}</span>
-          <span class="cal-mini-name">${e.event}</span>
-          <span class="imp-badge ${e.importance}" style="font-size:.55rem">${e.importance.substring(0,1).toUpperCase()}</span>
-        </div>`;
-      }).join('');
-    } catch(e) {}
-  }
-
-  async loadAnalysis() {
-    const el = document.getElementById('termAnalysisPanel');
-    try {
-      const data = await window.apiClient.get('/api/analysis', 30*60*1000);
-      this.renderAnalysis(data);
-    } catch(e) {
-      if (el) el.innerHTML = '<div style="font-family:var(--font-mono);font-size:.65rem;color:var(--text-muted);padding:12px;text-align:center">BACKEND OFFLINE<br><span style="font-size:.58rem">uvicorn main:app --port 8000</span></div>';
-    }
-  }
-
-  async refreshAnalysis() {
-    const el = document.getElementById('termAnalysisPanel');
-    if (el) el.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text-muted);font-family:var(--font-mono);font-size:.68rem"><div class="spinner-border spinner-border-sm" style="color:var(--amber);width:.9rem;height:.9rem;border-width:2px"></div><div style="margin-top:6px">REFRESHING...</div></div>';
-    window.apiClient.invalidate('/api/analysis');
-    await this.loadAnalysis();
-    Toast.show('ANALYSIS UPDATED', 'success');
-  }
-
-  renderAnalysis(data) {
-    const el = document.getElementById('termAnalysisPanel');
-    if (!el || !data) return;
-    const colors = {
-      'BULLISH':'var(--green)', 'MILDLY BULLISH':'#69f0ae',
-      'NEUTRAL':'var(--amber)', 'MILDLY BEARISH':'#ff8f00', 'BEARISH':'var(--red)'
-    };
-    const overall = data.overall || 'N/A';
-    const color   = colors[overall] || 'var(--amber)';
-
-    const insights = (data.insights||[]).slice(0,3).map(i =>
-      `<div style="display:flex;gap:6px;padding:5px 0;border-bottom:1px solid var(--border-dim);font-size:.7rem;color:var(--text-secondary);line-height:1.4">
-        <span style="color:var(--amber);flex-shrink:0">▶</span><span>${i}</span>
-      </div>`).join('');
-
-    const aiBlock = data.ai_summary ? `
-      <div style="background:var(--amber-dim);border-left:2px solid var(--amber);border-radius:2px;padding:7px 9px;margin:8px 0;font-size:.7rem;color:var(--text-secondary);line-height:1.5">
-        <div style="font-family:var(--font-mono);font-size:.55rem;color:var(--amber);letter-spacing:.1em;margin-bottom:4px">DEEPSEEK AI</div>
-        ${data.ai_summary}
-      </div>` : '';
-
-    el.innerHTML = `
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-        <div style="font-family:var(--font-mono);font-size:1.1rem;font-weight:700;color:${color}">${overall}</div>
-        <div style="display:flex;gap:8px">
-          <div style="text-align:center;background:var(--bg-raised);border-radius:3px;padding:4px 8px">
-            <div style="font-family:var(--font-mono);font-size:.55rem;color:var(--text-muted)">GAINERS</div>
-            <div style="font-family:var(--font-mono);font-size:.82rem;font-weight:700;color:var(--green)">${data.gainers||0}</div>
-          </div>
-          <div style="text-align:center;background:var(--bg-raised);border-radius:3px;padding:4px 8px">
-            <div style="font-family:var(--font-mono);font-size:.55rem;color:var(--text-muted)">LOSERS</div>
-            <div style="font-family:var(--font-mono);font-size:.82rem;font-weight:700;color:var(--red)">${data.losers||0}</div>
-          </div>
-        </div>
-      </div>
-      ${aiBlock}
-      ${insights}
-      <div style="font-family:var(--font-mono);font-size:.56rem;color:var(--text-muted);margin-top:6px;text-align:right">
-        ${data.generated_at ? new Date(data.generated_at).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:false}) : ''}
-      </div>`;
-  }
-
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-  window.homePage = new HomePage();
-  // Global status bar (from app.js) handles prices + sessions + watchlist
-  if (window.initStatusBar) window.initStatusBar();
-});
-
-// ── LIVE TV CLASS ─────────────────────────────────────────
-class LiveTV {
-  constructor() {
-    this.active = null; this.hls = null; this.muted = false;
-    this.channels = [
-      {id:'bloomberg',name:'Bloomberg TV',flag:'🇺🇸'},
-      {id:'skynews',name:'Sky News',flag:'🇬🇧'},
-      {id:'euronews',name:'Euronews EN',flag:'🇪🇺'},
-      {id:'dw',name:'DW News',flag:'🇩🇪'},
-      {id:'cnbc',name:'CNBC',flag:'🇺🇸'},
-      {id:'france24',name:'France 24',flag:'🇫🇷'},
-      {id:'aljazeera',name:'Al Jazeera EN',flag:'🇶🇦'},
-      {id:'alarabiya',name:'Al Arabiya',flag:'🇦🇪'},
-    ];
-    this._buildBar();
-  }
-  _buildBar() {
-    const bar=document.getElementById('liveChannelBar');
-    if(!bar)return;
-    bar.innerHTML=this.channels.map(c=>`<button class="tv-btn" data-ch="${c.id}" onclick="window.liveTv.setChannel('${c.id}')">${c.flag} ${c.name}</button>`).join('');
-  }
-  setChannel(id) {
-    const ch=this.channels.find(c=>c.id===id); if(!ch)return;
-    if(this.hls){this.hls.destroy();this.hls=null;}
-    this.active=id;
-    document.querySelectorAll('.tv-btn').forEach(b=>b.classList.toggle('live',b.dataset.ch===id));
-    const nameEl=document.getElementById('liveChannelName');
-    if(nameEl)nameEl.textContent=`${ch.flag} ${ch.name}`;
-    const zone=document.getElementById('liveEmbedZone');
-    if(!zone)return;
-    zone.innerHTML=`<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#000;gap:12px;font-family:var(--font-mono);font-size:.7rem;color:rgba(255,255,255,.6);text-align:center"><div class="spinner-border" style="color:var(--red);width:1.8rem;height:1.8rem;border-width:2px"></div><div>LOADING ${ch.name.toUpperCase()}...</div></div>`;
-    const video=document.createElement('video');
-    video.controls=true;video.autoplay=true;video.muted=this.muted;video.playsInline=true;
-    video.style.cssText='position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000;display:none';
-    zone.appendChild(video);
-    const url=`http://localhost:8000/api/stream/${id}/playlist.m3u8`;
-    if(window.Hls&&Hls.isSupported()){
-      const hls=new Hls({maxBufferLength:20,liveSyncDurationCount:3,lowLatencyMode:true});
-      this.hls=hls; hls.loadSource(url); hls.attachMedia(video);
-      hls.on(Hls.Events.MANIFEST_PARSED,()=>{zone.querySelector('div')?.remove();video.style.display='block';video.play().catch(()=>{});Toast.show(`▶ ${ch.name} — LIVE`,'success',2000);});
-      hls.on(Hls.Events.ERROR,(e,d)=>{if(d.fatal)zone.innerHTML=`<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--bg-raised);gap:10px;font-family:var(--font-mono);font-size:.68rem;color:var(--text-muted);text-align:center;padding:20px"><i class="bi bi-exclamation-triangle" style="font-size:1.8rem;color:var(--amber)"></i><div>BACKEND REQUIRED</div><div style="font-size:.58rem">uvicorn main:app --port 8000</div><button class="btn" onclick="window.liveTv.setChannel('${id}')" style="font-size:.6rem;margin-top:4px">↺ RETRY</button></div>`;});
-    }
-  }
-  stop(){
-    if(this.hls){this.hls.destroy();this.hls=null;}
-    this.active=null;
-    document.querySelectorAll('.tv-btn').forEach(b=>b.classList.remove('live'));
-    const n=document.getElementById('liveChannelName');if(n)n.textContent='NO CHANNEL SELECTED';
-    const z=document.getElementById('liveEmbedZone');
-    if(z)z.innerHTML=`<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--bg-raised);gap:10px;font-family:var(--font-mono);font-size:.7rem;color:var(--text-muted);text-align:center"><i class="bi bi-broadcast" style="font-size:2rem;color:var(--red);opacity:.5"></i><div>SELECT A CHANNEL ABOVE</div></div>`;
-  }
-  toggleMute(){
-    this.muted=!this.muted;
-    const v=document.querySelector('#liveEmbedZone video');if(v)v.muted=this.muted;
-    const b=document.getElementById('liveMuteBtn');if(b)b.textContent=this.muted?'🔇 UNMUTE':'🔊 MUTE';
-  }
-  fullscreen(){
-    const v=document.querySelector('#liveEmbedZone video');
-    if(!v){Toast.show('SELECT A CHANNEL FIRST','warning');return;}
-    (v.requestFullscreen||v.webkitRequestFullscreen||function(){}).call(v);
-  }
-}
-window.liveTv = new LiveTV();
-</script>
+<script src="assets/js/auth.js"></script>
+<script src="assets/js/asset-detail.js"></script>
+<script src="assets/js/news.js"></script>
 <script src="assets/js/features.js"></script>
 </body>
 </html>

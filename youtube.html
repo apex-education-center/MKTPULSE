@@ -1,5 +1,258 @@
-fastapi==0.104.1
-uvicorn==0.24.0
-httpx==0.25.0
-gunicorn==21.2.0
-python-multipart==0.0.6
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<script src="assets/js/theme-boot.js"></script>
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Financial Videos — MarketPulse</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<link href="assets/css/main.css" rel="stylesheet">
+<style>
+/* ── PAGE LAYOUT ── */
+.yt-layout {
+  background: var(--bg-base);
+  min-height: calc(100vh - var(--nav-h) - 74px);
+}
+
+/* ── TOPIC SUGGESTIONS ── */
+.yt-topics {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 6px 16px 10px;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-dim);
+}
+.yt-topics-label {
+  font-family: var(--font-mono); font-size: .58rem;
+  color: var(--text-muted); letter-spacing: .08em;
+  text-transform: uppercase; flex-shrink: 0;
+}
+.yt-topic {
+  padding: 4px 12px; border-radius: 20px;
+  font-family: var(--font-mono); font-size: .62rem;
+  border: 1px solid var(--border-mid);
+  background: var(--bg-overlay); color: var(--text-muted);
+  cursor: pointer; transition: all var(--transition);
+}
+.yt-topic:hover, .yt-topic.active {
+  border-color: var(--amber); color: var(--amber);
+  background: rgba(255,170,0,.06);
+}
+
+/* ── VIDEO MAIN ── */
+.video-main { overflow: auto; }
+.video-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(265px, 1fr));
+  gap: 14px;
+  padding: 16px;
+}
+
+/* ── VIDEO CARD ── */
+.vc {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  overflow: hidden;
+  transition: all var(--transition);
+  display: block;
+  text-decoration: none !important;
+  color: inherit;
+}
+.vc:hover {
+  border-color: var(--amber);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(0,0,0,.4);
+}
+.vc-thumb {
+  position: relative;
+  padding-top: 56.25%;
+  overflow: hidden;
+  background: var(--bg-overlay);
+}
+.vc-thumb img {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  transition: transform .4s ease;
+}
+.vc:hover .vc-thumb img { transform: scale(1.04); }
+.vc-play {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%,-50%);
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  background: rgba(0,0,0,.75);
+  border: 2px solid rgba(255,255,255,.3);
+  display: flex; align-items: center; justify-content: center;
+  transition: all var(--transition); pointer-events: none;
+}
+.vc-play i { color: #fff; font-size: .95rem; margin-left: 2px; }
+.vc:hover .vc-play { background: rgba(255,0,0,.85); border-color: #f00; }
+.vc-dur {
+  position: absolute; bottom: 6px; right: 6px;
+  background: rgba(0,0,0,.85); color: #fff;
+  font-family: var(--font-mono); font-size: .6rem;
+  padding: 1px 5px; border-radius: 2px;
+}
+.vc-yt-badge {
+  position: absolute; top: 6px; right: 6px;
+  background: rgba(255,0,0,.9); color: #fff;
+  font-family: var(--font-mono); font-size: .5rem;
+  font-weight: 700; letter-spacing: .1em;
+  padding: 2px 5px; border-radius: 2px;
+}
+.vc-body { padding: 10px 12px; }
+.vc-ch {
+  font-family: var(--font-mono); font-size: .6rem;
+  color: var(--text-muted); letter-spacing: .06em;
+  text-transform: uppercase; margin-bottom: 5px;
+  display: flex; align-items: center; gap: 5px;
+}
+.vc-title {
+  font-size: .82rem; font-weight: 500;
+  line-height: 1.4; margin-bottom: 7px;
+  color: var(--text-primary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.vc-meta {
+  display: flex; justify-content: space-between;
+  font-family: var(--font-mono); font-size: .62rem;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border-dim);
+  padding-top: 7px;
+  margin-top: auto;
+}
+.vc-open-link { color: var(--amber); font-size: .58rem; font-weight: 600; }
+
+@media(max-width:600px) { .video-grid { grid-template-columns: 1fr; gap: 10px; } }
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- STATUS BAR -->
+<div class="status-bar" id="statusBar">
+  <div class="sb-row sb-row-top">
+    <div class="sb-item"><span class="sb-live-dot"></span><span class="sb-value" style="font-size:.6rem;letter-spacing:.06em">LIVE</span></div>
+    <div class="sb-item" id="sb-btc"><span class="sb-label">BTC</span><span class="sb-value">—</span></div>
+    <div class="sb-item" id="sb-eth"><span class="sb-label">ETH</span><span class="sb-value">—</span></div>
+    <div class="sb-item" id="sb-nvda"><span class="sb-label">NVDA</span><span class="sb-value">—</span></div>
+    <div class="sb-item" id="sb-gold"><span class="sb-label">XAU</span><span class="sb-value">—</span></div>
+    <div class="sb-item" id="sb-oil"><span class="sb-label">OIL</span><span class="sb-value">—</span></div>
+    <div id="sb-watchlist" style="display:flex;align-items:center;height:100%;flex:1;overflow:hidden"></div>
+  </div>
+  <div class="sb-row sb-row-meta">
+    <div id="marketSessions"></div>
+    <div class="sb-clocks">
+      <div class="sb-item"><span class="sb-label">NY</span><span class="sb-value" id="sb-ny">—</span></div>
+      <div class="sb-item"><span class="sb-label">LN</span><span class="sb-value" id="sb-ln">—</span></div>
+      <div class="sb-item"><span class="sb-label">TK</span><span class="sb-value" id="sb-tk">—</span></div>
+      <div class="sb-item"><span class="sb-label">BT</span><span class="sb-value" id="sb-bt">—</span></div>
+    </div>
+  </div>
+</div>
+<!-- NAVBAR -->
+<nav class="navbar">
+  <a class="navbar-brand" href="index.html">MKT<span class="accent">PULSE</span><span class="ver">v9</span></a>
+  <div class="nav-sep"></div>
+  <ul class="nav-links">
+    <li><a class="nav-link" href="index.html"><i class="bi bi-display"></i> Terminal</a></li>
+    <li><a class="nav-link" href="markets.html"><i class="bi bi-graph-up"></i> Markets</a></li>
+    <li><a class="nav-link" href="news.html"><i class="bi bi-newspaper"></i> News</a></li>
+    <li><a class="nav-link active" href="youtube.html"><i class="bi bi-play-circle"></i> Videos</a></li>
+    <li><a class="nav-link" href="calendar.html"><i class="bi bi-calendar3"></i> Calendar</a></li>
+    <li><a class="nav-link" href="tools.html"><i class="bi bi-tools"></i> Tools</a></li>
+    <li><a class="nav-link" href="search.html"><i class="bi bi-search"></i> Search</a></li>
+  </ul>
+  <div class="nav-clock d-none d-lg-block" id="navClock"></div>
+  <div class="nav-actions">
+    <button class="theme-btn" id="themeToggle">☀</button>
+    <button class="hamburger" id="hamburgerBtn"><i class="bi bi-list"></i></button>
+  </div>
+</nav>
+
+<!-- TOOLBAR -->
+<div class="page-toolbar">
+  <h1 class="pt-title"><i class="bi bi-play-circle"></i> FINANCIAL VIDEOS</h1>
+  <div class="ms-auto d-flex align-items-center gap-2 flex-wrap">
+    <span style="font-family:var(--font-mono);font-size:.62rem;color:var(--text-muted)" id="videoCountBadge">Loading...</span>
+    <div class="search-bar" style="width:220px">
+      <i class="bi bi-search s-icon"></i>
+      <input id="videoSearch" type="text" placeholder="SEARCH VIDEOS..."
+             oninput="searchVideos(this.value);this.closest('.search-bar').classList.toggle('has-val',this.value.length>0)">
+      <button class="s-clear" onclick="this.previousElementSibling.value='';searchVideos('');this.closest('.search-bar').classList.remove('has-val')">✕</button>
+    </div>
+    <select onchange="setVideoSort(this.value)" class="t-select" style="width:120px;padding:5px 8px;font-size:.66rem">
+      <option value="date">LATEST</option>
+      <option value="title">A — Z</option>
+    </select>
+  </div>
+</div>
+
+<!-- FILTER CHIPS -->
+<div style="padding:8px 16px 4px;border-bottom:none;background:var(--bg-surface)">
+  <div class="chip-row">
+    <span class="chip active" onclick="setVideoCategory('all',this)">ALL</span>
+    <span class="chip" onclick="setVideoCategory('crypto',this)">CRYPTO</span>
+    <span class="chip" onclick="setVideoCategory('stocks',this)">STOCKS</span>
+    <span class="chip" onclick="setVideoCategory('macro',this)">MACRO</span>
+    <span class="chip" onclick="setVideoCategory('trading',this)">TRADING</span>
+    <span class="chip" onclick="setVideoCategory('education',this)">EDUCATION</span>
+  </div>
+</div>
+
+<!-- TOPIC SUGGESTIONS -->
+<div class="yt-topics" id="ytTopics">
+  <span class="yt-topics-label">Suggested:</span>
+  <span class="yt-topic" onclick="suggestVideoTopic('Bitcoin price analysis',this)">Bitcoin</span>
+  <span class="yt-topic" onclick="suggestVideoTopic('Ethereum crypto news',this)">Ethereum</span>
+  <span class="yt-topic" onclick="suggestVideoTopic('stock market investing 2025',this)">Stock Market</span>
+  <span class="yt-topic" onclick="suggestVideoTopic('Federal Reserve interest rates',this)">Fed Rates</span>
+  <span class="yt-topic" onclick="suggestVideoTopic('gold price forecast',this)">Gold</span>
+  <span class="yt-topic" onclick="suggestVideoTopic('NVIDIA stock analysis',this)">NVIDIA</span>
+  <span class="yt-topic" onclick="suggestVideoTopic('inflation economy explained',this)">Inflation</span>
+  <span class="yt-topic" onclick="suggestVideoTopic('DeFi cryptocurrency explained',this)">DeFi</span>
+  <span class="yt-topic" onclick="suggestVideoTopic('forex trading strategies',this)">Forex</span>
+  <span class="yt-topic" onclick="suggestVideoTopic('personal finance tips',this)">Personal Finance</span>
+</div>
+
+<!-- MAIN LAYOUT -->
+<div class="yt-layout">
+  <div class="video-main">
+    <div class="video-grid" id="videoGrid"></div>
+    <div id="loadMoreWrap" style="display:none;text-align:center;padding:20px 0 30px">
+      <button class="btn" onclick="loadMoreVideos()">
+        <i class="bi bi-arrow-down-circle me-1"></i>LOAD MORE VIDEOS
+      </button>
+    </div>
+    <div style="padding:10px 16px 20px;font-family:var(--font-mono);font-size:.58rem;color:var(--text-muted)">
+      SOURCE: YOUTUBE DATA API v3 · ALL VIDEOS OPEN IN NEW TAB · LIVE TV AVAILABLE ON TERMINAL
+    </div>
+  </div>
+</div>
+
+<footer style="margin-top:0">
+  <div class="container-fluid px-4">
+    <div class="row align-items-center">
+      <div class="col-md-6"><div class="footer-brand">MKT<span class="accent">PULSE</span></div><p class="mt-1">Professional financial intelligence terminal.</p></div>
+      <div class="col-md-6 text-md-end mt-3 mt-md-0"><p>Videos: YouTube Data API v3 · Live TV: Market Terminal</p></div>
+    </div>
+    <hr style="border-color:var(--border-dim);margin:14px 0">
+    <p class="text-center" style="font-size:.65rem">© 2026 MARKETPULSE — UNIVERSITY PROJECT</p>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="assets/js/alerts.js"></script>
+<script src="assets/js/app.js"></script>
+<script src="assets/js/auth.js"></script>
+<script src="assets/js/asset-detail.js"></script>
+<script src="assets/js/youtube.js"></script>
+<script src="assets/js/features.js"></script>
+</body>
+</html>
