@@ -130,6 +130,14 @@
 .vc-open-link { color: var(--amber); font-size: .58rem; font-weight: 600; }
 
 @media(max-width:600px) { .video-grid { grid-template-columns: 1fr; gap: 10px; } }
+@media(max-width:480px) {
+  .video-grid { padding: 8px; gap: 8px; }
+  .vc-title { font-size: .78rem; }
+  .yt-topics { overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; -ms-overflow-style: none; }
+  .yt-topics::-webkit-scrollbar { display: none; }
+  .yt-topic { flex-shrink: 0; }
+  .vc-body { padding: 8px 10px; }
+}
 </style>
 </head>
 <body>
