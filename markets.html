@@ -141,18 +141,66 @@
 .cstat-val { font-family:var(--font-mono); font-size:.9rem; font-weight:500; }
 
 @media (max-width:768px){
-  .mkts-side{position:static!important;max-height:none!important;overflow:visible!important;border-left:none!important;display:grid!important;grid-template-columns:1fr!important;gap:10px;padding:10px}
-  .mkts-table th{position:static}
-  .kpi-strip{grid-template-columns:repeat(2,1fr)!important}
-  .mkts-toolbar .chip-row{overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch}
-  .mkts-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
-  .mkts-table{min-width:400px}
-  .mkts-table th:nth-child(6),.mkts-table td:nth-child(6),
-  .mkts-table th:nth-child(7),.mkts-table td:nth-child(7),
-  .mkts-table th:nth-child(8),.mkts-table td:nth-child(8){display:none}
-  .mkts-table th:nth-child(9),.mkts-table td:nth-child(9){display:table-cell;min-width:72px}
-  .fav-btn,.compare-col-btn{min-width:36px;min-height:36px;padding:6px;font-size:1rem}
-  .asset-name{max-width:110px}
+  /* KPI strip → horizontal swipe row instead of cramped 2-col grid */
+  .kpi-strip{
+    display:flex!important; grid-template-columns:none!important;
+    overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none;
+    gap:1px; background:var(--border-dim);
+  }
+  .kpi-strip::-webkit-scrollbar{display:none}
+  .kpi-cell{flex:0 0 auto; min-width:122px; padding:9px 12px}
+
+  /* Toolbar: search full width on its own row, buttons share a row */
+  .mkts-toolbar{padding:8px 10px; gap:8px}
+  .mkts-toolbar .chip-row{overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch;flex:1 1 100%;order:1}
+  .mkts-toolbar .search-bar{width:100%!important;flex:1 1 100%;order:2}
+  .mkts-toolbar > .btn{flex:1 1 auto;order:3;min-height:38px}
+  .mkts-toolbar > span{display:none}
+
+  /* Table → stacked cards, no horizontal scrolling */
+  .mkts-table-wrap{overflow-x:visible;padding:8px}
+  .mkts-table{min-width:0;width:100%;display:block;border-collapse:separate}
+  .mkts-table thead{display:none}
+  .mkts-table tbody{display:block}
+  .mkts-table tr.mrow{
+    display:grid;
+    grid-template-columns:1fr auto;
+    grid-template-areas:"asset fav" "price chg";
+    column-gap:10px; row-gap:6px;
+    padding:12px;
+    margin-bottom:8px;
+    background:var(--bg-surface);
+    border:1px solid var(--border-soft);
+    border-radius:var(--radius);
+  }
+  .mkts-table tr.mrow:hover td{background:transparent}
+  .mkts-table td{padding:0;border:none;white-space:normal;overflow:visible;font-size:.8rem}
+  .mkts-table td:nth-child(1){display:none}
+  .mkts-table td:nth-child(2){grid-area:asset;text-align:left}
+  .mkts-table td:nth-child(2) .asset-name{max-width:none}
+  .mkts-table td:nth-child(3){grid-area:price;text-align:left}
+  .mkts-table td:nth-child(3) .price-val{font-size:.95rem}
+  .mkts-table td:nth-child(4){grid-area:chg;text-align:right;align-self:start}
+  .mkts-table td:nth-child(5),
+  .mkts-table td:nth-child(6),
+  .mkts-table td:nth-child(7),
+  .mkts-table td:nth-child(8){display:none}
+  .mkts-table td:nth-child(9){grid-area:fav;justify-self:end;align-self:start}
+  .fav-btn,.compare-col-btn{min-width:36px;min-height:36px;padding:6px;font-size:1.05rem}
+
+  /* Sidebar: single clean column, no fake sticky */
+  .mkts-side{
+    position:static!important;max-height:none!important;overflow:visible!important;
+    border-left:none!important;border-top:1px solid var(--border-dim);
+    display:flex!important;flex-direction:column!important;gap:0;padding:0
+  }
+  .side-section{border-bottom:1px solid var(--border-dim)}
+  .hm-sm{grid-template-columns:repeat(4,1fr)!important}
+}
+
+@media (max-width:420px){
+  .hm-sm{grid-template-columns:repeat(3,1fr)!important}
+  .kpi-cell{min-width:108px}
 }
 </style>
 </head>
