@@ -144,14 +144,19 @@
 @media(max-width:1100px){ .mkts-layout{grid-template-columns:1fr}; .mkts-side{display:none} }
 @media(max-width:768px) {
   .kpi-strip{grid-template-columns:repeat(3,1fr)}
-  /* Hide volume, mkt cap, 7d chart — keep rank(1), asset(2), price(3), 24h%(4), fav(9) */
-  .mkts-table th:nth-child(5),.mkts-table td:nth-child(5),
+  /* Hide vol/mktcap/7d chart, keep rank(1) asset(2) price(3) 24h%(4) 7d%(5) fav(9) */
   .mkts-table th:nth-child(6),.mkts-table td:nth-child(6),
   .mkts-table th:nth-child(7),.mkts-table td:nth-child(7),
-  .mkts-table th:nth-child(8),.mkts-table td:nth-child(8) { display:none }
-  /* Keep column 9 (fav/watchlist button) always visible */
-  .mkts-table th:nth-child(9),.mkts-table td:nth-child(9) { display:table-cell }
-  /* Also keep 7d % for context */
+  .mkts-table th:nth-child(8),.mkts-table td:nth-child(8){display:none}
+  .mkts-table th:nth-child(9),.mkts-table td:nth-child(9){display:table-cell!important}
+}
+@media(max-width:480px){
+  .kpi-strip{grid-template-columns:1fr 1fr}
+  /* On very small: also hide 7d% (5), keep rank asset price 24h fav */
+  .mkts-table th:nth-child(5),.mkts-table td:nth-child(5){display:none}
+  .mkts-table th:nth-child(9),.mkts-table td:nth-child(9){display:table-cell!important}
+  .mkts-toolbar{flex-wrap:wrap;gap:6px}
+  .mkts-toolbar .search-bar{width:100%!important}
 }
 </style>
 </head>
@@ -332,6 +337,43 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+// Fix Chart.js axis label colors for dark/light mode
+(function applyChartDefaults() {
+  function setChartDefaults() {
+    if (!window.Chart) return;
+    const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+    const tickColor  = isDark ? '#7a8fa6' : '#4a5568';
+    const gridColor  = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)';
+    const legendColor = isDark ? '#7a8fa6' : '#4a5568';
+    Chart.defaults.color = tickColor;
+    Chart.defaults.borderColor = gridColor;
+    if (Chart.defaults.plugins?.legend?.labels)
+      Chart.defaults.plugins.legend.labels.color = legendColor;
+    if (Chart.defaults.scales?.linear) {
+      Chart.defaults.scales.linear.ticks = { color: tickColor };
+      Chart.defaults.scales.linear.grid  = { color: gridColor };
+    }
+    // Re-render any existing charts
+    Object.values(Chart.instances || {}).forEach(c => {
+      try {
+        if (c.options?.scales) {
+          Object.values(c.options.scales).forEach(s => {
+            if (s.ticks) s.ticks.color = tickColor;
+            if (s.grid)  s.grid.color  = gridColor;
+          });
+        }
+        c.update('none');
+      } catch(e) {}
+    });
+  }
+  // Run once Chart.js is ready and on theme toggle
+  document.addEventListener('DOMContentLoaded', setChartDefaults);
+  new MutationObserver(setChartDefaults).observe(
+    document.documentElement, { attributes: true, attributeFilter: ['data-theme'] }
+  );
+})();
+</script>
 <script src="assets/js/alerts.js"></script>
 <script src="assets/js/app.js"></script>
 <script src="assets/js/auth.js"></script>

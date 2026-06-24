@@ -1300,131 +1300,108 @@ footer a:hover { color: var(--amber); }
   .hamburger { display: flex; }
 }
 
-/* ─── TABLET (≤768px) ────────────────────────────────────────────── */
+/* ── TABLET (≤768px) ─────────────────────────────────────────────── */
 @media (max-width: 768px) {
-  /* Status bar: hide watchlist items to prevent overflow */
+  /* Status bar */
   #sb-watchlist { display: none !important; }
   .sb-item { padding: 0 7px; }
-  .sb-row { padding: 0 10px; }
+  .sb-row  { padding: 0 10px; }
 
-  /* Page toolbar: stack vertically on tablet */
-  .page-toolbar {
-    flex-wrap: wrap;
-    gap: 8px;
-    padding: 8px 12px;
-    height: auto;
-    min-height: 42px;
-  }
+  /* Page toolbar */
+  .page-toolbar { flex-wrap: wrap; gap: 8px; padding: 8px 12px; height: auto; min-height: 42px; }
   .pt-title { font-size: 0.65rem; }
-  .page-toolbar .ms-auto {
-    width: 100%;
-    justify-content: flex-start !important;
-  }
+  .page-toolbar .ms-auto { width: 100%; justify-content: flex-start !important; }
   .page-toolbar .search-bar { width: 100% !important; max-width: 100%; }
-  .page-toolbar .t-select { flex: 1; }
 
-  /* Chip rows: scrollable, no wrap */
-  .chip-row {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-    padding-bottom: 4px;
-  }
+  /* Chip rows scrollable */
+  .chip-row { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none; padding-bottom: 4px; }
   .chip-row::-webkit-scrollbar { display: none; }
   .chip { flex-shrink: 0; }
 
-  /* News page */
-  .breaking-wrap { padding: 0 10px 12px; }
-  .breaking-slide { height: 170px; padding: 12px 14px; }
-  .bs-title { font-size: 0.88rem; }
-  .time-chips { padding: 6px 10px; gap: 4px; }
-  .time-chip { font-size: 0.58rem; padding: 3px 9px; }
+  /* Terminal grid */
+  .terminal-grid { grid-template-columns: 1fr; }
+  .tg-span2, .tg-span3 { grid-column: span 1; }
+
+  /* News grid: 2-col on tablet */
   .news-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; padding: 10px; }
 
-  /* YouTube page */
+  /* Video grid: 2-col on tablet */
   .video-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; padding: 10px; }
-  .yt-topics { padding: 5px 10px 8px; gap: 5px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+
+  /* Topic chips scrollable */
+  .yt-topics { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none; }
   .yt-topics::-webkit-scrollbar { display: none; }
   .yt-topic { flex-shrink: 0; }
 
-  /* Search page */
-  .search-hero { padding: 40px 0 30px; }
+  /* Breaking carousel */
+  .breaking-wrap { padding: 0 10px 12px; }
+  .breaking-slide { height: 170px; padding: 12px 14px; }
+  .bs-title { font-size: 0.88rem; }
+
+  /* Time chips scrollable */
+  .time-chips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding: 6px 10px; }
+  .time-chips::-webkit-scrollbar { display: none; }
+  .time-chip { flex-shrink: 0; }
+
+  /* Search hero */
+  .search-hero { padding: 40px 16px 30px; }
   .search-hero h1 { font-size: 1.6rem; }
-  .search-tips { gap: 6px; }
+  .search-tips { padding: 0 8px; }
 
-  /* Calendar page */
-  .cal-grid { grid-template-columns: 1fr !important; }
-  .cal-list { padding: 8px; }
-
-  /* Tools page */
-  .tools-grid { grid-template-columns: 1fr 1fr; }
+  /* Tools */
+  .tools-grid { grid-template-columns: 1fr; }
 
   /* Modal */
   .modal-box { width: 95vw !important; max-height: 88vh; }
   .asset-detail-box { width: 95vw !important; }
-  .ad-tabs { padding: 0 12px 10px; gap: 3px; }
-  .ad-tab { padding: 5px 10px; font-size: 0.6rem; }
 }
 
-/* ─── MOBILE (≤480px) ────────────────────────────────────────────── */
+/* ── MOBILE (≤480px) ─────────────────────────────────────────────── */
 @media (max-width: 480px) {
-  /* Status bar: even more compact */
-  .sb-item:nth-child(n+5) { display: none; } /* show only BTC + ETH + LIVE */
-  .status-bar { height: 42px; }
-  .sb-row { height: 21px; }
-  --statusbar-h: 42px;
+  /* Status bar: trim to LIVE + BTC + ETH */
+  .sb-item:nth-child(n+4) { display: none; }
+  .sb-item:first-child { display: flex; }
 
   /* Navbar */
-  .navbar-brand { font-size: 0.85rem; }
   .navbar { padding: 0 10px; }
+  .navbar-brand { font-size: 0.85rem; }
 
-  /* Toolbar: full stack */
-  .page-toolbar { padding: 8px 10px; gap: 6px; }
-
-  /* News page */
+  /* News */
   .news-grid { grid-template-columns: 1fr; padding: 8px; }
   .nc-img { height: 130px; }
   .breaking-slide { height: 150px; }
   .bs-title { font-size: 0.82rem; -webkit-line-clamp: 2; }
-  .time-chips { gap: 3px; padding: 5px 8px; }
 
-  /* YouTube page */
+  /* Videos */
   .video-grid { grid-template-columns: 1fr; padding: 8px; gap: 8px; }
 
-  /* Search page */
-  .search-hero { padding: 30px 0 20px; }
+  /* Search */
+  .search-hero { padding: 30px 16px 20px; }
   .search-hero h1 { font-size: 1.35rem; }
-  .search-hero p { font-size: 0.82rem; }
+  .search-hero p  { font-size: 0.82rem; }
   .search-hero .search-bar { padding: 10px 14px; }
-  .r-item { padding: 12px 14px; gap: 10px; }
-  .r-ico { width: 36px; height: 36px; }
-
-  /* Tools */
-  .tools-grid { grid-template-columns: 1fr; }
-  .tool-card { padding: 16px; }
+  .r-item { padding: 10px 12px; gap: 10px; }
+  .r-ico  { width: 36px; height: 36px; }
 
   /* KPI strip */
   .kpi-strip { grid-template-columns: 1fr 1fr; }
+  .modal-stats { grid-template-columns: 1fr 1fr; }
 
   /* Footer */
-  footer { padding: 20px 0; }
   footer .row { flex-direction: column; text-align: center; gap: 8px; }
   footer .col-md-6.text-md-end { text-align: center !important; }
 
-  /* Modal full-screen on mobile */
-  .modal-box, .asset-detail-box { width: 100vw !important; max-height: 95vh; border-radius: 0; margin: 0; }
-  .modal-overlay { align-items: flex-end; }
+  /* Modals full-screen */
+  .modal-box, .asset-detail-box { width: 100vw !important; border-radius: 0; margin: 0; }
 
-  /* Drawer wider on small screens */
+  /* Drawer */
   .nav-drawer { width: 88vw; }
 
-  /* General data table: hide less-important columns (NOT last col = fav/action) */
-  .dt td:nth-child(4),
-  .dt th:nth-child(4) { display: none; }
-  .dt-name { max-width: 90px; }
+  /* TV */
+  .tv-channels { gap: 3px; }
+  .tv-btn { font-size: 0.55rem; padding: 3px 7px; }
 
-  /* Scroll top button */
+  /* Scroll top */
   .scroll-top { bottom: 16px; right: 12px; }
 }
 
