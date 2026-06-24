@@ -83,6 +83,13 @@ class AssetDetailModal {
     if (!ctx) return;
     const up = (a.change_7d || 0) >= 0;
     const color = up ? '#00c853' : '#f62459';
+    const css = getComputedStyle(document.documentElement);
+    const tickColor = document.documentElement.getAttribute('data-theme') === 'light'
+      ? (css.getPropertyValue('--text-secondary').trim() || '#4a5568')
+      : '#e2e8f0';
+    const gridColor = document.documentElement.getAttribute('data-theme') === 'light'
+      ? 'rgba(0,0,0,.06)'
+      : 'rgba(255,255,255,.04)';
     if (this._chart) this._chart.destroy();
     this._chart = new Chart(ctx, {
       type: 'line',
@@ -95,7 +102,7 @@ class AssetDetailModal {
         responsive: true,
         plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => Fmt.price(c.raw) } } },
         scales: {
-          y: { ticks: { callback: v => Fmt.price(v), color: 'var(--text-muted)', font: { family: 'IBM Plex Mono', size: 10 } }, grid: { color: 'rgba(255,255,255,.04)' } },
+          y: { ticks: { callback: v => Fmt.price(v), color: tickColor, font: { family: 'IBM Plex Mono', size: 10 } }, grid: { color: gridColor } },
           x: { display: false },
         },
       },
