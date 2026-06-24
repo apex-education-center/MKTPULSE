@@ -548,10 +548,36 @@ class AuthManager {
   }
 }
 
+// ── GLOBAL SIGN-IN ENTRY POINT ────────────────────────────
+// All HTML pages call onclick="window.openSignIn(event)"
+// This function MUST exist before any button is clicked.
+window.openSignIn = function (e) {
+  if (e) { e.stopPropagation(); e.preventDefault(); }
+  if (!window.authManager) return;
+  if (window.authManager.isLoggedIn()) {
+    window.authManager.showModal();
+  } else {
+    window.authManager._openGoogleSignIn();
+  }
+};
+
 // Global callback required by Google Identity Services
 window.handleCredentialResponse = function (response) {
   window.authManager?.handleCredentialResponse(response);
 };
+
+// ── AUTO-INJECT GOOGLE GSI SCRIPT IF MISSING ─────────────
+// Needed on every page; safe to call multiple times (guards by id)
+(function injectGSI() {
+  if (document.getElementById('google-gsi-script')) return;
+  if (window.google?.accounts?.id) return;
+  const s = document.createElement('script');
+  s.id  = 'google-gsi-script';
+  s.src = 'https://accounts.google.com/gsi/client';
+  s.async = true;
+  s.defer = true;
+  document.head.appendChild(s);
+})();
 
 function bootAuthManager() {
   if (window.authManager) return;
