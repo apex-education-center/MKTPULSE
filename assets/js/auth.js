@@ -57,19 +57,6 @@ class AuthManager {
 
     if (!this._slotWired) {
       this._slotWired = true;
-      slot.addEventListener('click', (e) => {
-        if (this._loading) return;
-        if (this.isLoggedIn()) {
-          if (e.target.closest('.auth-profile')) this.showModal();
-          return;
-        }
-        if (e.target.closest('.auth-nav-btn, .auth-google-custom, [role="button"], iframe')) {
-          e.preventDefault();
-          this.showModal();
-          return;
-        }
-        this.showModal();
-      });
     }
 
     this._renderAuthSlot();
@@ -126,7 +113,7 @@ class AuthManager {
       const initial = (name.trim()[0] || '?').toUpperCase();
       slot.classList.add('is-signed-in');
       slot.innerHTML = `
-        <button type="button" class="auth-profile" id="authProfileBtn" title="${this.email}">
+        <button type="button" class="auth-profile" id="authProfileBtn" title="${this.email}" onclick="window.openSignIn(event)">
           <span class="auth-avatar-wrap">
             ${pic
               ? `<img class="auth-avatar" src="${pic}" alt="" referrerpolicy="no-referrer">`
@@ -146,7 +133,7 @@ class AuthManager {
     slot.classList.remove('is-signed-in');
 
     slot.innerHTML = `
-      <button type="button" class="auth-google-custom auth-nav-btn" id="authNavBtn" aria-label="Sign in">
+      <button type="button" class="auth-google-custom auth-nav-btn" id="authNavBtn" aria-label="Sign in" onclick="window.openSignIn(event)">
         <span class="auth-g-logo">${this._googleLogoSvg()}</span>
         <span class="auth-nav-label">SIGN IN</span>
       </button>`;

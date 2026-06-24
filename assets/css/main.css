@@ -283,6 +283,9 @@ a { color: inherit; text-decoration: none; }
   margin-left: 8px;
   height: 32px;
   min-width: 0;
+  position: relative;
+  z-index: 1001;
+  pointer-events: auto;
 }
 
 .theme-btn {
@@ -1489,16 +1492,21 @@ body {
   .asset-name { max-width: 110px; }
   .asset-ico { width: 26px; height: 26px; }
 
-  .tools-grid { grid-template-columns: 1fr; gap: 16px; padding: 0 0 16px; }
-  .tool-card { padding: 16px; }
-  .page-hero { padding: 24px 0 18px; margin-bottom: 20px; }
-  .ci-wrap { grid-template-columns: 1fr; gap: 16px; }
-  .ci-ctrl { flex-wrap: wrap; }
+  .tools-grid { grid-template-columns: 1fr !important; gap: 12px; padding: 0 0 20px; width: 100%; }
+  .tool-card { padding: 14px; overflow: hidden; box-sizing: border-box; }
+  .page-hero { padding: 20px 0 16px; margin-bottom: 16px; }
+  main .container-fluid.px-4 { max-width: 100vw; overflow-x: hidden; }
+  .ci-wrap { grid-template-columns: 1fr !important; gap: 14px; }
+  .ci-ctrl { flex-wrap: wrap; gap: 8px; }
   .ci-ctrl label { width: 100%; margin-bottom: 4px; }
+  .ci-ctrl input[type=range] { width: 100%; min-width: 0; }
   .ci-stats { grid-template-columns: 1fr 1fr; }
-  .heatmap-grid { grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); }
-  .tools-nav { top: var(--nav-h); padding: 8px 0 10px; margin-bottom: 16px; }
+  .heatmap-grid { grid-template-columns: repeat(3, 1fr) !important; }
+  .tools-nav { top: calc(var(--statusbar-h) + var(--nav-h)); padding: 8px 12px 10px; margin-bottom: 14px; }
   .tools-nav-row .chip { min-height: 36px; padding: 6px 12px; }
+  .conv-result { font-size: 1.1rem; word-break: break-word; }
+  .export-btn { min-height: 48px; }
+  .p-item, .a-item, .lb-row { flex-wrap: wrap; }
   .conv-row { grid-template-columns: 1fr !important; gap: 8px !important; }
   .conv-swap { display: none !important; }
   .portfolio-add-row { flex-direction: column; }
@@ -1547,7 +1555,12 @@ body {
 @media (max-width: 480px) {
   .kpi-strip { grid-template-columns: 1fr 1fr; }
   .navbar-brand .ver { display: none; }
-  .auth-nav-btn { padding: 0 8px; font-size: 0.55rem; }
+  .auth-slot:not(.is-signed-in) .auth-nav-btn {
+    min-height: 36px;
+    height: 36px;
+    padding: 0 10px;
+  }
+  .nav-actions { gap: 4px; }
   .auth-text { display: none; }
   .ph-link { display: none; }
   .mini-table { font-size: 0.68rem; }
@@ -1600,18 +1613,27 @@ body, .panel, .modal-box, .news-card, .vc, .cal-event,
   height: 32px;
   position: relative;
   flex-shrink: 0;
-  z-index: 2;
+  z-index: 1001;
+  pointer-events: auto;
 }
 .auth-slot:not(.is-signed-in) {
   max-width: none;
   min-width: 72px;
 }
 .auth-nav-btn {
-  height: 30px;
+  height: 32px;
+  min-height: 32px;
+  min-width: 44px;
   padding: 0 10px 0 8px;
   display: inline-flex !important;
   visibility: visible !important;
   opacity: 1 !important;
+  pointer-events: auto !important;
+  position: relative;
+  z-index: 2;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(240,165,0,0.2);
+  cursor: pointer;
 }
 .auth-nav-label {
   display: inline;
