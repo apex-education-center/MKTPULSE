@@ -56,11 +56,44 @@ class AuthManager {
         if (e.target.closest('.auth-profile')) this.showModal();
         return;
       }
-      if (!e.target.closest('[role="button"], iframe')) {
+      if (!e.target.closest('.auth-google-custom, [role="button"], iframe')) {
         this.showModal();
       }
     });
     this._renderAuthSlot();
+    this._injectDrawerAuth();
+  }
+
+  _injectDrawerAuth() {
+    if (document.getElementById('drawerAuthBtn')) return;
+    const foot = document.querySelector('.drawer-foot');
+    if (!foot) {
+      setTimeout(() => this._injectDrawerAuth(), 50);
+      return;
+    }
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.id = 'drawerAuthBtn';
+    btn.className = 'drawer-auth-btn';
+    foot.insertBefore(btn, foot.firstChild);
+    btn.addEventListener('click', () => {
+      window.navManager?.closeDrawer?.();
+      this.showModal();
+    });
+    this._updateDrawerAuth();
+  }
+
+  _updateDrawerAuth() {
+    const btn = document.getElementById('drawerAuthBtn');
+    if (!btn) return;
+    if (this.isLoggedIn()) {
+      const name = this.user?.name || this.email?.split('@')[0] || 'Account';
+      btn.innerHTML = `<i class="bi bi-person-check"></i><span>${name}</span>`;
+      btn.classList.add('is-signed-in');
+    } else {
+      btn.innerHTML = `<i class="bi bi-google"></i><span>SIGN IN</span>`;
+      btn.classList.remove('is-signed-in');
+    }
   }
 
   _setLoading(on) {
@@ -97,13 +130,22 @@ class AuthManager {
           </span>
           <i class="bi bi-chevron-down auth-chevron" aria-hidden="true"></i>
         </button>`;
+      this._updateDrawerAuth();
       return;
     }
 
     slot.classList.remove('is-signed-in');
 
-    slot.innerHTML = '<div id="googleBtnNav" class="auth-google-wrap"></div>';
-    this._renderGoogleButton('googleBtnNav', true);
+    slot.innerHTML = `
+      <button type="button" class="auth-google-custom auth-nav-btn" id="authNavBtn" aria-label="Sign in">
+        <span class="auth-g-logo">${this._googleLogoSvg()}</span>
+        <span class="auth-nav-label">SIGN IN</span>
+      </button>`;
+    document.getElementById('authNavBtn')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.showModal();
+    });
+    this._updateDrawerAuth();
   }
 
   _googleLogoSvg() {
@@ -120,35 +162,39 @@ class AuthManager {
     if (!el || this.isLoggedIn()) return;
 
     if (compact) {
-      el.className = 'auth-google-wrap auth-google-compact';
-      el.innerHTML = `
-        <button type="button" class="auth-google-custom" id="${containerId}Custom" aria-label="Sign in">
-          <span class="auth-g-logo">${this._googleLogoSvg()}</span>
-          <span>SIGN IN</span>
-        </button>`;
-      document.getElementById(`${containerId}Custom`)?.addEventListener('click', (e) => {
-        e.stopPropagation();
-        this._openGoogleSignIn();
-      });
+      this._renderAuthSlot();
       return;
     }
 
-    if (!this._googleReady) return;
-
     el.className = 'auth-google-wrap auth-google-modal';
+    el.style.display = '';
     el.innerHTML = '';
-    try {
-      const w = Math.max(200, Math.min(280, el.offsetWidth || 240));
-      window.google.accounts.id.renderButton(el, {
-        type: 'standard',
-        theme: this._googleTheme(),
-        size: 'large',
-        text: 'signin_with',
-        shape: 'pill',
-        logo_alignment: 'left',
-        width: w,
-      });
-    } catch (e) { /* gsi not ready */ }
+
+    if (this._googleReady && window.google?.accounts?.id) {
+      try {
+        const w = Math.max(200, Math.min(280, el.offsetWidth || 240));
+        window.google.accounts.id.renderButton(el, {
+          type: 'standard',
+          theme: this._googleTheme(),
+          size: 'large',
+          text: 'continue_with',
+          shape: 'pill',
+          logo_alignment: 'left',
+          width: w,
+        });
+        return;
+      } catch (e) { /* use fallback below */ }
+    }
+
+    el.innerHTML = `
+      <button type="button" class="auth-google-custom auth-google-modal-btn" style="width:100%;justify-content:center;height:44px">
+        <span class="auth-g-logo">${this._googleLogoSvg()}</span>
+        <span>Continue with Google</span>
+      </button>`;
+    el.querySelector('button')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this._openGoogleSignIn();
+    });
   }
 
   _googleTheme() {
@@ -157,16 +203,21 @@ class AuthManager {
 
   _openGoogleSignIn() {
     if (this._googleReady && window.google?.accounts?.id) {
+      const rendered = document.querySelector('#googleBtnModal [role="button"]');
+      if (rendered) {
+        rendered.click();
+        return;
+      }
       try {
         window.google.accounts.id.prompt((notification) => {
           if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-            this.showModal();
+            if (!document.getElementById('authModal')?.classList.contains('open')) this.showModal();
           }
         });
         return;
-      } catch (e) { /* fall through to modal */ }
+      } catch (e) { /* fall through */ }
     }
-    this.showModal();
+    if (!document.getElementById('authModal')?.classList.contains('open')) this.showModal();
   }
 
   _waitForGoogle(maxMs = 12000) {
@@ -271,6 +322,7 @@ class AuthManager {
     }
     this._renderModal();
     el.classList.add('open');
+    requestAnimationFrame(() => this._renderGoogleInModal());
   }
 
   hideModal() {
@@ -302,7 +354,7 @@ class AuthManager {
     }
     title.textContent = 'SIGN IN';
     body.innerHTML = `
-      <div class="auth-google-wrap" id="googleBtnModal" style="margin-bottom:4px"></div>
+      <div class="auth-google-wrap auth-google-modal" id="googleBtnModal" style="margin-bottom:12px"></div>
       <div class="auth-divider"></div>
       <p style="font-size:.68rem;color:var(--text-muted);text-align:center;margin-bottom:12px">Or use email</p>
       <input class="form-input" id="authEmail" type="email" placeholder="Email" style="margin-bottom:10px;width:100%">
@@ -373,6 +425,7 @@ class AuthManager {
     try { window.google?.accounts?.id?.disableAutoSelect?.(); } catch (e) {}
     this._restoreGuestState();
     this._renderAuthSlot();
+    this._updateDrawerAuth();
     this.hideModal();
     Toast.show('Logged out — local defaults restored', 'info');
   }
@@ -436,6 +489,7 @@ class AuthManager {
     localStorage.setItem('mp-email', data.email);
     localStorage.setItem('mp-user', JSON.stringify(this.user));
     this._renderAuthSlot();
+    this._updateDrawerAuth();
   }
 
   async _validateAndPull() {

@@ -580,10 +580,12 @@ class NavManager {
           </a>`).join('')}
       </nav>
       <div class="drawer-foot">
-        <button class="drawer-theme" onclick="window.themeManager.toggle()">
-          <i class="bi bi-circle-half"></i> THEME
-        </button>
-        <span class="drawer-clock-sm" id="drawerClock"></span>
+        <div class="drawer-foot-row">
+          <button class="drawer-theme" onclick="window.themeManager.toggle()">
+            <i class="bi bi-circle-half"></i> THEME
+          </button>
+          <span class="drawer-clock-sm" id="drawerClock"></span>
+        </div>
       </div>`;
 
     document.body.appendChild(overlay);
