@@ -212,6 +212,21 @@ V10/
 | Watchlist not showing | Star assets on **Markets** (BTC, ETH, NVDA, etc.) then `Ctrl+F5` |
 | Google login blocked | Add `http://localhost:8000` to OAuth origins (see above) |
 | Telegram not working | Set `TELEGRAM_BOT_TOKEN` in `.env` and restart server |
+| **Render deploy crash** | Use Python **3.12** (`runtime.txt` included). Do not use 3.14 with old httpx |
+
+---
+
+## Deploy on Render
+
+1. Push the repo to GitHub (include `runtime.txt`, `requirements.txt`, `render.yaml`).
+2. [Render](https://render.com) → **New Web Service** → connect repo.
+3. **Runtime:** Python 3.12 (auto-detected from `runtime.txt`).
+4. **Build command:** `pip install -r requirements.txt`
+5. **Start command:** `uvicorn main:app --host 0.0.0.0 --port $PORT`
+6. Add environment variables in Render dashboard (`NEWSAPI_KEY`, `FINNHUB_KEY`, etc.).
+7. For **Google Sign-In**, add your Render URL to OAuth origins, e.g. `https://your-app.onrender.com`
+
+The frontend uses `window.location.origin` for API calls, so it works on Render without code changes.
 
 ---
 
