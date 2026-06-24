@@ -3,149 +3,122 @@
 <head>
 <meta charset="UTF-8">
 <script src="assets/js/theme-boot.js"></script>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Markets — MarketPulse</title>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Economic Calendar — MarketPulse</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="assets/css/main.css" rel="stylesheet">
 <style>
-/* ── MARKETS LAYOUT ── */
-.mkts-layout { display:grid; grid-template-columns:1fr 240px; gap:1px; background:var(--border-dim); }
-.mkts-main   { background:var(--bg-base); min-width:0; }
-.mkts-side   { background:var(--bg-surface); border-left:1px solid var(--border-soft);
-               position:sticky; top:calc(var(--nav-h) + 50px);
-               max-height:calc(100vh - var(--nav-h) - 50px); overflow-y:auto; }
+.page-hero{padding:48px 0 36px;border-bottom:1px solid var(--border-dim);margin-bottom:40px}
+.page-hero h1{font-size:2.2rem;font-weight:700;letter-spacing:-.02em}
+.page-hero p{color:var(--text-secondary);margin-top:8px}
 
-/* ── KPI STRIP ── */
-.kpi-strip { display:grid; grid-template-columns:repeat(5,1fr); background:var(--border-dim); gap:1px; }
-.kpi-cell  { background:var(--bg-surface); padding:10px 14px; transition:background var(--transition); }
-.kpi-cell:hover { background:var(--bg-raised); }
-.kc-label  { font-family:var(--font-mono); font-size:.58rem; letter-spacing:.1em; text-transform:uppercase; color:var(--text-muted); margin-bottom:4px; }
-.kc-value  { font-family:var(--font-mono); font-size:.95rem; font-weight:600; }
-.kc-sub    { font-family:var(--font-mono); font-size:.62rem; margin-top:2px; }
+/* ── DATE PICKER CALENDAR ── */
+.cal-picker-wrap{background:var(--bg-surface);border:1px solid var(--border-dim);border-radius:var(--radius);padding:24px;margin-bottom:36px}
+.cal-picker-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.cal-picker-title{font-family:var(--font-sans);font-size:1.1rem;font-weight:700}
+.cal-nav-btn{background:var(--bg-raised);border:1px solid var(--border-mid);color:var(--text-secondary);width:34px;height:34px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all var(--transition)}
+.cal-nav-btn:hover{border-color:var(--amber);color:var(--amber)}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal-day-header{text-align:center;font-family:var(--font-mono);font-size:.65rem;color:var(--text-muted);padding:6px 0;letter-spacing:.08em;text-transform:uppercase}
+.cal-day{text-align:center;padding:6px 2px;border-radius:6px;cursor:pointer;font-family:'IBM Plex Mono',monospace;font-size:.82rem;font-weight:500;transition:all .15s;position:relative;min-height:36px;display:flex;align-items:center;justify-content:center;color:var(--text-primary) !important;user-select:none}
+.cal-day-num-inner{color:inherit !important;display:block;min-width:16px;text-align:center}
+.cal-day:hover{background:var(--bg-overlay)}
+.cal-day.other-month{color:var(--text-muted)}
+.cal-day:hover{background:var(--bg-raised)}
+.cal-day.past-day{color:var(--text-muted) !important;opacity:.65}
+.cal-day.today{background:rgba(240,165,0,.2);color:var(--amber) !important;font-weight:700;border:2px solid rgba(240,165,0,.6)}
+.cal-day.selected{background:var(--amber) !important;color:#000 !important;font-weight:700;border:2px solid var(--amber);box-shadow:0 0 14px rgba(240,165,0,.5)}
+.cal-day.selected .cal-day-num-inner{color:#000 !important}
+.past-event{opacity:.72}
+.cal-day.has-event::after{content:'';position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:var(--red)}
+.cal-day.has-high::after{background:var(--red)}
+.cal-day.has-medium::after{background:var(--amber)}
+.cal-day.has-low::after{background:var(--blue)}
 
-/* ── TABLE ── */
-.mkts-table-wrap { overflow-x:auto; }
-.mkts-table {
-  width:100%; border-collapse:collapse;
-  font-family:var(--font-mono);
-  table-layout:fixed;
-}
-.mkts-table th {
-  font-size:.6rem; letter-spacing:.1em; text-transform:uppercase;
-  color:var(--text-muted); padding:8px 12px;
-  border-bottom:2px solid var(--border-soft);
-  background:var(--bg-raised);
-  position:sticky; top:0; z-index:5;
-  white-space:nowrap; cursor:pointer;
-  user-select:none; text-align:left;
-}
-.mkts-table th:hover { color:var(--text-secondary); }
-.mkts-table th.asc::after  { content:' ↑'; color:var(--amber); }
-.mkts-table th.desc::after { content:' ↓'; color:var(--amber); }
-.mkts-table th:nth-child(1){ width:36px; }
-.mkts-table th:nth-child(2){ width:200px; }
-.mkts-table th:nth-child(3){ width:120px; text-align:right; }
-.mkts-table th:nth-child(4){ width:90px;  text-align:right; }
-.mkts-table th:nth-child(5){ width:90px;  text-align:right; }
-.mkts-table th:nth-child(6){ width:100px; text-align:right; }
-.mkts-table th:nth-child(7){ width:100px; text-align:right; }
-.mkts-table th:nth-child(8){ width:90px;  text-align:center; }
-.mkts-table th:nth-child(9){ width:36px; }
+/* ── DATE RANGE SELECTOR ── */
+.date-range-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:20px}
+.date-input{background:var(--bg-raised);border:1px solid var(--border-mid);color:var(--text-primary);padding:8px 14px;border-radius:var(--radius-sm);font-family:var(--font-sans);font-size:.85rem;cursor:pointer}
+.date-input:focus{outline:none;border-color:var(--amber)}
 
-.mkts-table tr.mrow {
-  border-bottom:1px solid var(--border-dim);
-  cursor:pointer; transition:background var(--transition);
-}
-.mkts-table tr.mrow:hover td { background:var(--bg-raised); }
-.mkts-table td { padding:9px 12px; font-size:.8rem; vertical-align:middle; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
-.mkts-table td:nth-child(3){ text-align:right; }
-.mkts-table td:nth-child(4){ text-align:right; }
-.mkts-table td:nth-child(5){ text-align:right; }
-.mkts-table td:nth-child(6){ text-align:right; }
-.mkts-table td:nth-child(7){ text-align:right; }
-.mkts-table td:nth-child(8){ text-align:center; }
-.mkts-table td:nth-child(9){ text-align:center; }
+/* ── MOOD CARD ── */
 
-/* Asset cell */
-.asset-cell { display:flex; align-items:center; gap:9px; }
-.asset-ico  {
-  width:30px; height:30px; border-radius:50%;
-  background:var(--bg-overlay); border:1px solid var(--border-mid);
-  overflow:hidden; flex-shrink:0;
-  display:flex; align-items:center; justify-content:center;
-  font-size:.6rem; font-weight:700; color:var(--amber);
-}
-.asset-ico img { width:100%; height:100%; object-fit:cover; border-radius:50%; }
-.asset-name { font-size:.8rem; font-weight:600; color:var(--text-primary); display:block; line-height:1.2; max-width:130px; overflow:hidden; text-overflow:ellipsis; }
-.asset-sym  { font-size:.62rem; color:var(--text-muted); display:block; }
 
-/* Price cell */
-.price-val { font-size:.85rem; font-weight:600; color:var(--text-primary); }
 
-/* Change badges */
-.chg-up   { display:inline-flex; align-items:center; gap:2px; padding:2px 7px; border-radius:2px; font-size:.7rem; font-weight:600; background:rgba(0,200,83,.1); color:var(--green); }
-.chg-down { display:inline-flex; align-items:center; gap:2px; padding:2px 7px; border-radius:2px; font-size:.7rem; font-weight:600; background:rgba(246,36,89,.1); color:var(--red); }
-.chg-neu  { display:inline-flex; align-items:center; gap:2px; padding:2px 7px; border-radius:2px; font-size:.7rem; color:var(--text-muted); background:var(--bg-overlay); }
 
-/* Vol/Mcap */
-.num-cell { font-size:.72rem; color:var(--text-secondary); }
 
-/* Fav button */
-.fav-btn { background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:.9rem; transition:all .15s; padding:2px 4px; line-height:1; }
-.fav-btn:hover { color:var(--amber); transform:scale(1.2); }
-.fav-btn.on { color:var(--amber); }
 
-/* ── TOOLBAR ── */
-.mkts-toolbar {
-  padding:9px 14px; background:var(--bg-surface);
-  border-bottom:1px solid var(--border-soft);
-  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
-  position:sticky; top:calc(var(--nav-h) + 36px); z-index:9;
-}
 
-/* ── SIDEBAR PANELS ── */
-.side-section { border-bottom:1px solid var(--border-dim); }
-.side-head { padding:7px 12px; background:var(--bg-raised); font-family:var(--font-mono); font-size:.6rem; letter-spacing:.1em; text-transform:uppercase; color:var(--amber); font-weight:600; }
-.side-body { padding:10px 12px; }
 
-/* FG bar in sidebar */
-.fg-bar-sm { height:4px; border-radius:2px; background:linear-gradient(to right,#f62459,#ff8f00,#f0a500,#69f0ae,#00c853); position:relative; margin:6px 0 3px; }
-.fg-ind-sm { position:absolute; top:-4px; width:12px; height:12px; border-radius:50%; background:var(--text-primary); border:2px solid var(--bg-base); transform:translateX(-50%); transition:left .5s; }
 
-/* Heatmap sm */
-.hm-sm { display:grid; grid-template-columns:repeat(3,1fr); gap:3px; }
-.hm-sm-cell { border-radius:3px; padding:5px 4px; text-align:center; font-family:var(--font-mono); font-size:.62rem; }
-.hm-sm-sym { font-weight:600; margin-bottom:1px; }
-.hm-sm-pct { font-size:.68rem; }
 
-/* Watchlist in sidebar */
-.wl-item { display:flex; align-items:center; gap:8px; padding:7px 0; border-bottom:1px solid var(--border-dim); }
-.wl-item:last-child { border-bottom:none; }
-.wl-sym  { font-family:var(--font-mono); font-weight:700; font-size:.7rem; color:var(--amber); min-width:44px; }
-.wl-px   { font-family:var(--font-mono); font-size:.72rem; flex:1; }
-.wl-chg  { font-family:var(--font-mono); font-size:.66rem; font-weight:600; }
 
-/* Chart modal */
-.chart-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.8); backdrop-filter:blur(6px); z-index:2000; align-items:center; justify-content:center; padding:20px; }
-.chart-overlay.open { display:flex; }
-.chart-box { background:var(--bg-surface); border:1px solid var(--amber); border-top:3px solid var(--amber); border-radius:var(--radius-lg); width:min(780px,100%); max-height:90vh; overflow-y:auto; }
-.chart-head { display:flex; align-items:center; justify-content:space-between; padding:11px 16px; background:var(--bg-raised); border-bottom:1px solid var(--border-soft); }
-.chart-title { font-family:var(--font-mono); font-size:.85rem; font-weight:600; color:var(--amber); }
-.chart-close { background:var(--bg-overlay); border:1px solid var(--border-mid); color:var(--text-secondary); width:26px; height:26px; border-radius:var(--radius-sm); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:.75rem; transition:all var(--transition); }
-.chart-close:hover { border-color:var(--red); color:var(--red); }
-.chart-body { padding:16px; }
-.chart-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:14px; }
-.cstat { background:var(--bg-raised); border:1px solid var(--border-soft); border-radius:var(--radius-sm); padding:10px 12px; }
-.cstat-lbl { font-family:var(--font-mono); font-size:.58rem; letter-spacing:.1em; text-transform:uppercase; color:var(--text-muted); margin-bottom:3px; }
-.cstat-val { font-family:var(--font-mono); font-size:.9rem; font-weight:500; }
 
+
+
+/* ── EVENT CARDS ── */
+.cal-layout{display:grid;grid-template-columns:1fr 360px;gap:28px;align-items:start}
+.upcoming-card{background:var(--bg-surface);border:1px solid var(--border-dim);border-radius:var(--radius);padding:20px;position:sticky;top:80px}
+.upcoming-card h3{font-family:var(--font-sans);font-size:1rem;font-weight:700;margin-bottom:16px;color:var(--amber)}
+.up-item{display:flex;gap:14px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--border-dim)}
+.up-item:last-child{border-bottom:none}
+.up-date{text-align:center;background:var(--bg-raised);border:1px solid var(--border-mid);border-radius:var(--radius-sm);padding:6px 10px;min-width:46px;flex-shrink:0}
+.up-mo{font-size:.55rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--amber)}
+.up-day{font-family:var(--font-sans);font-size:1.2rem;font-weight:700;line-height:1}
+.up-info{flex:1}
+.up-ev{font-size:.83rem;font-weight:600;margin-bottom:3px}
+.up-sub{font-size:.72rem;color:var(--text-muted)}
+.cal-group{margin-bottom:32px}
+.cal-group-header{font-family:var(--font-mono);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted);padding:8px 0;border-bottom:1px solid var(--border-dim);margin-bottom:14px}
+
+.cal-event{background:var(--bg-surface);border:1px solid var(--border-dim);border-radius:var(--radius);padding:18px 20px;margin-bottom:12px;display:grid;grid-template-columns:64px 1fr auto;gap:16px;align-items:start;transition:all var(--transition);cursor:pointer}
+.cal-event:hover{border-color:var(--border-mid);transform:translateX(4px);box-shadow:var(--shadow)}
+.cal-event.high{border-left:3px solid var(--red)}
+.cal-event.medium{border-left:3px solid var(--amber)}
+.cal-event.low{border-left:3px solid var(--blue)}
+.cal-event.expanded{border-color:var(--border-mid)}
+.cal-day-block{text-align:center}
+.cal-day-num{font-family:var(--font-sans);font-size:1.8rem;font-weight:700;line-height:1;color:var(--text-primary)}
+.cal-day-mo{font-size:.65rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--amber)}
+.cal-event-name{font-size:.95rem;font-weight:600;margin-bottom:4px}
+.cal-region{font-size:.85rem;margin-bottom:3px}
+.cal-detail{font-size:.8rem;color:var(--text-muted);line-height:1.5}
+.cal-stats{display:flex;gap:16px;margin-top:10px;flex-wrap:wrap}
+.cal-stat{background:var(--bg-raised);border:1px solid var(--border-dim);border-radius:6px;padding:6px 12px;font-family:var(--font-mono);font-size:.75rem}
+.lbl{color:var(--text-muted);margin-bottom:2px;font-size:.65rem;text-transform:uppercase}
+.val{font-weight:600}
+
+/* ── IMPACT PILL ── */
+.imp-badge{padding:4px 10px;border-radius:20px;font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+.imp-badge.high{background:rgba(255,61,90,.15);color:var(--red)}
+.imp-badge.medium{background:rgba(245,200,66,.15);color:var(--amber)}
+.imp-badge.low{background:rgba(77,166,255,.15);color:var(--blue)}
+
+/* ── IMPACT EXPANSION ── */
+.event-impact{display:none;padding:14px 16px;background:var(--bg-raised);border-radius:var(--radius-sm);margin-top:12px;font-size:.85rem;line-height:1.6;border-left:3px solid var(--amber)}
+.event-impact.open{display:block}
+.impact-title{font-weight:700;margin-bottom:6px;color:var(--amber);font-size:.8rem;letter-spacing:.06em;text-transform:uppercase}
+
+/* ── FEAR & GREED WIDGET ── */
+.fg-widget{background:var(--bg-surface);border:1px solid var(--border-dim);border-radius:var(--radius);padding:20px;margin-bottom:20px}
+.fg-widget h3{font-family:var(--font-sans);font-size:.95rem;font-weight:700;margin-bottom:16px;color:var(--amber)}
+.fg-arc{text-align:center;margin-bottom:12px}
+.fg-value{font-family:var(--font-sans);font-size:2.2rem;font-weight:700}
+.fg-label{font-size:.78rem;color:var(--text-muted);margin-top:4px}
+.fg-bar{height:8px;border-radius:4px;background:linear-gradient(to right,#ff3d5a,#ff8c00,#f5c842,#00ff88);margin-bottom:8px;position:relative}
+.fg-indicator{position:absolute;top:-3px;width:14px;height:14px;border-radius:50%;background:#fff;border:2px solid var(--bg-base);transform:translateX(-50%);transition:left .5s ease}
+.fg-history{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
+.fg-hist-item{text-align:center;font-size:.65rem}
+.fg-hist-val{font-family:var(--font-mono);font-weight:600}
+.fg-hist-date{color:var(--text-muted)}
+
+@media(max-width:992px){.cal-layout{grid-template-columns:1fr}.upcoming-card{position:static}}
+@media(max-width:576px){.cal-event{grid-template-columns:50px 1fr}.cal-event>:last-child{display:none}.date-range-row{flex-direction:column;align-items:stretch}}
 </style>
 </head>
 <body>
 <div class="page">
-
 <!-- STATUS BAR -->
 <div class="status-bar" id="statusBar">
   <div class="sb-row sb-row-top">
@@ -167,164 +140,143 @@
     </div>
   </div>
 </div>
-
 <!-- NAVBAR -->
 <nav class="navbar">
   <a class="navbar-brand" href="index.html">MKT<span class="accent">PULSE</span><span class="ver">v9</span></a>
   <div class="nav-sep"></div>
   <ul class="nav-links">
-    <li><a class="nav-link" href="index.html"><i class="bi bi-display"></i> Terminal</a></li>
-    <li><a class="nav-link active" href="markets.html"><i class="bi bi-graph-up"></i> Markets</a></li>
-    <li><a class="nav-link" href="news.html"><i class="bi bi-newspaper"></i> News</a></li>
-    <li><a class="nav-link" href="youtube.html"><i class="bi bi-play-circle"></i> Videos</a></li>
-    <li><a class="nav-link" href="calendar.html"><i class="bi bi-calendar3"></i> Calendar</a></li>
-    <li><a class="nav-link" href="tools.html"><i class="bi bi-tools"></i> Tools</a></li>
-    <li><a class="nav-link" href="search.html"><i class="bi bi-search"></i> Search</a></li>
+      <li><a class="nav-link" href="index.html"><i class="bi bi-display"></i> Terminal</a></li>
+      <li><a class="nav-link" href="markets.html"><i class="bi bi-graph-up"></i> Markets</a></li>
+      <li><a class="nav-link" href="news.html"><i class="bi bi-newspaper"></i> News</a></li>
+      <li><a class="nav-link" href="youtube.html"><i class="bi bi-play-circle"></i> Videos</a></li>
+      <li><a class="nav-link" href="calendar.html"><i class="bi bi-calendar3"></i> Calendar</a></li>
+      <li><a class="nav-link" href="tools.html"><i class="bi bi-tools"></i> Tools</a></li>
+      <li><a class="nav-link" href="search.html"><i class="bi bi-search"></i> Search</a></li>
   </ul>
   <div class="nav-clock d-none d-lg-block" id="navClock"></div>
   <div class="nav-actions">
-    <button class="theme-btn" id="themeToggle">☀</button>
+    <button class="theme-btn" id="themeToggle" title="Toggle theme">☀</button>
     <button class="hamburger" id="hamburgerBtn"><i class="bi bi-list"></i></button>
   </div>
 </nav>
 
-<!-- KPI STRIP -->
-<div class="kpi-strip" id="kpiStrip">
-  <div class="kpi-cell"><div class="kc-label">TOTAL ASSETS</div><div class="kc-value skeleton" style="height:22px;width:40px"></div></div>
-  <div class="kpi-cell"><div class="kc-label">GAINERS 24H</div><div class="kc-value skeleton" style="height:22px;width:30px"></div></div>
-  <div class="kpi-cell"><div class="kc-label">LOSERS 24H</div><div class="kc-value skeleton" style="height:22px;width:30px"></div></div>
-  <div class="kpi-cell"><div class="kc-label">BTC PRICE</div><div class="kc-value skeleton" style="height:22px;width:80px"></div></div>
-  <div class="kpi-cell"><div class="kc-label">FAVORITES</div><div class="kc-value skeleton" style="height:22px;width:30px"></div></div>
-</div>
-
-<!-- TOOLBAR -->
-<div class="mkts-toolbar">
-  <div class="chip-row mb-0">
-    <span class="chip active" data-tab="crypto"      onclick="mktPage.setTab('crypto',this)">CRYPTO</span>
-    <span class="chip"        data-tab="stocks"      onclick="mktPage.setTab('stocks',this)">STOCKS</span>
-    <span class="chip"        data-tab="commodities" onclick="mktPage.setTab('commodities',this)">COMMODITIES</span>
-  </div>
-  <div class="search-bar ms-auto" style="width:220px" id="mktSearchBar">
-    <i class="bi bi-search s-icon"></i>
-    <input id="mktSearch" type="text" placeholder="SEARCH ASSETS..."
-           oninput="mktPage.search(this.value);document.getElementById('mktSearchBar').classList.toggle('has-val',this.value.length>0)">
-    <button class="s-clear" onclick="document.getElementById('mktSearch').value='';mktPage.search('');document.getElementById('mktSearchBar').classList.remove('has-val')">✕</button>
-  </div>
-  <button class="btn" onclick="mktPage.exportCSV()" style="padding:5px 12px"><i class="bi bi-download me-1"></i>CSV</button>
-  <button class="btn" onclick="mktPage.reload()" style="padding:5px 12px" id="refreshBtn"><i class="bi bi-arrow-clockwise me-1"></i>REFRESH</button>
-  <span style="font-family:var(--font-mono);font-size:.58rem;color:var(--text-muted)">CLICK ROW = DETAIL · ⇄ = COMPARE</span>
-  <span style="font-family:var(--font-mono);font-size:.6rem;color:var(--text-muted)" id="lastUpdate">—</span>
-</div>
-
-<div class="mkts-layout">
-  <!-- MAIN TABLE -->
-  <div class="mkts-main">
-    <div class="mkts-table-wrap">
-      <table class="mkts-table" id="mktsTable">
-        <thead>
-          <tr>
-            <th onclick="mktPage.sort('#')">#</th>
-            <th>ASSET</th>
-            <th onclick="mktPage.sort('price')">PRICE</th>
-            <th onclick="mktPage.sort('change_24h')">24H %</th>
-            <th onclick="mktPage.sort('change_7d')">7D %</th>
-            <th onclick="mktPage.sort('volume')">VOLUME</th>
-            <th onclick="mktPage.sort('market_cap')">MKT CAP</th>
-            <th>7D CHART</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody id="mktsBody">
-          <tr><td colspan="9" style="text-align:center;padding:48px;color:var(--text-muted);font-family:var(--font-mono);font-size:.72rem">
-            <div class="spinner-border spinner-border-sm me-2" style="color:var(--amber)"></div>LOADING...
-          </td></tr>
-        </tbody>
-      </table>
-    </div>
-    <div style="padding:8px 14px;font-family:var(--font-mono);font-size:.58rem;color:var(--text-muted);border-top:1px solid var(--border-dim);background:var(--bg-surface)">
-      DATA: COINGECKO · YAHOO FINANCE · UPDATES EVERY 5 MIN · CLICK ROW FOR CHART
-    </div>
+<main>
+<div class="container-fluid px-4">
+  <div class="page-hero fade-up">
+    <h1><i class="bi bi-calendar3 me-3" style="color:var(--purple)"></i>Economic Calendar</h1>
+    <p>Real-time macro events from Finnhub API — click any event to see market impact analysis.</p>
   </div>
 
-  <!-- SIDEBAR -->
-  <div class="mkts-side">
-    <!-- Fear & Greed -->
-    <div class="side-section">
-      <div class="side-head">FEAR & GREED INDEX</div>
-      <div class="side-body">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
-          <div style="font-family:var(--font-mono);font-size:1.8rem;font-weight:700" id="fgVal">—</div>
-          <div>
-            <div style="font-family:var(--font-mono);font-size:.75rem;font-weight:600" id="fgLabel">LOADING</div>
-            <div style="font-family:var(--font-mono);font-size:.58rem;color:var(--text-muted)">CRYPTO FEAR & GREED INDEX</div>
-          </div>
+
+  <div class="cal-layout">
+    <div>
+      <!-- DATE PICKER -->
+      <div class="cal-picker-wrap fade-up">
+        <div class="cal-picker-header">
+          <button class="cal-nav-btn" onclick="calendarPage.prevMonth()"><i class="bi bi-chevron-left"></i></button>
+          <div class="cal-picker-title" id="pickerTitle">—</div>
+          <button class="cal-nav-btn" onclick="calendarPage.nextMonth()"><i class="bi bi-chevron-right"></i></button>
         </div>
-        <div class="fg-bar"><div class="fg-indicator" id="fgInd" style="left:50%"></div></div>
+        <div class="cal-grid" id="pickerGrid"></div>
+      </div>
+
+      <!-- DATE RANGE + FILTER -->
+      <div class="date-range-row fade-up">
+        <input type="date" class="date-input" id="fromDate" onchange="calendarPage.fetchRange()">
+        <span style="color:var(--text-muted)">to</span>
+        <input type="date" class="date-input" id="toDate" onchange="calendarPage.fetchRange()">
+        <button class="btn-mp btn-mp-ghost" onclick="calendarPage.resetRange()" style="padding:7px 14px;font-size:.82rem">Reset</button>
+      </div>
+
+      <div class="section-heading fade-up">
+        <h2><i class="bi bi-calendar-event me-2" style="color:var(--purple)"></i>Upcoming Events</h2>
+        <div class="line"></div>
+        <span class="badge-count" id="eventCount">—</span>
+      </div>
+
+      <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2 fade-up">
+        <div class="chip-row mb-0">
+          <span class="chip active" onclick="calendarPage.setFilter('all',this)">All</span>
+        <span class="chip" onclick="calendarPage.setFilter('high',this)"><span style="color:var(--red)">⬤</span> High</span>
+        <span class="chip" onclick="calendarPage.setFilter('medium',this)"><span style="color:var(--amber)">⬤</span> Medium</span>
+        <span class="chip" onclick="calendarPage.setFilter('US',this)">🇺🇸 US</span>
+        <span class="chip" onclick="calendarPage.setFilter('EU',this)">🇪🇺 EU</span>
+        <span class="chip" onclick="calendarPage.setFilter('UK',this)">🇬🇧 UK</span>
+        <span class="chip" onclick="calendarPage.setFilter('CN',this)">🇨🇳 China</span>
+        </div>
+        <button class="btn" onclick="exportCalendarCSV()" style="padding:5px 14px;font-size:.65rem">
+          <i class="bi bi-download me-1"></i>EXPORT EXCEL
+        </button>
+      </div>
+
+      <div id="calendarEvents">
+        <div class="text-center py-5" style="color:var(--text-muted)">
+          <div class="spinner-border spinner-border-sm me-2" style="color:var(--amber)"></div>
+          Loading real-time events from Finnhub...
+        </div>
+      </div>
+    </div>
+
+    <!-- SIDEBAR -->
+    <div>
+      <!-- FEAR & GREED -->
+      <div class="fg-widget fade-up">
+        <h3><i class="bi bi-speedometer me-2"></i>Fear & Greed Index</h3>
+        <div class="fg-arc">
+          <div class="fg-mini-val" id="fgValue" style="color:var(--amber)">—</div>
+          <div class="fg-mini-label" id="fgLabel">Loading...</div>
+        </div>
+        <div class="fg-bar"><div class="fg-indicator" id="fgIndicator" style="left:50%"></div></div>
         <div class="fg-scale"><span>EXTREME FEAR</span><span>NEUTRAL</span><span>EXTREME GREED</span></div>
+        <div class="fg-history" id="fgHistory"></div>
       </div>
-    </div>
 
-    <!-- Heatmap -->
-    <div class="side-section">
-      <div class="side-head">CRYPTO HEATMAP</div>
-      <div class="side-body">
-        <div class="hm-sm" id="sideHeatmap"></div>
+      <!-- MACRO ALERTS -->
+      <div class="upcoming-card fade-up" style="margin-bottom:16px">
+        <h3><i class="bi bi-bell me-2"></i>Macro Alerts</h3>
+        <p style="font-size:.72rem;color:var(--text-muted);margin-bottom:12px">Notify ~1h before Fed, CPI, NFP & major events (Telegram if configured)</p>
+        <label style="display:flex;align-items:center;gap:8px;font-size:.78rem;margin-bottom:10px;cursor:pointer">
+          <input type="checkbox" id="calAlertEnabled" onchange="calendarPage.saveCalendarAlerts()"> Enable alerts
+        </label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span style="font-size:.68rem;color:var(--text-muted)">Minutes before</span>
+          <input type="number" id="calAlertMins" class="date-input" value="60" min="15" max="180" style="width:70px" onchange="calendarPage.saveCalendarAlerts()">
+        </div>
+        <div style="font-size:.58rem;color:var(--text-muted);margin-top:10px">Keywords: FOMC, CPI, NFP, Fed, ECB</div>
       </div>
-    </div>
 
-    <!-- Favorites -->
-    <div class="side-section">
-      <div class="side-head">MY WATCHLIST ⭐</div>
-      <div class="side-body" id="sideFavorites">
-        <div style="color:var(--text-muted);font-family:var(--font-mono);font-size:.65rem;text-align:center;padding:12px 0">
-          CLICK ☆ TO ADD
+      <!-- UPCOMING -->
+      <div class="upcoming-card fade-up">
+        <h3><i class="bi bi-alarm me-2"></i>Next 5 Events</h3>
+        <div id="upcomingList">
+          ${Array(5).fill('<div class="up-item"><div class="up-date skeleton" style="min-height:46px;min-width:46px"></div><div class="up-info"><div class="skeleton" style="height:12px;margin-bottom:6px"></div><div class="skeleton" style="height:10px;width:70%"></div></div></div>').join('')}
         </div>
       </div>
     </div>
-
-    <!-- Top movers -->
-    <div class="side-section">
-      <div class="side-head">TOP MOVERS</div>
-      <div class="side-body" id="sideMovers">
-        <div style="color:var(--text-muted);font-family:var(--font-mono);font-size:.65rem">LOADING...</div>
-      </div>
-    </div>
   </div>
 </div>
-
-<!-- CHART MODAL -->
-<div class="chart-overlay" id="chartOverlay" onclick="if(event.target===this)mktPage.closeChart()">
-  <div class="chart-box">
-    <div class="chart-head">
-      <span class="chart-title" id="chartTitle">—</span>
-      <button class="chart-close" onclick="mktPage.closeChart()">✕</button>
-    </div>
-    <div class="chart-body">
-      <div style="font-family:var(--font-mono);font-size:.62rem;color:var(--text-muted);margin-bottom:12px" id="chartSub">—</div>
-      <canvas id="chartCanvas" height="200"></canvas>
-      <div class="chart-stats" id="chartStats"></div>
-    </div>
-  </div>
-</div>
+</main>
 
 <footer>
   <div class="container-fluid px-4">
     <div class="row align-items-center">
-      <div class="col-md-6"><div class="footer-brand">MKT<span class="accent">PULSE</span></div><p class="mt-1">Professional financial intelligence terminal.</p></div>
-      <div class="col-md-6 text-md-end"><p style="font-size:.65rem">Data: CoinGecko · Yahoo Finance · Updates every 5 min</p></div>
+      <div class="col-md-6"><div class="footer-brand">Market<span class="accent">Pulse</span></div><p class="mt-1">Financial intelligence for modern investors.</p></div>
+      <div class="col-md-6 text-md-end mt-3 mt-md-0"><p>Calendar: Finnhub API · AI: Claude · Fear&Greed: Alternative.me</p></div>
     </div>
-    <hr style="border-color:var(--border-dim);margin:14px 0">
-    <p class="text-center" style="font-size:.65rem">© 2026 MARKETPULSE — UNIVERSITY PROJECT</p>
+    <hr style="border-color:var(--border-dim);margin:20px 0">
+    <p class="text-center" style="font-size:.78rem">© 2026 MarketPulse. University Project.</p>
   </div>
 </footer>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="assets/js/export.js"></script>
 <script src="assets/js/alerts.js"></script>
 <script src="assets/js/app.js"></script>
 <script src="assets/js/auth.js"></script>
 <script src="assets/js/asset-detail.js"></script>
-<script src="assets/js/markets.js"></script>
+<script src="assets/js/calendar.js"></script>
 <script src="assets/js/features.js"></script>
 </body>
 </html>
