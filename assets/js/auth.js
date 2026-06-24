@@ -45,41 +45,50 @@ class AuthManager {
 
   _injectUI() {
     const actions = document.querySelector('.nav-actions');
-    if (!actions || document.getElementById('authSlot')) return;
-    const slot = document.createElement('div');
-    slot.id = 'authSlot';
-    slot.className = 'auth-slot';
-    actions.insertBefore(slot, actions.firstChild);
-    slot.addEventListener('click', (e) => {
-      if (this._loading) return;
-      if (this.isLoggedIn()) {
-        if (e.target.closest('.auth-profile')) this.showModal();
-        return;
-      }
-      if (!e.target.closest('.auth-google-custom, [role="button"], iframe')) {
+    if (!actions) return;
+
+    let slot = document.getElementById('authSlot');
+    if (!slot) {
+      slot = document.createElement('div');
+      slot.id = 'authSlot';
+      slot.className = 'auth-slot';
+      actions.insertBefore(slot, actions.firstChild);
+    }
+
+    if (!this._slotWired) {
+      this._slotWired = true;
+      slot.addEventListener('click', (e) => {
+        if (this._loading) return;
+        if (this.isLoggedIn()) {
+          if (e.target.closest('.auth-profile')) this.showModal();
+          return;
+        }
+        if (e.target.closest('.auth-nav-btn, .auth-google-custom, [role="button"], iframe')) {
+          e.preventDefault();
+          this.showModal();
+          return;
+        }
         this.showModal();
-      }
-    });
+      });
+    }
+
     this._renderAuthSlot();
     this._injectDrawerAuth();
   }
 
   _injectDrawerAuth() {
-    if (document.getElementById('drawerAuthBtn')) return;
-    const foot = document.querySelector('.drawer-foot');
-    if (!foot) {
+    const btn = document.getElementById('drawerAuthBtn');
+    if (!btn) {
       setTimeout(() => this._injectDrawerAuth(), 50);
       return;
     }
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.id = 'drawerAuthBtn';
-    btn.className = 'drawer-auth-btn';
-    foot.insertBefore(btn, foot.firstChild);
-    btn.addEventListener('click', () => {
-      window.navManager?.closeDrawer?.();
-      this.showModal();
-    });
+    if (!this._drawerWired) {
+      this._drawerWired = true;
+      btn.addEventListener('click', () => {
+        window.navManager?.closeDrawer?.();
+        this.showModal();
+      });
+    }
     this._updateDrawerAuth();
   }
 
@@ -141,10 +150,6 @@ class AuthManager {
         <span class="auth-g-logo">${this._googleLogoSvg()}</span>
         <span class="auth-nav-label">SIGN IN</span>
       </button>`;
-    document.getElementById('authNavBtn')?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      this.showModal();
-    });
     this._updateDrawerAuth();
   }
 
@@ -561,7 +566,8 @@ window.handleCredentialResponse = function (response) {
   window.authManager?.handleCredentialResponse(response);
 };
 
-document.addEventListener('DOMContentLoaded', () => {
+function bootAuthManager() {
+  if (window.authManager) return;
   window.authManager = new AuthManager();
   const _origToggle = window.favoritesManager?.toggle?.bind(window.favoritesManager);
   if (_origToggle) {
@@ -578,4 +584,10 @@ document.addEventListener('DOMContentLoaded', () => {
       window.authManager?.scheduleSync();
     };
   }
-});
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', bootAuthManager);
+} else {
+  bootAuthManager();
+}

@@ -1547,8 +1547,7 @@ body {
 @media (max-width: 480px) {
   .kpi-strip { grid-template-columns: 1fr 1fr; }
   .navbar-brand .ver { display: none; }
-  .auth-nav-label { display: none; }
-  .auth-nav-btn { padding: 0 8px; min-width: 36px; }
+  .auth-nav-btn { padding: 0 8px; font-size: 0.55rem; }
   .auth-text { display: none; }
   .ph-link { display: none; }
   .mini-table { font-size: 0.68rem; }
@@ -1610,6 +1609,9 @@ body, .panel, .modal-box, .news-card, .vc, .cal-event,
 .auth-nav-btn {
   height: 30px;
   padding: 0 10px 0 8px;
+  display: inline-flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
 }
 .auth-nav-label {
   display: inline;

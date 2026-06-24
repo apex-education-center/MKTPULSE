@@ -580,6 +580,7 @@ class NavManager {
           </a>`).join('')}
       </nav>
       <div class="drawer-foot">
+        <button type="button" class="drawer-auth-btn" id="drawerAuthBtn"><i class="bi bi-google"></i><span>SIGN IN</span></button>
         <div class="drawer-foot-row">
           <button class="drawer-theme" onclick="window.themeManager.toggle()">
             <i class="bi bi-circle-half"></i> THEME
