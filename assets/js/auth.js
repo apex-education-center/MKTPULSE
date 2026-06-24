@@ -193,25 +193,26 @@ class AuthManager {
     return document.documentElement.getAttribute('data-theme') === 'light' ? 'outline' : 'filled_black';
   }
 
-  _openGoogleSignIn() {
-    if (this._googleReady && window.google?.accounts?.id) {
-      const rendered = document.querySelector('#googleBtnModal [role="button"]');
-      if (rendered) {
-        rendered.click();
-        return;
-      }
+_openGoogleSignIn() {
+  if (this._googleReady && window.google?.accounts?.id) {
+    // Look for Google's native iframe/button inside your wrapper
+    const rendered = document.querySelector('#googleBtnModal iframe, #googleBtnModal [role="button"]');
+    if (rendered) {
+      // If it's an iframe, we can't always programmatically .click() it securely.
+      // Instead, force Google to open the One Tap / Popup prompt directly:
       try {
-        window.google.accounts.id.prompt((notification) => {
-          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-            if (!document.getElementById('authModal')?.classList.contains('open')) this.showModal();
-          }
-        });
+        window.google.accounts.id.prompt();
         return;
-      } catch (e) { /* fall through */ }
+      } catch (e) {
+        console.error("Google prompt failed:", e);
+      }
     }
-    if (!document.getElementById('authModal')?.classList.contains('open')) this.showModal();
   }
-
+  // Fallback to opening the standard modal if it wasn't open yet
+  if (!document.getElementById('authModal')?.classList.contains('open')) {
+    this.showModal();
+  }
+}
   _waitForGoogle(maxMs = 12000) {
     return new Promise((resolve, reject) => {
       if (window.google?.accounts?.id) return resolve();
