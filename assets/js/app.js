@@ -159,6 +159,7 @@ class FinancialLoader {
     clearInterval(this._clk);
     setTimeout(() => {
       el.style.opacity = '0';
+      el.style.pointerEvents = 'none'; // stop blocking clicks the moment fade starts
       setTimeout(() => el.remove(), 500);
     }, 300);
   }
@@ -166,6 +167,13 @@ class FinancialLoader {
 
 // Start loader immediately
 window._loader = new FinancialLoader();
+
+// Safety net: if hide() never fires (JS error, offline backend),
+// force-remove the loader after 5s so it never permanently blocks clicks
+setTimeout(() => {
+  const el = document.getElementById('mpLoader');
+  if (el) { el.style.pointerEvents = 'none'; el.style.opacity = '0'; setTimeout(() => el.remove(), 500); }
+}, 5000);
 
 // Stamp ?theme= on internal links so navigation keeps the same mode (works on file:// too)
 function stampThemeLinks() {
