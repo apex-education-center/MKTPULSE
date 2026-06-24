@@ -1495,7 +1495,7 @@ body {
 @media (max-width: 480px) {
   .kpi-strip { grid-template-columns: 1fr 1fr; }
   .navbar-brand .ver { display: none; }
-  .auth-slot:not(.is-signed-in) { max-width: 118px; min-width: 100px; }
+  .auth-slot:not(.is-signed-in) { max-width: 130px; min-width: 88px; }
   .auth-text { display: none; }
   .ph-link { display: none; }
   .mini-table { font-size: 0.68rem; }
@@ -1670,16 +1670,14 @@ body, .panel, .modal-box, .news-card, .vc, .cal-event,
 }
 .auth-google-wrap.auth-google-compact {
   width: auto;
-  min-width: 100px;
-  max-width: 118px;
+  min-width: 88px;
+  max-width: 130px;
   height: 32px;
   flex-shrink: 0;
   overflow: visible;
 }
-.auth-google-compact > div {
-  transform: scale(0.92);
-  transform-origin: right center;
-  margin-right: -4px;
+.auth-google-compact .auth-google-custom {
+  width: 100%;
 }
 .auth-google-wrap > div {
   transform: scale(0.68);

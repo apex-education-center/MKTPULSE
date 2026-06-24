@@ -117,27 +117,23 @@ class AuthManager {
 
   _renderGoogleButton(containerId, compact = false) {
     const el = document.getElementById(containerId);
-    if (!el || !this._googleReady || this.isLoggedIn()) return;
+    if (!el || this.isLoggedIn()) return;
 
     if (compact) {
       el.className = 'auth-google-wrap auth-google-compact';
-      el.innerHTML = '';
-      try {
-        window.google.accounts.id.renderButton(el, {
-          type: 'standard',
-          theme: this._googleTheme(),
-          size: 'medium',
-          text: 'signin_with',
-          shape: 'pill',
-          logo_alignment: 'left',
-          width: 110,
-        });
-      } catch (e) {
-        el.innerHTML = `<button type="button" class="auth-google-custom" onclick="window.authManager.showModal()">
-          <span class="auth-g-logo">${this._googleLogoSvg()}</span><span>GOOGLE</span></button>`;
-      }
+      el.innerHTML = `
+        <button type="button" class="auth-google-custom" id="${containerId}Custom" aria-label="Sign in">
+          <span class="auth-g-logo">${this._googleLogoSvg()}</span>
+          <span>SIGN IN</span>
+        </button>`;
+      document.getElementById(`${containerId}Custom`)?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this._openGoogleSignIn();
+      });
       return;
     }
+
+    if (!this._googleReady) return;
 
     el.className = 'auth-google-wrap auth-google-modal';
     el.innerHTML = '';
@@ -157,6 +153,20 @@ class AuthManager {
 
   _googleTheme() {
     return document.documentElement.getAttribute('data-theme') === 'light' ? 'outline' : 'filled_black';
+  }
+
+  _openGoogleSignIn() {
+    if (this._googleReady && window.google?.accounts?.id) {
+      try {
+        window.google.accounts.id.prompt((notification) => {
+          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+            this.showModal();
+          }
+        });
+        return;
+      } catch (e) { /* fall through to modal */ }
+    }
+    this.showModal();
   }
 
   _waitForGoogle(maxMs = 12000) {
