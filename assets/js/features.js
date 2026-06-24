@@ -311,6 +311,13 @@ class QuickCompare {
     if (!el) {
       el = document.createElement('div');
       el.id = 'compareBar';
+      el.style.cssText = `
+        position:fixed;bottom:0;left:0;right:0;
+        background:var(--bg-surface);border-top:2px solid var(--amber);
+        padding:10px 20px;display:flex;align-items:center;gap:16px;
+        font-family:'IBM Plex Mono',monospace;font-size:.72rem;
+        z-index:500;transform:translateY(100%);transition:transform .3s ease;
+      `;
       document.body.appendChild(el);
     }
 

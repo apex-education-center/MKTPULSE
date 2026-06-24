@@ -1,89 +1,282 @@
-// MarketPulse — daily PDF market summary
-window.MpReport = {
-  async download() {
-    if (!window.jspdf?.jsPDF) {
-      Toast.show('PDF library loading — try again', 'warning');
-      return;
-    }
-    Toast.show('Building PDF report…', 'info');
-    try {
-      const [wl, news, cal, analysis] = await Promise.all([
-        window.apiClient.get('/api/watchlist', 0),
-        window.apiClient.get('/api/news?period=today', 5 * 60 * 1000),
-        window.apiClient.get('/api/calendar', 30 * 60 * 1000),
-        window.apiClient.get('/api/analysis', 30 * 60 * 1000).catch(() => ({})),
-      ]);
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF({ unit: 'pt', format: 'a4' });
-      const W = doc.internal.pageSize.getWidth();
-      const margin = 40;
-      let y = margin;
-      const date = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<script src="assets/js/theme-boot.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Economic Calendar — MarketPulse</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="assets/css/main.css" rel="stylesheet">
+<style>
+.page-hero{padding:48px 0 36px;border-bottom:1px solid var(--border-dim);margin-bottom:40px}
+.page-hero h1{font-size:2.2rem;font-weight:700;letter-spacing:-.02em}
+.page-hero p{color:var(--text-secondary);margin-top:8px}
 
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(16);
-      doc.setTextColor(240, 165, 0);
-      doc.text('MarketPulse Daily Report', margin, y);
-      y += 18;
-      doc.setFontSize(9);
-      doc.setTextColor(120, 120, 120);
-      doc.setFont('helvetica', 'normal');
-      doc.text(date, margin, y);
-      y += 24;
+/* ── DATE PICKER CALENDAR ── */
+.cal-picker-wrap{background:var(--bg-surface);border:1px solid var(--border-dim);border-radius:var(--radius);padding:24px;margin-bottom:36px}
+.cal-picker-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.cal-picker-title{font-family:var(--font-sans);font-size:1.1rem;font-weight:700}
+.cal-nav-btn{background:var(--bg-raised);border:1px solid var(--border-mid);color:var(--text-secondary);width:34px;height:34px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all var(--transition)}
+.cal-nav-btn:hover{border-color:var(--amber);color:var(--amber)}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal-day-header{text-align:center;font-family:var(--font-mono);font-size:.65rem;color:var(--text-muted);padding:6px 0;letter-spacing:.08em;text-transform:uppercase}
+.cal-day{text-align:center;padding:6px 2px;border-radius:6px;cursor:pointer;font-family:'IBM Plex Mono',monospace;font-size:.82rem;font-weight:500;transition:all .15s;position:relative;min-height:36px;display:flex;align-items:center;justify-content:center;color:var(--text-primary) !important;user-select:none}
+.cal-day-num-inner{color:inherit !important;display:block;min-width:16px;text-align:center}
+.cal-day:hover{background:var(--bg-overlay)}
+.cal-day.other-month{color:var(--text-muted)}
+.cal-day:hover{background:var(--bg-raised)}
+.cal-day.past-day{color:var(--text-muted) !important;opacity:.65}
+.cal-day.today{background:rgba(240,165,0,.2);color:var(--amber) !important;font-weight:700;border:2px solid rgba(240,165,0,.6)}
+.cal-day.selected{background:var(--amber) !important;color:#000 !important;font-weight:700;border:2px solid var(--amber);box-shadow:0 0 14px rgba(240,165,0,.5)}
+.cal-day.selected .cal-day-num-inner{color:#000 !important}
+.past-event{opacity:.72}
+.cal-day.has-event::after{content:'';position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:var(--red)}
+.cal-day.has-high::after{background:var(--red)}
+.cal-day.has-medium::after{background:var(--amber)}
+.cal-day.has-low::after{background:var(--blue)}
 
-      const section = (title) => {
-        if (y > 720) { doc.addPage(); y = margin; }
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(11);
-        doc.setTextColor(40, 40, 40);
-        doc.text(title, margin, y);
-        y += 14;
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9);
-      };
+/* ── DATE RANGE SELECTOR ── */
+.date-range-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:20px}
+.date-input{background:var(--bg-raised);border:1px solid var(--border-mid);color:var(--text-primary);padding:8px 14px;border-radius:var(--radius-sm);font-family:var(--font-sans);font-size:.85rem;cursor:pointer}
+.date-input:focus{outline:none;border-color:var(--amber)}
 
-      section('MARKET PRICES');
-      const rows = [
-        ...(wl.crypto || []).slice(0, 4).map(a => [a.symbol, a.name, `$${Number(a.price).toLocaleString()}`, `${a.change_24h}%`]),
-        ...(wl.stocks || []).slice(0, 4).map(a => [a.symbol, a.name, `$${Number(a.price).toLocaleString()}`, `${a.change_24h}%`]),
-        ...(wl.commodities || []).slice(0, 3).map(a => [a.symbol, a.name, `$${Number(a.price).toLocaleString()}`, `${a.change_24h}%`]),
-      ];
-      rows.forEach(r => {
-        doc.text(`${r[0]}  ${r[2]}  (${r[3]} 24h)`, margin, y);
-        y += 12;
-      });
-      y += 10;
+/* ── MOOD CARD ── */
 
-      section('TOP NEWS');
-      (news || []).slice(0, 6).forEach(a => {
-        const lines = doc.splitTextToSize(`• ${a.title}`, W - margin * 2);
-        lines.forEach(line => { if (y > 750) { doc.addPage(); y = margin; } doc.text(line, margin, y); y += 11; });
-      });
-      y += 8;
 
-      section('UPCOMING CALENDAR (7 DAYS)');
-      const soon = (cal || []).filter(e => e.date).slice(0, 8);
-      soon.forEach(e => {
-        if (y > 750) { doc.addPage(); y = margin; }
-        doc.text(`${e.date}  ${e.event}  [${(e.importance || '').toUpperCase()}]`, margin, y);
-        y += 12;
-      });
-      y += 8;
 
-      if (analysis?.summary || analysis?.insights || analysis?.analysis) {
-        section('MARKET SUMMARY');
-        const text = (analysis.summary || analysis.analysis || (analysis.insights || []).join(' ') || '').slice(0, 500);
-        doc.splitTextToSize(text, W - margin * 2).forEach(line => {
-          if (y > 750) { doc.addPage(); y = margin; }
-          doc.text(line, margin, y);
-          y += 11;
-        });
-      }
 
-      doc.save(`marketpulse_report_${new Date().toISOString().split('T')[0]}.pdf`);
-      Toast.show('PDF downloaded', 'success');
-    } catch (e) {
-      Toast.show('PDF failed — is backend running?', 'error');
-    }
-  },
-};
+
+
+
+
+
+
+
+
+
+
+/* ── EVENT CARDS ── */
+.cal-layout{display:grid;grid-template-columns:1fr 360px;gap:28px;align-items:start}
+.upcoming-card{background:var(--bg-surface);border:1px solid var(--border-dim);border-radius:var(--radius);padding:20px;position:sticky;top:80px}
+.upcoming-card h3{font-family:var(--font-sans);font-size:1rem;font-weight:700;margin-bottom:16px;color:var(--amber)}
+.up-item{display:flex;gap:14px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--border-dim)}
+.up-item:last-child{border-bottom:none}
+.up-date{text-align:center;background:var(--bg-raised);border:1px solid var(--border-mid);border-radius:var(--radius-sm);padding:6px 10px;min-width:46px;flex-shrink:0}
+.up-mo{font-size:.55rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--amber)}
+.up-day{font-family:var(--font-sans);font-size:1.2rem;font-weight:700;line-height:1}
+.up-info{flex:1}
+.up-ev{font-size:.83rem;font-weight:600;margin-bottom:3px}
+.up-sub{font-size:.72rem;color:var(--text-muted)}
+.cal-group{margin-bottom:32px}
+.cal-group-header{font-family:var(--font-mono);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted);padding:8px 0;border-bottom:1px solid var(--border-dim);margin-bottom:14px}
+
+.cal-event{background:var(--bg-surface);border:1px solid var(--border-dim);border-radius:var(--radius);padding:18px 20px;margin-bottom:12px;display:grid;grid-template-columns:64px 1fr auto;gap:16px;align-items:start;transition:all var(--transition);cursor:pointer}
+.cal-event:hover{border-color:var(--border-mid);transform:translateX(4px);box-shadow:var(--shadow)}
+.cal-event.high{border-left:3px solid var(--red)}
+.cal-event.medium{border-left:3px solid var(--amber)}
+.cal-event.low{border-left:3px solid var(--blue)}
+.cal-event.expanded{border-color:var(--border-mid)}
+.cal-day-block{text-align:center}
+.cal-day-num{font-family:var(--font-sans);font-size:1.8rem;font-weight:700;line-height:1;color:var(--text-primary)}
+.cal-day-mo{font-size:.65rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--amber)}
+.cal-event-name{font-size:.95rem;font-weight:600;margin-bottom:4px}
+.cal-region{font-size:.85rem;margin-bottom:3px}
+.cal-detail{font-size:.8rem;color:var(--text-muted);line-height:1.5}
+.cal-stats{display:flex;gap:16px;margin-top:10px;flex-wrap:wrap}
+.cal-stat{background:var(--bg-raised);border:1px solid var(--border-dim);border-radius:6px;padding:6px 12px;font-family:var(--font-mono);font-size:.75rem}
+.lbl{color:var(--text-muted);margin-bottom:2px;font-size:.65rem;text-transform:uppercase}
+.val{font-weight:600}
+
+/* ── IMPACT PILL ── */
+.imp-badge{padding:4px 10px;border-radius:20px;font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+.imp-badge.high{background:rgba(255,61,90,.15);color:var(--red)}
+.imp-badge.medium{background:rgba(245,200,66,.15);color:var(--amber)}
+.imp-badge.low{background:rgba(77,166,255,.15);color:var(--blue)}
+
+/* ── IMPACT EXPANSION ── */
+.event-impact{display:none;padding:14px 16px;background:var(--bg-raised);border-radius:var(--radius-sm);margin-top:12px;font-size:.85rem;line-height:1.6;border-left:3px solid var(--amber)}
+.event-impact.open{display:block}
+.impact-title{font-weight:700;margin-bottom:6px;color:var(--amber);font-size:.8rem;letter-spacing:.06em;text-transform:uppercase}
+
+/* ── FEAR & GREED WIDGET ── */
+.fg-widget{background:var(--bg-surface);border:1px solid var(--border-dim);border-radius:var(--radius);padding:20px;margin-bottom:20px}
+.fg-widget h3{font-family:var(--font-sans);font-size:.95rem;font-weight:700;margin-bottom:16px;color:var(--amber)}
+.fg-arc{text-align:center;margin-bottom:12px}
+.fg-value{font-family:var(--font-sans);font-size:2.2rem;font-weight:700}
+.fg-label{font-size:.78rem;color:var(--text-muted);margin-top:4px}
+.fg-bar{height:8px;border-radius:4px;background:linear-gradient(to right,#ff3d5a,#ff8c00,#f5c842,#00ff88);margin-bottom:8px;position:relative}
+.fg-indicator{position:absolute;top:-3px;width:14px;height:14px;border-radius:50%;background:#fff;border:2px solid var(--bg-base);transform:translateX(-50%);transition:left .5s ease}
+.fg-history{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
+.fg-hist-item{text-align:center;font-size:.65rem}
+.fg-hist-val{font-family:var(--font-mono);font-weight:600}
+.fg-hist-date{color:var(--text-muted)}
+
+@media(max-width:992px){.cal-layout{grid-template-columns:1fr}.upcoming-card{position:static}}
+@media(max-width:576px){.cal-event{grid-template-columns:50px 1fr}.cal-event>:last-child{display:none}.date-range-row{flex-direction:column;align-items:stretch}}
+</style>
+</head>
+<body>
+<div class="page">
+<!-- STATUS BAR -->
+<div class="status-bar" id="statusBar">
+  <div class="sb-row sb-row-top">
+    <div class="sb-item"><span class="sb-live-dot"></span><span class="sb-value" style="font-size:.6rem;letter-spacing:.06em">LIVE</span></div>
+    <div class="sb-item" id="sb-btc"><span class="sb-label">BTC</span><span class="sb-value">—</span></div>
+    <div class="sb-item" id="sb-eth"><span class="sb-label">ETH</span><span class="sb-value">—</span></div>
+    <div class="sb-item" id="sb-nvda"><span class="sb-label">NVDA</span><span class="sb-value">—</span></div>
+    <div class="sb-item" id="sb-gold"><span class="sb-label">XAU</span><span class="sb-value">—</span></div>
+    <div class="sb-item" id="sb-oil"><span class="sb-label">OIL</span><span class="sb-value">—</span></div>
+    <div id="sb-watchlist" style="display:flex;align-items:center;height:100%;flex:1;overflow:hidden"></div>
+  </div>
+  <div class="sb-row sb-row-meta">
+    <div id="marketSessions"></div>
+    <div class="sb-clocks">
+      <div class="sb-item"><span class="sb-label">NY</span><span class="sb-value" id="sb-ny">—</span></div>
+      <div class="sb-item"><span class="sb-label">LN</span><span class="sb-value" id="sb-ln">—</span></div>
+      <div class="sb-item"><span class="sb-label">TK</span><span class="sb-value" id="sb-tk">—</span></div>
+      <div class="sb-item"><span class="sb-label">BT</span><span class="sb-value" id="sb-bt">—</span></div>
+    </div>
+  </div>
+</div>
+<!-- NAVBAR -->
+<nav class="navbar">
+  <a class="navbar-brand" href="index.html">MKT<span class="accent">PULSE</span><span class="ver">v9</span></a>
+  <div class="nav-sep"></div>
+  <ul class="nav-links">
+      <li><a class="nav-link" href="index.html"><i class="bi bi-display"></i> Terminal</a></li>
+      <li><a class="nav-link" href="markets.html"><i class="bi bi-graph-up"></i> Markets</a></li>
+      <li><a class="nav-link" href="news.html"><i class="bi bi-newspaper"></i> News</a></li>
+      <li><a class="nav-link" href="youtube.html"><i class="bi bi-play-circle"></i> Videos</a></li>
+      <li><a class="nav-link" href="calendar.html"><i class="bi bi-calendar3"></i> Calendar</a></li>
+      <li><a class="nav-link" href="tools.html"><i class="bi bi-tools"></i> Tools</a></li>
+      <li><a class="nav-link" href="search.html"><i class="bi bi-search"></i> Search</a></li>
+  </ul>
+  <div class="nav-clock d-none d-lg-block" id="navClock"></div>
+  <div class="nav-actions">
+    <button class="theme-btn" id="themeToggle" title="Toggle theme">☀</button>
+    <button class="hamburger" id="hamburgerBtn"><i class="bi bi-list"></i></button>
+  </div>
+</nav>
+
+<main>
+<div class="container-fluid px-4">
+  <div class="page-hero fade-up">
+    <h1><i class="bi bi-calendar3 me-3" style="color:var(--purple)"></i>Economic Calendar</h1>
+    <p>Real-time macro events from Finnhub API — click any event to see market impact analysis.</p>
+  </div>
+
+
+  <div class="cal-layout">
+    <div>
+      <!-- DATE PICKER -->
+      <div class="cal-picker-wrap fade-up">
+        <div class="cal-picker-header">
+          <button class="cal-nav-btn" onclick="calendarPage.prevMonth()"><i class="bi bi-chevron-left"></i></button>
+          <div class="cal-picker-title" id="pickerTitle">—</div>
+          <button class="cal-nav-btn" onclick="calendarPage.nextMonth()"><i class="bi bi-chevron-right"></i></button>
+        </div>
+        <div class="cal-grid" id="pickerGrid"></div>
+      </div>
+
+      <!-- DATE RANGE + FILTER -->
+      <div class="date-range-row fade-up">
+        <input type="date" class="date-input" id="fromDate" onchange="calendarPage.fetchRange()">
+        <span style="color:var(--text-muted)">to</span>
+        <input type="date" class="date-input" id="toDate" onchange="calendarPage.fetchRange()">
+        <button class="btn-mp btn-mp-ghost" onclick="calendarPage.resetRange()" style="padding:7px 14px;font-size:.82rem">Reset</button>
+      </div>
+
+      <div class="section-heading fade-up">
+        <h2><i class="bi bi-calendar-event me-2" style="color:var(--purple)"></i>Upcoming Events</h2>
+        <div class="line"></div>
+        <span class="badge-count" id="eventCount">—</span>
+      </div>
+
+      <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2 fade-up">
+        <div class="chip-row mb-0">
+          <span class="chip active" onclick="calendarPage.setFilter('all',this)">All</span>
+        <span class="chip" onclick="calendarPage.setFilter('high',this)"><span style="color:var(--red)">⬤</span> High</span>
+        <span class="chip" onclick="calendarPage.setFilter('medium',this)"><span style="color:var(--amber)">⬤</span> Medium</span>
+        <span class="chip" onclick="calendarPage.setFilter('US',this)">🇺🇸 US</span>
+        <span class="chip" onclick="calendarPage.setFilter('EU',this)">🇪🇺 EU</span>
+        <span class="chip" onclick="calendarPage.setFilter('UK',this)">🇬🇧 UK</span>
+        <span class="chip" onclick="calendarPage.setFilter('CN',this)">🇨🇳 China</span>
+        </div>
+        <button class="btn" onclick="exportCalendarCSV()" style="padding:5px 14px;font-size:.65rem">
+          <i class="bi bi-download me-1"></i>EXPORT EXCEL
+        </button>
+      </div>
+
+      <div id="calendarEvents">
+        <div class="text-center py-5" style="color:var(--text-muted)">
+          <div class="spinner-border spinner-border-sm me-2" style="color:var(--amber)"></div>
+          Loading real-time events from Finnhub...
+        </div>
+      </div>
+    </div>
+
+    <!-- SIDEBAR -->
+    <div>
+      <!-- FEAR & GREED -->
+      <div class="fg-widget fade-up">
+        <h3><i class="bi bi-speedometer me-2"></i>Fear & Greed Index</h3>
+        <div class="fg-arc">
+          <div class="fg-mini-val" id="fgValue" style="color:var(--amber)">—</div>
+          <div class="fg-mini-label" id="fgLabel">Loading...</div>
+        </div>
+        <div class="fg-bar"><div class="fg-indicator" id="fgIndicator" style="left:50%"></div></div>
+        <div class="fg-scale"><span>EXTREME FEAR</span><span>NEUTRAL</span><span>EXTREME GREED</span></div>
+        <div class="fg-history" id="fgHistory"></div>
+      </div>
+
+      <!-- MACRO ALERTS -->
+      <div class="upcoming-card fade-up" style="margin-bottom:16px">
+        <h3><i class="bi bi-bell me-2"></i>Macro Alerts</h3>
+        <p style="font-size:.72rem;color:var(--text-muted);margin-bottom:12px">Notify ~1h before Fed, CPI, NFP & major events (Telegram if configured)</p>
+        <label style="display:flex;align-items:center;gap:8px;font-size:.78rem;margin-bottom:10px;cursor:pointer">
+          <input type="checkbox" id="calAlertEnabled" onchange="calendarPage.saveCalendarAlerts()"> Enable alerts
+        </label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span style="font-size:.68rem;color:var(--text-muted)">Minutes before</span>
+          <input type="number" id="calAlertMins" class="date-input" value="60" min="15" max="180" style="width:70px" onchange="calendarPage.saveCalendarAlerts()">
+        </div>
+        <div style="font-size:.58rem;color:var(--text-muted);margin-top:10px">Keywords: FOMC, CPI, NFP, Fed, ECB</div>
+      </div>
+
+      <!-- UPCOMING -->
+      <div class="upcoming-card fade-up">
+        <h3><i class="bi bi-alarm me-2"></i>Next 5 Events</h3>
+        <div id="upcomingList">
+          ${Array(5).fill('<div class="up-item"><div class="up-date skeleton" style="min-height:46px;min-width:46px"></div><div class="up-info"><div class="skeleton" style="height:12px;margin-bottom:6px"></div><div class="skeleton" style="height:10px;width:70%"></div></div></div>').join('')}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</main>
+
+<footer>
+  <div class="container-fluid px-4">
+    <div class="row align-items-center">
+      <div class="col-md-6"><div class="footer-brand">Market<span class="accent">Pulse</span></div><p class="mt-1">Financial intelligence for modern investors.</p></div>
+      <div class="col-md-6 text-md-end mt-3 mt-md-0"><p>Calendar: Finnhub API · AI: Claude · Fear&Greed: Alternative.me</p></div>
+    </div>
+    <hr style="border-color:var(--border-dim);margin:20px 0">
+    <p class="text-center" style="font-size:.78rem">© 2026 MarketPulse. University Project.</p>
+  </div>
+</footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="assets/js/export.js"></script>
+<script src="assets/js/alerts.js"></script>
+<script src="assets/js/app.js"></script>
+<script src="assets/js/auth.js"></script>
+<script src="assets/js/asset-detail.js"></script>
+<script src="assets/js/calendar.js"></script>
+<script src="assets/js/features.js"></script>
+</body>
+</html>
