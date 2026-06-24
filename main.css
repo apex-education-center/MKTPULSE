@@ -1419,7 +1419,7 @@ footer a:hover { color: var(--amber); }
   /* Drawer wider on small screens */
   .nav-drawer { width: 88vw; }
 
-  /* General data table: hide less-important columns */
+  /* General data table: hide less-important columns (NOT last col = fav/action) */
   .dt td:nth-child(4),
   .dt th:nth-child(4) { display: none; }
   .dt-name { max-width: 90px; }

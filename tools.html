@@ -109,6 +109,35 @@
   .tools-grid{grid-template-columns:1fr}
   .conv-row{grid-template-columns:1fr;gap:6px}
   .conv-swap{display:none}
+  /* Portfolio add row: wrap on mobile */
+  .portfolio-add-row{flex-wrap:wrap}
+  .portfolio-add-row .t-input{min-width:0}
+  /* 2-col inner grids stack to 1 col */
+  .ci-wrap{grid-template-columns:1fr}
+  .ci-stats{grid-template-columns:1fr 1fr}
+  /* Export grid: 1 col */
+  .export-grid{grid-template-columns:1fr}
+  .export-grid button[style*="span 2"]{grid-column:span 1 !important}
+  /* Risk/DCA output */
+  .risk-out{grid-template-columns:1fr 1fr}
+  .dca-out{grid-template-columns:1fr 1fr}
+  /* Alert row */
+  .alert-row{flex-wrap:wrap}
+  .alert-row .t-input,.alert-row .t-select{flex:1 1 calc(50% - 4px);min-width:100px}
+  /* Gas grid stays 3-col — fine on tablet, shrink on small */
+  /* Compound full-width override */
+  #tool-compound{grid-column:1 !important}
+}
+@media(max-width:480px){
+  .portfolio-add-row{flex-direction:column}
+  .portfolio-add-row .t-input,.portfolio-add-row button{width:100%;flex:none}
+  .gas-grid{grid-template-columns:1fr}
+  .alert-row .t-input,.alert-row .t-select{flex:1 1 100%}
+  .ci-stats{grid-template-columns:1fr}
+  .risk-out{grid-template-columns:1fr}
+  .dca-out{grid-template-columns:1fr}
+  .export-grid{grid-template-columns:1fr}
+  .ci-ctrl label{width:110px;font-size:.62rem}
 }
 </style>
 </head>
@@ -1249,8 +1278,8 @@ function calcCI() {
   ctx.clearRect(0, 0, W, H);
 
   const isDark  = document.documentElement.getAttribute('data-theme') !== 'light';
-  const gridCol = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)';
-  const textCol = isDark ? '#4a5568' : '#9aa3b0';
+  const gridCol = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)';
+  const textCol = isDark ? '#7a8fa6' : '#4a5568';
   const bgColor = isDark ? '#0c1018' : '#f7f8fa';
 
   // Fill background
