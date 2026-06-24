@@ -1,4 +1,8 @@
 // MarketPulse — accounts, Google Sign-In, cloud sync
+const API = (typeof window !== 'undefined' && window.location?.protocol?.startsWith('http'))
+  ? window.location.origin
+  : 'http://localhost:8000';
+
 const GOOGLE_CLIENT_ID = '175986550586-rgsis4asdfi9ol9p30t7sv26nltc6qsp.apps.googleusercontent.com';
 
 const MP_DEFAULTS = {
@@ -47,8 +51,14 @@ class AuthManager {
     slot.className = 'auth-slot';
     actions.insertBefore(slot, actions.firstChild);
     slot.addEventListener('click', (e) => {
-      if (!this.isLoggedIn() || this._loading) return;
-      if (e.target.closest('.auth-profile')) this.showModal();
+      if (this._loading) return;
+      if (this.isLoggedIn()) {
+        if (e.target.closest('.auth-profile')) this.showModal();
+        return;
+      }
+      if (!e.target.closest('[role="button"], iframe')) {
+        this.showModal();
+      }
     });
     this._renderAuthSlot();
   }
@@ -110,28 +120,22 @@ class AuthManager {
     if (!el || !this._googleReady || this.isLoggedIn()) return;
 
     if (compact) {
-      el.className = 'auth-google-wrap';
-      el.innerHTML = `
-        <button type="button" class="auth-google-custom" id="${containerId}Custom" aria-label="Sign in with Google">
-          <span class="auth-g-logo">${this._googleLogoSvg()}</span>
-          <span>GOOGLE</span>
-        </button>
-        <div id="${containerId}Hidden" style="position:absolute;width:0;height:0;overflow:hidden;opacity:0;pointer-events:none"></div>`;
-      const hidden = document.getElementById(`${containerId}Hidden`);
+      el.className = 'auth-google-wrap auth-google-compact';
+      el.innerHTML = '';
       try {
-        window.google.accounts.id.renderButton(hidden, {
+        window.google.accounts.id.renderButton(el, {
           type: 'standard',
           theme: this._googleTheme(),
-          size: 'large',
+          size: 'medium',
           text: 'signin_with',
-          width: 200,
+          shape: 'pill',
+          logo_alignment: 'left',
+          width: 110,
         });
-      } catch (e) { /* ignore */ }
-      document.getElementById(`${containerId}Custom`)?.addEventListener('click', () => {
-        const inner = hidden?.querySelector('[role="button"]') || hidden?.querySelector('div');
-        if (inner) inner.click();
-        else window.google.accounts.id.prompt();
-      });
+      } catch (e) {
+        el.innerHTML = `<button type="button" class="auth-google-custom" onclick="window.authManager.showModal()">
+          <span class="auth-g-logo">${this._googleLogoSvg()}</span><span>GOOGLE</span></button>`;
+      }
       return;
     }
 
