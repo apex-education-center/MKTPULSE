@@ -96,12 +96,38 @@
 .risk-stat .num{font-family:var(--font-mono);font-size:1rem;font-weight:700;color:var(--amber)}
 .dca-out{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:12px}
 
-/* ── WATCHLIST NOTES ── */
-.note-list{display:flex;flex-direction:column;gap:8px;max-height:240px;overflow-y:auto}
-.note-item{background:var(--bg-raised);border-left:3px solid var(--amber);padding:10px 14px;border-radius:0 var(--radius-sm) var(--radius-sm) 0;font-size:.83rem}
-.note-sym{font-weight:700;color:var(--amber);font-size:.75rem;margin-bottom:3px}
-.note-text{color:var(--text-secondary);line-height:1.4}
-.note-time{font-size:.65rem;color:var(--text-muted);margin-top:4px}
+/* ── TRADING NOTES ── */
+.notes-form{display:flex;flex-direction:column;gap:10px}
+.notes-form-row{display:flex;gap:8px;align-items:center}
+.note-sym-input{flex:0 0 90px;min-width:0}
+.note-text-input{flex:1;min-width:0}
+.note-add-btn{width:100%;margin-top:2px}
+.note-list{display:flex;flex-direction:column;gap:8px;max-height:260px;overflow-y:auto;margin-top:4px}
+.note-item{
+  background:var(--bg-raised);border:1px solid var(--border-soft);
+  border-left:3px solid var(--amber);
+  padding:10px 12px;border-radius:0 var(--radius-sm) var(--radius-sm) 0;
+  display:flex;flex-direction:column;gap:4px;
+}
+.note-header{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.note-sym-badge{
+  font-family:var(--font-mono);font-size:.62rem;font-weight:700;letter-spacing:.08em;
+  background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber);
+  padding:2px 8px;border-radius:2px;flex-shrink:0;
+}
+.note-time{font-family:var(--font-mono);font-size:.6rem;color:var(--text-muted)}
+.note-del{background:none;border:none;color:var(--text-muted);cursor:pointer;
+  padding:2px 4px;font-size:.75rem;line-height:1;flex-shrink:0;
+  opacity:.5;transition:opacity .2s}
+.note-del:hover{opacity:1;color:var(--red)}
+.note-text{font-size:.82rem;color:var(--text-secondary);line-height:1.45}
+.note-empty{color:var(--text-muted);font-size:.8rem;text-align:center;padding:20px 16px;
+  font-family:var(--font-mono);letter-spacing:.05em}
+
+@media(max-width:480px){
+  .notes-form-row{flex-direction:column}
+  .note-sym-input,.note-text-input{flex:none;width:100%}
+}
 
 @media (max-width:768px){
   main,.container-fluid{max-width:100vw;overflow-x:hidden}
@@ -340,20 +366,23 @@
       </div>
     </div>
 
-    <!-- 7. WATCHLIST NOTES -->
+    <!-- 7. TRADING NOTES -->
     <div class="tool-card fade-up">
       <div class="tc-title"><span class="tc-icon">📝</span> Trading Notes</div>
-      <div class="portfolio-add-row" style="flex-direction:column;gap:8px">
-        <div style="display:flex;gap:8px">
-          <input class="t-input" id="noteSym"  placeholder="Symbol" style="flex:1">
-          <input class="t-input" id="noteText" placeholder="Your note (thesis, reminder...)" style="flex:3">
+      <div class="notes-form">
+        <div class="notes-form-row">
+          <input class="t-input note-sym-input" id="noteSym"
+                 placeholder="SYMBOL" style="text-transform:uppercase"
+                 oninput="this.value=this.value.toUpperCase()">
+          <input class="t-input note-text-input" id="noteText"
+                 placeholder="Thesis, reminder, target...">
         </div>
-        <button class="btn-mp btn-mp-ghost" style="width:100%" onclick="toolsPage.addNote()">
+        <button class="btn-mp btn-mp-primary note-add-btn" onclick="toolsPage.addNote()">
           <i class="bi bi-plus-circle me-1"></i> Add Note
         </button>
       </div>
       <div class="note-list" id="notesList">
-        <div style="color:var(--text-muted);font-size:.82rem;text-align:center;padding:16px">No notes yet</div>
+        <div class="note-empty">NO NOTES YET</div>
       </div>
     </div>
 
@@ -957,7 +986,7 @@ class ToolsPage {
     const list = document.getElementById('notesList');
     if (!list) return;
     if (!this.notes.length) {
-      list.innerHTML = '<div style="color:var(--text-muted);font-size:.82rem;text-align:center;padding:16px">No notes yet</div>';
+      list.innerHTML = '<div class="note-empty">NO NOTES YET</div>';
       return;
     }
     list.innerHTML = this.notes.slice(0,10).map((n,i) => `
