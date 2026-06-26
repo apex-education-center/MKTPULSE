@@ -802,16 +802,6 @@ import httpx
 
 # Map channel ID -> stream URL + required referer
 LIVE_STREAMS = {
-    "bloomberg": {
-        "url": "https://66e4bbba.wurl.com/master/f36d25e7e52f1ba8d7e56eb859c636563214f541/TEctZ2JfQmxvb21iZXJnVFZQbHVzX0hMUw/playlist.m3u8",
-        "referer": "https://www.wurl.com/",
-        "name": "Bloomberg TV"
-    },
-    "cnbc": {
-        "url": "https://cnbc-live.akamaized.net/cnbc/master.m3u8",
-        "referer": "https://www.cnbc.com/",
-        "name": "CNBC"
-    },
     "aljazeera": {
         "url": "https://live-hls-apps-aje-fa.getaj.net/AJE/index.m3u8",
         "referer": "https://www.aljazeera.com/",
@@ -836,23 +826,8 @@ PROXY_HEADERS = {
     "Connection": "keep-alive",
 }
 
-import re as _re
-
-def _proxy_tag_uri(line: str, channel_id: str, base_url: str) -> str:
-    """Rewrite URI="..." inside tag lines like #EXT-X-KEY / #EXT-X-MEDIA so
-    encryption-key and alt-track requests go through our proxy too (these
-    are easy to miss because they live inside a '#' comment/tag line, not
-    on their own line like segment/playlist URLs)."""
-    m = _re.search(r'URI="([^"]+)"', line)
-    if not m:
-        return line
-    target = m.group(1)
-    if not target.startswith("http"):
-        target = base_url + target
-    import urllib.parse
-    encoded = urllib.parse.quote(target, safe="")
-    proxied = f"/api/stream/{channel_id}/segment?url={encoded}"
-    return line[:m.start()] + f'URI="{proxied}"' + line[m.end():]
+@app.get("/api/stream/{channel_id}/playlist.m3u8")
+async def proxy_m3u8(channel_id: str, request: FastAPIRequest):
     """Proxy M3U8 playlist and rewrite segment URLs to go through this proxy."""
     ch = LIVE_STREAMS.get(channel_id)
     if not ch:
@@ -888,7 +863,7 @@ def _proxy_tag_uri(line: str, channel_id: str, base_url: str) -> str:
                         encoded = urllib.parse.quote(abs_url, safe="")
                         lines.append(f"/api/stream/{channel_id}/segment?url={encoded}")
                     else:
-                        lines.append(_proxy_tag_uri(line, channel_id, base_url))
+                        lines.append(line)
                 else:
                     lines.append(line)
             
@@ -939,7 +914,7 @@ async def proxy_segment(channel_id: str, url: str, request: FastAPIRequest):
                         encoded = urllib.parse.quote(abs_url, safe="")
                         lines.append(f"/api/stream/{channel_id}/segment?url={encoded}")
                     else:
-                        lines.append(_proxy_tag_uri(line, channel_id, base_url))
+                        lines.append(line)
                 return FastAPIResponse(
                     content="\n".join(lines),
                     media_type="application/vnd.apple.mpegurl",
@@ -978,11 +953,135 @@ async def list_streams():
     return [{"id": k, "name": v["name"]} for k, v in LIVE_STREAMS.items()]
 
 
+# ── LIVE TV STREAM PROXY ──────────────────────────────────────────
+# HLS streams need a server-side proxy because:
+# 1. Many streams block direct browser fetch (CORS)  
+# 2. Some require specific Referer headers
+# We proxy both the playlist (.m3u8) AND the segments (.ts) to avoid CORS
+
+from fastapi.responses import StreamingResponse, Response
+import httpx
+
+# Verified working streams with their required referer headers
+LIVE_STREAMS = {
+    "bloomberg":  {"url": "https://66e4bbba.wurl.com/master/f36d25e7e52f1ba8d7e56eb859c636563214f541/TEctZ2JfQmxvb21iZXJnVFZQbHVzX0hMUw/playlist.m3u8", "referer": "https://www.wurl.com/", "name": "Bloomberg TV"},
+    "aljazeera":  {"url": "https://live-hls-apps-aje-fa.getaj.net/AJE/index.m3u8",  "referer": "https://www.aljazeera.com/", "name": "Al Jazeera English"},
+    "alarabiya":  {"url": "https://live.alarabiya.net/alarabiapublish/alarabiya.smil/playlist.m3u8", "referer": "https://www.alarabiya.net/", "name": "Al Arabiya"},
+    "france24":   {"url": "https://live.france24.com/hls/live/2037218-b/F24_EN_HI_HLS/master_5000.m3u8", "referer": "https://www.france24.com/", "name": "France 24"},
+    "cnbc":       {"url": "https://cnbc-live.akamaized.net/cnbc/master.m3u8", "referer": "https://www.cnbc.com/", "name": "CNBC"},
+}
+
+PROXY_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Accept": "*/*",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Connection": "keep-alive",
+}
+
+@app.get("/api/stream/{channel_id}/playlist.m3u8")
+async def stream_playlist(channel_id: str, request: Request):
+    """Proxy the M3U8 playlist for a live channel — rewrites segment URLs to go through our proxy"""
+    if channel_id not in LIVE_STREAMS:
+        raise HTTPException(404, f"Channel {channel_id} not found")
+    
+    ch = LIVE_STREAMS[channel_id]
+    headers = {**PROXY_HEADERS, "Referer": ch["referer"], "Origin": ch["referer"].rstrip("/")}
+    
+    try:
+        async with httpx.AsyncClient(timeout=10, verify=False, follow_redirects=True) as client:
+            r = await client.get(ch["url"], headers=headers)
+            if r.status_code != 200:
+                raise HTTPException(r.status_code, "Stream unavailable")
+            
+            content = r.text
+            base_url = ch["url"].rsplit("/", 1)[0] + "/"
+            
+            # Rewrite relative URLs in the M3U8 to point through our proxy
+            lines = content.split("\n")
+            rewritten = []
+            for line in lines:
+                line = line.strip()
+                if line and not line.startswith("#"):
+                    # This is a segment or sub-playlist URL
+                    if line.startswith("http"):
+                        # Absolute URL — proxy it
+                        import base64
+                        encoded = base64.urlsafe_b64encode(line.encode()).decode()
+                        rewritten.append(f"/api/stream/{channel_id}/segment?url={encoded}")
+                    else:
+                        # Relative URL — make absolute then proxy
+                        abs_url = base_url + line
+                        import base64
+                        encoded = base64.urlsafe_b64encode(abs_url.encode()).decode()
+                        rewritten.append(f"/api/stream/{channel_id}/segment?url={encoded}")
+                else:
+                    rewritten.append(line)
+            
+            return Response(
+                content="\n".join(rewritten),
+                media_type="application/vnd.apple.mpegurl",
+                headers={
+                    "Access-Control-Allow-Origin": "*",
+                    "Cache-Control": "no-cache",
+                }
+            )
+    except httpx.RequestError as e:
+        raise HTTPException(503, f"Stream connection error: {e}")
+
+@app.get("/api/stream/{channel_id}/segment")
+async def stream_segment(channel_id: str, url: str):
+    """Proxy individual HLS segments/sub-playlists"""
+    import base64
+    try:
+        actual_url = base64.urlsafe_b64decode(url.encode()).decode()
+    except Exception:
+        raise HTTPException(400, "Invalid URL encoding")
+    
+    if channel_id not in LIVE_STREAMS:
+        raise HTTPException(404, "Channel not found")
+    
+    ch = LIVE_STREAMS[channel_id]
+    headers = {**PROXY_HEADERS, "Referer": ch["referer"], "Origin": ch["referer"].rstrip("/")}
+    
+    try:
+        async with httpx.AsyncClient(timeout=15, verify=False, follow_redirects=True) as client:
+            r = await client.get(actual_url, headers=headers)
+            
+            # If it's a sub-playlist (m3u8), rewrite its URLs too
+            ct = r.headers.get("content-type", "")
+            if "mpegurl" in ct or actual_url.endswith(".m3u8"):
+                content = r.text
+                base = actual_url.rsplit("/", 1)[0] + "/"
+                lines = content.split("\n")
+                rewritten = []
+                for line in lines:
+                    line = line.strip()
+                    if line and not line.startswith("#"):
+                        abs_url = line if line.startswith("http") else base + line
+                        import base64 as b64
+                        enc = b64.urlsafe_b64encode(abs_url.encode()).decode()
+                        rewritten.append(f"/api/stream/{channel_id}/segment?url={enc}")
+                    else:
+                        rewritten.append(line)
+                return Response(
+                    content="\n".join(rewritten),
+                    media_type="application/vnd.apple.mpegurl",
+                    headers={"Access-Control-Allow-Origin": "*", "Cache-Control": "no-cache"}
+                )
+            
+            return Response(
+                content=r.content,
+                media_type=ct or "video/MP2T",
+                headers={"Access-Control-Allow-Origin": "*", "Cache-Control": "no-cache, max-age=0"}
+            )
+    except Exception as e:
+        raise HTTPException(503, f"Segment error: {e}")
+
 @app.get("/api/stream/channels")
 async def get_stream_channels():
     """Return list of available channels"""
-    return [{"id": k, "name": v["name"], "playlist": f"/api/stream/{k}/playlist.m3u8"}
-            for k, v in LIVE_STREAMS.items()]
+    return [{"id": k, "name": k.replace("_"," ").title(), "playlist": f"/api/stream/{k}/playlist.m3u8"} 
+            for k in LIVE_STREAMS.keys()]
 
 @app.get("/api/clear-cache")
 async def clear_cache():
