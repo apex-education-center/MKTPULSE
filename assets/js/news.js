@@ -19,26 +19,36 @@ class NewsManager {
 
   async init() {
     await this.fetch('all', '', 'all');
-    this._baseArticles = [...this.allArticles]; // snapshot of all-time articles for counting
+    this._baseArticles = [...this.allArticles];
     this._loadPeriodCounts();
   }
 
   _loadPeriodCounts() {
-    // Use UTC midnight boundaries — published_at comes as ISO "Z" (UTC) from NewsAPI
+    // DEBUG — open browser console to see values
     const now = new Date();
-    const todayUTC  = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
-    const weekUTC   = todayUTC - 7  * 86400000;
-    const monthUTC  = todayUTC - 30 * 86400000;
+    const todayUTC = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+    const weekUTC  = todayUTC - 7  * 86400000;
+    const monthUTC = todayUTC - 30 * 86400000;
+
+    const src = this._baseArticles || this.allArticles;
+    console.log('[NewsCount] total articles:', src.length);
+    if (src.length > 0) {
+      console.log('[NewsCount] sample published_at:', src[0].published_at, src[1]?.published_at);
+      console.log('[NewsCount] todayUTC:', new Date(todayUTC).toISOString());
+      console.log('[NewsCount] newest article UTC:', new Date(src[0].published_at).toISOString());
+    }
 
     let cAll = 0, cMonth = 0, cWeek = 0, cToday = 0;
-    for (const a of this._baseArticles) {
+    for (const a of src) {
       const t = new Date(a.published_at || 0).getTime();
-      if (isNaN(t)) continue;
+      if (isNaN(t)) { console.warn('[NewsCount] bad date:', a.published_at); continue; }
       cAll++;
       if (t >= monthUTC) cMonth++;
       if (t >= weekUTC)  cWeek++;
       if (t >= todayUTC) cToday++;
     }
+    console.log('[NewsCount] all:', cAll, 'month:', cMonth, 'week:', cWeek, 'today:', cToday);
+
     const map = { all: cAll, month: cMonth, week: cWeek, today: cToday };
     for (const [p, count] of Object.entries(map)) {
       const el = document.getElementById('tc-' + p);
