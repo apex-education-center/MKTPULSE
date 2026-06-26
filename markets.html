@@ -140,6 +140,14 @@
 .cstat-lbl { font-family:var(--font-mono); font-size:.58rem; letter-spacing:.1em; text-transform:uppercase; color:var(--text-muted); margin-bottom:3px; }
 .cstat-val { font-family:var(--font-mono); font-size:.9rem; font-weight:500; }
 
+@media (max-width:1000px){
+  .mkts-layout{ grid-template-columns:1fr; }
+  .mkts-side{
+    position:static; max-height:none; overflow:visible;
+    border-left:none; border-top:1px solid var(--border-dim);
+  }
+}
+
 @media (min-width:769px){
   .side-section > summary{ cursor:default; }
   .side-section > summary::-webkit-details-marker{ display:none; }
