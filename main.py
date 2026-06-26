@@ -985,7 +985,6 @@ import httpx
 
 # Verified working streams with their required referer headers
 LIVE_STREAMS = {
-    "bloomberg":  {"url": "https://66e4bbba.wurl.com/master/f36d25e7e52f1ba8d7e56eb859c636563214f541/TEctZ2JfQmxvb21iZXJnVFZQbHVzX0hMUw/playlist.m3u8", "referer": "https://www.wurl.com/", "name": "Bloomberg TV"},
     "aljazeera":  {"url": "https://live-hls-apps-aje-fa.getaj.net/AJE/index.m3u8",  "referer": "https://www.aljazeera.com/", "name": "Al Jazeera English"},
     "alarabiya":  {"url": "https://live.alarabiya.net/alarabiapublish/alarabiya.smil/playlist.m3u8", "referer": "https://www.alarabiya.net/", "name": "Al Arabiya"},
     "france24":   {"url": "https://live.france24.com/hls/live/2037218-b/F24_EN_HI_HLS/master_5000.m3u8", "referer": "https://www.france24.com/", "name": "France 24"},

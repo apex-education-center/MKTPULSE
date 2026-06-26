@@ -461,7 +461,6 @@
     </div>
     <div class="tv-wrap">
       <div class="tv-channels" id="liveChannelBar">
-        <button class="tv-btn live" onclick="liveTv.setChannel('bloomberg')" data-ch="bloomberg">BLOOMBERG</button>
         <button class="tv-btn" onclick="liveTv.setChannel('skynews')"   data-ch="skynews">SKY NEWS</button>
         <button class="tv-btn" onclick="liveTv.setChannel('euronews')"  data-ch="euronews">EURONEWS</button>
         <button class="tv-btn" onclick="liveTv.setChannel('dw')"        data-ch="dw">DW NEWS</button>
@@ -876,7 +875,6 @@ class LiveTV {
     this.active = null; this.hls = null;
     this.muted = true; // browsers require muted autoplay; user clicks UNMUTE for sound
     this.channels = [
-      {id:'bloomberg',name:'Bloomberg TV',flag:'🇺🇸'},
       {id:'cnbc',name:'CNBC',flag:'🇺🇸'},
       {id:'france24',name:'France 24',flag:'🇫🇷'},
       {id:'aljazeera',name:'Al Jazeera EN',flag:'🇶🇦'},
