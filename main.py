@@ -826,112 +826,133 @@ PROXY_HEADERS = {
     "Connection": "keep-alive",
 }
 
-@app.get("/api/stream/{channel_id}/playlist.m3u8")
-async def proxy_m3u8(channel_id: str, request: FastAPIRequest):
-    """Proxy M3U8 playlist and rewrite segment URLs to go through this proxy."""
-    ch = LIVE_STREAMS.get(channel_id)
-    if not ch:
-        raise HTTPException(status_code=404, detail=f"Channel '{channel_id}' not found")
-    
-    stream_url = ch["url"]
-    base_url   = stream_url.rsplit("/", 1)[0] + "/"
-    
-    headers = {**PROXY_HEADERS, "Referer": ch["referer"], "Origin": ch["referer"].rstrip("/")}
-    
-    try:
-        async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
-            r = await client.get(stream_url, headers=headers)
-            if r.status_code != 200:
-                raise HTTPException(status_code=r.status_code, detail=f"Upstream returned {r.status_code}")
-            
-            m3u8_text = r.text
-            
-            # Rewrite relative URLs in M3U8 to absolute, then proxy them
-            lines = []
-            for line in m3u8_text.splitlines():
-                stripped = line.strip()
-                if stripped and not stripped.startswith("#"):
-                    if stripped.startswith("http"):
-                        # Absolute URL → proxy it
-                        import urllib.parse
-                        encoded = urllib.parse.quote(stripped, safe="")
-                        lines.append(f"/api/stream/{channel_id}/segment?url={encoded}")
-                    elif stripped.endswith(".m3u8") or stripped.endswith(".ts") or stripped.endswith(".aac"):
-                        # Relative URL → make absolute then proxy
-                        abs_url = base_url + stripped
-                        import urllib.parse
-                        encoded = urllib.parse.quote(abs_url, safe="")
-                        lines.append(f"/api/stream/{channel_id}/segment?url={encoded}")
-                    else:
-                        lines.append(line)
-                else:
-                    lines.append(line)
-            
-            rewritten = "\n".join(lines)
-            
-            return FastAPIResponse(
-                content=rewritten,
-                media_type="application/vnd.apple.mpegurl",
-                headers={
-                    "Access-Control-Allow-Origin": "*",
-                    "Cache-Control": "no-cache, no-store",
-                    "Access-Control-Allow-Headers": "*",
-                }
-            )
-    except httpx.RequestError as e:
-        raise HTTPException(status_code=502, detail=f"Upstream error: {e}")
+import base64
+import urllib.parse
+import re
 
-@app.get("/api/stream/{channel_id}/segment")
-async def proxy_segment(channel_id: str, url: str, request: FastAPIRequest):
-    """Proxy individual TS segments and nested M3U8 playlists."""
-    ch = LIVE_STREAMS.get(channel_id)
-    if not ch:
-        raise HTTPException(status_code=404, detail="Channel not found")
+@app.get("/api/stream/{channel_id}/playlist.m3u8")
+async def stream_playlist(channel_id: str, request: Request):
+    """Proxy the M3U8 playlist for a live channel — rewrites segment and nested track URLs"""
+    if channel_id not in LIVE_STREAMS:
+        raise HTTPException(404, f"Channel {channel_id} not found")
     
-    import urllib.parse
-    actual_url = urllib.parse.unquote(url)
-    
+    ch = LIVE_STREAMS[channel_id]
     headers = {**PROXY_HEADERS, "Referer": ch["referer"], "Origin": ch["referer"].rstrip("/")}
     
     try:
-        async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
-            r = await client.get(actual_url, headers=headers)
+        async with httpx.AsyncClient(timeout=10, verify=False, follow_redirects=True) as client:
+            r = await client.get(ch["url"], headers=headers)
+            if r.status_code != 200:
+                raise HTTPException(r.status_code, "Stream unavailable")
             
-            content_type = r.headers.get("content-type", "video/mp2t")
+            content = r.text
+            current_url = str(r.url) # Resolves any upstream redirects cleanly
             
-            # If this is a nested M3U8 (quality playlist), rewrite it too
-            if "mpegurl" in content_type or actual_url.endswith(".m3u8"):
-                m3u8_text = r.text
-                base_url  = actual_url.rsplit("/", 1)[0] + "/"
-                lines = []
-                for line in m3u8_text.splitlines():
-                    stripped = line.strip()
-                    if stripped and not stripped.startswith("#") and (stripped.endswith(".ts") or stripped.endswith(".aac") or stripped.endswith(".m3u8")):
-                        if stripped.startswith("http"):
-                            abs_url = stripped
-                        else:
-                            abs_url = base_url + stripped
-                        encoded = urllib.parse.quote(abs_url, safe="")
-                        lines.append(f"/api/stream/{channel_id}/segment?url={encoded}")
-                    else:
-                        lines.append(line)
-                return FastAPIResponse(
-                    content="\n".join(lines),
-                    media_type="application/vnd.apple.mpegurl",
-                    headers={"Access-Control-Allow-Origin": "*", "Cache-Control": "no-cache"}
-                )
+            lines = content.split("\n")
+            rewritten = []
             
-            # Binary media segment (TS, AAC, etc.)
-            return FastAPIResponse(
-                content=r.content,
-                media_type=content_type,
+            # Regex to find URI="xyz" inside metadata tags (e.g., #EXT-X-MEDIA)
+            uri_regex = re.compile(r'(URI=["\'])([^"\']+)((["\']))')
+
+            for line in lines:
+                line_str = line.strip()
+                if not line_str:
+                    continue
+
+                # Case A: Embedded URI target found inside structural HLS metadata
+                if line_str.startswith("#") and 'URI=' in line_str:
+                    def replace_uri(match):
+                        prefix, rel_url, suffix = match.group(1), match.group(2), match.group(3)
+                        abs_url = urllib.parse.urljoin(current_url, rel_url)
+                        encoded = base64.urlsafe_b64encode(abs_url.encode()).decode()
+                        return f'{prefix}/api/stream/{channel_id}/segment?url={encoded}{suffix}'
+                    
+                    rewritten.append(uri_regex.sub(replace_uri, line_str))
+
+                # Case B: Standard exposed segment or sub-playlist file path
+                elif not line_str.startswith("#"):
+                    abs_url = urllib.parse.urljoin(current_url, line_str)
+                    encoded = base64.urlsafe_b64encode(abs_url.encode()).decode()
+                    rewritten.append(f"/api/stream/{channel_id}/segment?url={encoded}")
+                
+                # Case C: Standard descriptive comments
+                else:
+                    rewritten.append(line_str)
+            
+            return Response(
+                content="\n".join(rewritten),
+                media_type="application/vnd.apple.mpegurl",
                 headers={
                     "Access-Control-Allow-Origin": "*",
                     "Cache-Control": "no-cache",
                 }
             )
     except httpx.RequestError as e:
-        raise HTTPException(status_code=502, detail=f"Segment fetch error: {e}")
+        raise HTTPException(503, f"Stream connection error: {e}")
+
+@app.get("/api/stream/{channel_id}/segment")
+async def stream_segment(channel_id: str, url: str):
+    """Proxy individual HLS segments/sub-playlists"""
+    try:
+        actual_url = base64.urlsafe_b64decode(url.encode()).decode()
+    except Exception:
+        raise HTTPException(400, "Invalid URL encoding")
+    
+    if channel_id not in LIVE_STREAMS:
+        raise HTTPException(404, "Channel not found")
+    
+    ch = LIVE_STREAMS[channel_id]
+    headers = {**PROXY_HEADERS, "Referer": ch["referer"], "Origin": ch["referer"].rstrip("/")}
+    
+    try:
+        async with httpx.AsyncClient(timeout=15, verify=False, follow_redirects=True) as client:
+            r = await client.get(actual_url, headers=headers)
+            
+            ct = r.headers.get("content-type", "")
+            # If the proxied segment is an underlying adaptive variant manifest, rewrite it too
+            if "mpegurl" in ct or actual_url.endswith(".m3u8"):
+                content = r.text
+                current_url = str(r.url)
+                lines = content.split("\n")
+                rewritten = []
+                uri_regex = re.compile(r'(URI=["\'])([^"\']+)((["\']))')
+
+                for line in lines:
+                    line_str = line.strip()
+                    if not line_str:
+                        continue
+                    
+                    if line_str.startswith("#") and 'URI=' in line_str:
+                        def replace_uri(match):
+                            prefix, rel_url, suffix = match.group(1), match.group(2), match.group(3)
+                            abs_url = urllib.parse.urljoin(current_url, rel_url)
+                            enc = base64.urlsafe_b64encode(abs_url.encode()).decode()
+                            return f'{prefix}/api/stream/{channel_id}/segment?url={enc}{suffix}'
+                        rewritten.append(uri_regex.sub(replace_uri, line_str))
+                        
+                    elif not line_str.startswith("#"):
+                        abs_url = urllib.parse.urljoin(current_url, line_str)
+                        enc = base64.urlsafe_b64encode(abs_url.encode()).decode()
+                        rewritten.append(f"/api/stream/{channel_id}/segment?url={enc}")
+                    else:
+                        rewritten.append(line_str)
+                        
+                return Response(
+                    content="\n".join(rewritten),
+                    media_type="application/vnd.apple.mpegurl",
+                    headers={"Access-Control-Allow-Origin": "*", "Cache-Control": "no-cache"}
+                )
+            
+            return Response(
+                content=r.content,
+                media_type=ct or "video/MP2T",
+                headers={"Access-Control-Allow-Origin": "*", "Cache-Control": "no-cache, max-age=0"}
+            )
+    except Exception as e:
+        raise HTTPException(503, f"Segment error: {e}")
+
+            
+
 
 @app.get("/api/stream/{channel_id}/status")
 async def stream_status(channel_id: str):
