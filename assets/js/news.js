@@ -21,18 +21,26 @@ class NewsManager {
     this._loadPeriodCounts();
   }
 
-  async _loadPeriodCounts() {
-    const periods = ['today', 'week', 'month', 'all'];
-    await Promise.all(periods.map(async (p) => {
-      if (p === this.timeFilter) return;
-      try {
-        const res = await fetch(`${window.apiClient.base}/api/news?category=${this.category}&period=${p}`);
-        if (!res.ok) return;
-        const data = await res.json();
-        const el = document.getElementById(`tc-${p}`);
-        if (el && Array.isArray(data)) el.textContent = data.length;
-      } catch (e) {}
-    }));
+  _loadPeriodCounts() {
+    // Count client-side so today ⊆ week ⊆ month ⊆ all is always consistent
+    const now = new Date();
+    const sod = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const sow = new Date(sod); sow.setDate(sod.getDate() - sod.getDay());
+    const som = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    let cAll = 0, cMonth = 0, cWeek = 0, cToday = 0;
+    for (const a of this.allArticles) {
+      const d = new Date(a.published_at || 0);
+      cAll++;
+      if (d >= som)  cMonth++;
+      if (d >= sow)  cWeek++;
+      if (d >= sod)  cToday++;
+    }
+    const map = { all: cAll, month: cMonth, week: cWeek, today: cToday };
+    for (const [p, count] of Object.entries(map)) {
+      const el = document.getElementById('tc-' + p);
+      if (el) el.textContent = count;
+    }
   }
 
   // ── FETCH ────────────────────────────────────────────
@@ -189,8 +197,7 @@ class NewsManager {
   }
 
   _updateTimeCounts() {
-    const active = document.getElementById(`tc-${this.timeFilter}`);
-    if (active) active.textContent = this.allArticles.length;
+    this._loadPeriodCounts();
   }
 
   loadMore() { this.page++; this.render(); Toast.show('MORE ARTICLES LOADED'); }
