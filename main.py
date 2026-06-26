@@ -283,7 +283,7 @@ async def get_news(q: str = "", category: str = "all", period: str = "all"):
     safe_q = q[:30].replace(' ', '_').replace('/', '').replace('\\', '')
     today  = datetime.now().strftime("%Y-%m-%d")
     cache_key = f"{CACHE_DIR}/news_{category}_{safe_q}_{period}_{today}.json"
-    cache_mins = 15 if period == "today" else 45
+    cache_mins = 120 if period == "today" else 360
     if cache_valid(cache_key, cache_mins):
         return read_cache(cache_key)
 
@@ -299,7 +299,7 @@ async def get_news(q: str = "", category: str = "all", period: str = "all"):
 
     queries = [q] if q else CATEGORY_QUERIES.get(category, CATEGORY_QUERIES["all"])
     articles, seen = [], set()
-    pages     = 3 if period in ("all", "month") else (1 if period == "week" else 2)
+    pages     = 2 if period in ("all", "month") else 1
     page_size = 100
 
     async with httpx.AsyncClient(timeout=25) as client:
@@ -985,6 +985,7 @@ import httpx
 
 # Verified working streams with their required referer headers
 LIVE_STREAMS = {
+    "bloomberg":  {"url": "https://66e4bbba.wurl.com/master/f36d25e7e52f1ba8d7e56eb859c636563214f541/TEctZ2JfQmxvb21iZXJnVFZQbHVzX0hMUw/playlist.m3u8", "referer": "https://www.wurl.com/", "name": "Bloomberg TV"},
     "aljazeera":  {"url": "https://live-hls-apps-aje-fa.getaj.net/AJE/index.m3u8",  "referer": "https://www.aljazeera.com/", "name": "Al Jazeera English"},
     "alarabiya":  {"url": "https://live.alarabiya.net/alarabiapublish/alarabiya.smil/playlist.m3u8", "referer": "https://www.alarabiya.net/", "name": "Al Arabiya"},
     "france24":   {"url": "https://live.france24.com/hls/live/2037218-b/F24_EN_HI_HLS/master_5000.m3u8", "referer": "https://www.france24.com/", "name": "France 24"},
@@ -1457,6 +1458,11 @@ async def _calendar_alert_loop():
         except Exception as e:
             print(f"Calendar alerts: {e}")
         await asyncio.sleep(300)
+
+@app.get("/health")
+async def health():
+    """Keep-alive endpoint — ping every 10 min via cron-job.org to prevent Render spin-down."""
+    return {"status": "ok", "time": datetime.now().isoformat()}
 
 # Static frontend (HTML, CSS, JS) — mount after API routes
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
