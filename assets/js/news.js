@@ -6,7 +6,7 @@
 class NewsManager {
   constructor() {
     this.allArticles = [];
-    this._baseArticles = []; // always period=all, used for counts
+    this._baseArticles = [];
     this.category    = 'all';
     this.timeFilter  = 'all';   // today | week | month | all
     this.sortBy      = 'date';
@@ -19,24 +19,25 @@ class NewsManager {
 
   async init() {
     await this.fetch('all', '', 'all');
-    this._baseArticles = [...this.allArticles]; // snapshot of all articles for counting
+    this._baseArticles = [...this.allArticles]; // snapshot of all-time articles for counting
     this._loadPeriodCounts();
   }
 
   _loadPeriodCounts() {
-    // Always count from _baseArticles (period=all) so today ⊆ week ⊆ month ⊆ all
+    // Use UTC midnight boundaries — published_at comes as ISO "Z" (UTC) from NewsAPI
     const now = new Date();
-    const sod = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const sow = new Date(sod); sow.setDate(sod.getDate() - sod.getDay());
-    const som = new Date(now.getFullYear(), now.getMonth(), 1);
+    const todayUTC  = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+    const weekUTC   = todayUTC - 7  * 86400000;
+    const monthUTC  = todayUTC - 30 * 86400000;
 
     let cAll = 0, cMonth = 0, cWeek = 0, cToday = 0;
     for (const a of this._baseArticles) {
-      const d = new Date(a.published_at || 0);
+      const t = new Date(a.published_at || 0).getTime();
+      if (isNaN(t)) continue;
       cAll++;
-      if (d >= som)  cMonth++;
-      if (d >= sow)  cWeek++;
-      if (d >= sod)  cToday++;
+      if (t >= monthUTC) cMonth++;
+      if (t >= weekUTC)  cWeek++;
+      if (t >= todayUTC) cToday++;
     }
     const map = { all: cAll, month: cMonth, week: cWeek, today: cToday };
     for (const [p, count] of Object.entries(map)) {
