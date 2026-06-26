@@ -6,6 +6,7 @@
 class NewsManager {
   constructor() {
     this.allArticles = [];
+    this._baseArticles = []; // always period=all, used for counts
     this.category    = 'all';
     this.timeFilter  = 'all';   // today | week | month | all
     this.sortBy      = 'date';
@@ -18,18 +19,19 @@ class NewsManager {
 
   async init() {
     await this.fetch('all', '', 'all');
+    this._baseArticles = [...this.allArticles]; // snapshot of all articles for counting
     this._loadPeriodCounts();
   }
 
   _loadPeriodCounts() {
-    // Count client-side so today ⊆ week ⊆ month ⊆ all is always consistent
+    // Always count from _baseArticles (period=all) so today ⊆ week ⊆ month ⊆ all
     const now = new Date();
     const sod = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const sow = new Date(sod); sow.setDate(sod.getDate() - sod.getDay());
     const som = new Date(now.getFullYear(), now.getMonth(), 1);
 
     let cAll = 0, cMonth = 0, cWeek = 0, cToday = 0;
-    for (const a of this.allArticles) {
+    for (const a of this._baseArticles) {
       const d = new Date(a.published_at || 0);
       cAll++;
       if (d >= som)  cMonth++;
