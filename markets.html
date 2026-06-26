@@ -140,47 +140,78 @@
 .cstat-lbl { font-family:var(--font-mono); font-size:.58rem; letter-spacing:.1em; text-transform:uppercase; color:var(--text-muted); margin-bottom:3px; }
 .cstat-val { font-family:var(--font-mono); font-size:.9rem; font-weight:500; }
 
+@media (min-width:769px){
+  .side-section > summary{ cursor:default; }
+  .side-section > summary::-webkit-details-marker{ display:none; }
+  .side-section:not([open]) > div{ display:block !important; }
+}
+
 @media (max-width:768px){
-  /* KPI strip → horizontal swipe row instead of cramped 2-col grid */
+  body{ -webkit-tap-highlight-color:transparent; }
+
+  /* KPI strip → 2x2 hero grid, each metric gets breathing room + an accent */
   .kpi-strip{
-    display:flex!important; grid-template-columns:none!important;
-    overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none;
-    gap:1px; background:var(--border-dim);
+    display:grid!important; grid-template-columns:1fr 1fr!important;
+    gap:8px!important; background:transparent!important;
+    padding:10px 10px 4px;
   }
-  .kpi-strip::-webkit-scrollbar{display:none}
-  .kpi-cell{flex:0 0 auto; min-width:122px; padding:9px 12px}
+  .kpi-cell{
+    position:relative; min-width:0; padding:12px 14px 11px;
+    background:var(--bg-surface); border:1px solid var(--border-soft);
+    border-radius:var(--radius-lg); overflow:hidden;
+  }
+  .kpi-cell::before{
+    content:''; position:absolute; left:0; top:0; bottom:0; width:3px;
+    background:var(--amber); opacity:.7;
+  }
+  .kpi-cell:nth-child(2)::before{ background:var(--green); }
+  .kpi-cell:nth-child(3)::before{ background:var(--red); }
+  .kpi-cell:nth-child(4)::before{ background:var(--amber); }
+  .kpi-cell:nth-child(5)::before{ background:var(--text-secondary); }
+  .kc-label{ font-size:.56rem; }
+  .kc-value{ font-size:1.15rem; margin-top:1px; }
 
   /* Toolbar: search full width on its own row, buttons share a row */
-  .mkts-toolbar{padding:8px 10px; gap:8px}
-  .mkts-toolbar .chip-row{overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch;flex:1 1 100%;order:1}
-  .mkts-toolbar .search-bar{width:100%!important;flex:1 1 100%;order:2}
-  .mkts-toolbar > .btn{flex:1 1 auto;order:3;min-height:38px}
+  .mkts-toolbar{padding:10px 10px 8px; gap:8px}
+  .mkts-toolbar .chip-row{overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch;flex:1 1 100%;order:1;scrollbar-width:none}
+  .mkts-toolbar .chip-row::-webkit-scrollbar{display:none}
+  .mkts-toolbar .chip{flex:0 0 auto;border-radius:20px}
+  .mkts-toolbar .search-bar{width:100%!important;flex:1 1 100%;order:2;border-radius:20px}
+  .mkts-toolbar > .btn{flex:1 1 auto;order:3;min-height:40px;border-radius:10px}
   .mkts-toolbar > span{display:none}
 
-  /* Table → stacked cards, no horizontal scrolling */
-  .mkts-table-wrap{overflow-x:visible;padding:8px}
+  /* Table → tappable cards with direction accent + bigger touch targets */
+  .mkts-table-wrap{overflow-x:visible;padding:6px 10px 10px}
   .mkts-table{min-width:0;width:100%;display:block;border-collapse:separate}
   .mkts-table thead{display:none}
-  .mkts-table tbody{display:block}
+  .mkts-table tbody{display:flex;flex-direction:column;gap:8px}
   .mkts-table tr.mrow{
     display:grid;
     grid-template-columns:1fr auto;
     grid-template-areas:"asset fav" "price chg";
-    column-gap:10px; row-gap:6px;
-    padding:12px;
-    margin-bottom:8px;
+    column-gap:10px; row-gap:8px;
+    padding:13px 13px 13px 16px;
     background:var(--bg-surface);
     border:1px solid var(--border-soft);
-    border-radius:var(--radius);
+    border-left:3px solid var(--border-mid);
+    border-radius:var(--radius-lg);
+    transition:transform .12s ease, border-color .15s ease, background .15s ease;
   }
+  .mkts-table tr.mrow:active{ transform:scale(.98); background:var(--bg-raised); }
+  .mkts-table tr.mrow:has(.chg-up){ border-left-color:var(--green); }
+  .mkts-table tr.mrow:has(.chg-down){ border-left-color:var(--red); }
   .mkts-table tr.mrow:hover td{background:transparent}
   .mkts-table td{padding:0;border:none;white-space:normal;overflow:visible;font-size:.8rem}
   .mkts-table td:nth-child(1){display:none}
   .mkts-table td:nth-child(2){grid-area:asset;text-align:left}
-  .mkts-table td:nth-child(2) .asset-name{max-width:none}
-  .mkts-table td:nth-child(3){grid-area:price;text-align:left}
-  .mkts-table td:nth-child(3) .price-val{font-size:.95rem}
-  .mkts-table td:nth-child(4){grid-area:chg;text-align:right;align-self:start}
+  .mkts-table td:nth-child(2) .asset-name{max-width:none;font-size:.85rem}
+  .mkts-table td:nth-child(2) .asset-ico{width:34px;height:34px}
+  .mkts-table td:nth-child(3){grid-area:price;text-align:left;align-self:end}
+  .mkts-table td:nth-child(3) .price-val{font-size:1.02rem}
+  .mkts-table td:nth-child(4){grid-area:chg;text-align:right;align-self:center}
+  .mkts-table td:nth-child(4) .chg-up,
+  .mkts-table td:nth-child(4) .chg-down,
+  .mkts-table td:nth-child(4) .chg-neu{ font-size:.78rem; padding:4px 9px; border-radius:20px; }
   .mkts-table td:nth-child(5),
   .mkts-table td:nth-child(6),
   .mkts-table td:nth-child(7),
@@ -188,19 +219,33 @@
   .mkts-table td:nth-child(9){grid-area:fav;justify-self:end;align-self:start}
   .fav-btn,.compare-col-btn{min-width:36px;min-height:36px;padding:6px;font-size:1.05rem}
 
-  /* Sidebar: single clean column, no fake sticky */
+  /* Sidebar → collapsible accordions, only Fear & Greed open by default */
   .mkts-side{
     position:static!important;max-height:none!important;overflow:visible!important;
     border-left:none!important;border-top:1px solid var(--border-dim);
-    display:flex!important;flex-direction:column!important;gap:0;padding:0
+    display:flex!important;flex-direction:column!important;gap:8px;padding:10px
   }
-  .side-section{border-bottom:1px solid var(--border-dim)}
+  .side-section{
+    border:1px solid var(--border-soft); border-bottom:1px solid var(--border-soft)!important;
+    border-radius:var(--radius-lg); overflow:hidden; background:var(--bg-surface);
+  }
+  .side-section > summary{
+    list-style:none; cursor:pointer; display:flex; align-items:center;
+    justify-content:space-between;
+  }
+  .side-section > summary::-webkit-details-marker{ display:none; }
+  .side-section .side-head{ margin:0; border:none; flex:1; }
+  .side-section > summary::after{
+    content:'\f282'; font-family:'bootstrap-icons'; font-size:.65rem;
+    color:var(--text-muted); padding-right:12px; transition:transform .2s ease;
+  }
+  .side-section[open] > summary::after{ transform:rotate(180deg); }
   .hm-sm{grid-template-columns:repeat(4,1fr)!important}
 }
 
 @media (max-width:420px){
   .hm-sm{grid-template-columns:repeat(3,1fr)!important}
-  .kpi-cell{min-width:108px}
+  .kpi-strip{grid-template-columns:1fr 1fr!important}
 }
 </style>
 </head>
@@ -316,8 +361,8 @@
   <!-- SIDEBAR -->
   <div class="mkts-side">
     <!-- Fear & Greed -->
-    <div class="side-section">
-      <div class="side-head">FEAR & GREED INDEX</div>
+    <details class="side-section" open>
+      <summary><div class="side-head">FEAR & GREED INDEX</div></summary>
       <div class="side-body">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
           <div style="font-family:var(--font-mono);font-size:1.8rem;font-weight:700" id="fgVal">—</div>
@@ -329,33 +374,33 @@
         <div class="fg-bar"><div class="fg-indicator" id="fgInd" style="left:50%"></div></div>
         <div class="fg-scale"><span>EXTREME FEAR</span><span>NEUTRAL</span><span>EXTREME GREED</span></div>
       </div>
-    </div>
+    </details>
 
     <!-- Heatmap -->
-    <div class="side-section">
-      <div class="side-head">CRYPTO HEATMAP</div>
+    <details class="side-section">
+      <summary><div class="side-head">CRYPTO HEATMAP</div></summary>
       <div class="side-body">
         <div class="hm-sm" id="sideHeatmap"></div>
       </div>
-    </div>
+    </details>
 
     <!-- Favorites -->
-    <div class="side-section">
-      <div class="side-head">MY WATCHLIST ⭐</div>
+    <details class="side-section">
+      <summary><div class="side-head">MY WATCHLIST ⭐</div></summary>
       <div class="side-body" id="sideFavorites">
         <div style="color:var(--text-muted);font-family:var(--font-mono);font-size:.65rem;text-align:center;padding:12px 0">
           CLICK ☆ TO ADD
         </div>
       </div>
-    </div>
+    </details>
 
     <!-- Top movers -->
-    <div class="side-section">
-      <div class="side-head">TOP MOVERS</div>
+    <details class="side-section">
+      <summary><div class="side-head">TOP MOVERS</div></summary>
       <div class="side-body" id="sideMovers">
         <div style="color:var(--text-muted);font-family:var(--font-mono);font-size:.65rem">LOADING...</div>
       </div>
-    </div>
+    </details>
   </div>
 </div>
 
