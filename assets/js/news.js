@@ -19,35 +19,25 @@ class NewsManager {
 
   async init() {
     await this.fetch('all', '', 'all');
-    this._baseArticles = [...this.allArticles];
-    this._loadPeriodCounts();
   }
 
   _loadPeriodCounts() {
-    // DEBUG — open browser console to see values
     const now = new Date();
     const todayUTC = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
     const weekUTC  = todayUTC - 7  * 86400000;
     const monthUTC = todayUTC - 30 * 86400000;
 
     const src = this._baseArticles || this.allArticles;
-    console.log('[NewsCount] total articles:', src.length);
-    if (src.length > 0) {
-      console.log('[NewsCount] sample published_at:', src[0].published_at, src[1]?.published_at);
-      console.log('[NewsCount] todayUTC:', new Date(todayUTC).toISOString());
-      console.log('[NewsCount] newest article UTC:', new Date(src[0].published_at).toISOString());
-    }
 
     let cAll = 0, cMonth = 0, cWeek = 0, cToday = 0;
     for (const a of src) {
       const t = new Date(a.published_at || 0).getTime();
-      if (isNaN(t)) { console.warn('[NewsCount] bad date:', a.published_at); continue; }
+      if (isNaN(t)) continue;
       cAll++;
       if (t >= monthUTC) cMonth++;
       if (t >= weekUTC)  cWeek++;
       if (t >= todayUTC) cToday++;
     }
-    console.log('[NewsCount] all:', cAll, 'month:', cMonth, 'week:', cWeek, 'today:', cToday);
 
     const map = { all: cAll, month: cMonth, week: cWeek, today: cToday };
     for (const [p, count] of Object.entries(map)) {
@@ -71,8 +61,33 @@ class NewsManager {
       this.allArticles = articles;
       this._buildCarousel();
       this.render();
+
+      // Keep the period-count baseline in sync with the CURRENT
+      // category/query, not just the very first load.
+      if (p === 'all') {
+        this._baseArticles = articles;
+        this._loadPeriodCounts();
+      } else {
+        this._refreshBaseCounts(category, q);
+      }
     } catch(e) {
       this._showError(e.message);
+    }
+  }
+
+  async _refreshBaseCounts(category, q) {
+    try {
+      let url = `${window.apiClient.base}/api/news?category=${category}&period=all`;
+      if (q) url += `&q=${encodeURIComponent(q)}`;
+      const res = await fetch(url);
+      if (!res.ok) return;
+      const articles = await res.json();
+      if (Array.isArray(articles)) {
+        this._baseArticles = articles;
+        this._loadPeriodCounts();
+      }
+    } catch (e) {
+      console.warn('[NewsCount] failed to refresh base counts', e);
     }
   }
 
@@ -210,7 +225,8 @@ class NewsManager {
   }
 
   _updateTimeCounts() {
-    this._loadPeriodCounts();
+    // Counts are now refreshed directly in fetch()/_refreshBaseCounts()
+    // whenever the category/query changes — no need to recompute here.
   }
 
   loadMore() { this.page++; this.render(); Toast.show('MORE ARTICLES LOADED'); }
