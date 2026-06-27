@@ -22,10 +22,14 @@ class NewsManager {
   }
 
   _loadPeriodCounts() {
-    const now = new Date();
-    const todayUTC = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
-    const weekUTC  = todayUTC - 7  * 86400000;
-    const monthUTC = todayUTC - 30 * 86400000;
+    const now      = Date.now();
+    // Match the backend's lenient windows (see main.py /api/news):
+    // "today" = last 48h, "week" = last 7d, "month"/"all" = last 30d.
+    // Using strict calendar-midnight UTC here under-counts "today" because
+    // NewsAPI articles often lag 24-48h on the free tier.
+    const todayWin = now - 48 * 3600000;
+    const weekWin  = now - 7  * 86400000;
+    const monthWin = now - 30 * 86400000;
 
     const src = this._baseArticles || this.allArticles;
 
@@ -34,9 +38,9 @@ class NewsManager {
       const t = new Date(a.published_at || 0).getTime();
       if (isNaN(t)) continue;
       cAll++;
-      if (t >= monthUTC) cMonth++;
-      if (t >= weekUTC)  cWeek++;
-      if (t >= todayUTC) cToday++;
+      if (t >= monthWin) cMonth++;
+      if (t >= weekWin)  cWeek++;
+      if (t >= todayWin) cToday++;
     }
 
     const map = { all: cAll, month: cMonth, week: cWeek, today: cToday };
