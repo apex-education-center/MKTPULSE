@@ -440,6 +440,7 @@ window.loadFearGreed = async function () {
     const cur = data.current || {};
     const val = parseInt(cur.value || 50, 10);
     const label = cur.value_classification || 'Neutral';
+    window.MP_FEAR_GREED = val; // consumed by cursor-fx.js
     const color = window.FG_COLORS[label] || 'var(--amber)';
 
     // Terminal (index.html)
