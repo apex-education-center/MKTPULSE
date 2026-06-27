@@ -226,7 +226,6 @@ marketpulse/
 │       ├── features.js      # 10 bonus features (shortcuts, alerts, compare…)
 │       ├── alerts.js        # PriceAlertManager — browser + Telegram
 │       ├── asset-detail.js  # AssetDetailModal — chart, news, calendar, videos
-│       ├── cursor-fx.js     # Terminal crosshair cursor + click particles
 │       ├── export.js        # Excel/CSV export helpers (SheetJS)
 │       ├── pdf-report.js    # Daily PDF market summary (jsPDF)
 │       └── theme-boot.js    # Synchronous theme restore (runs in <head>)
