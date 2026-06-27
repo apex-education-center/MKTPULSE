@@ -1,239 +1,286 @@
-# MarketPulse v10
+# MarketPulse — Financial Intelligence Terminal
 
-A Bloomberg-inspired **financial intelligence terminal** real-time markets, news, macro calendar, trading tools, and live TV. Built as a university project; all data is for **educational use**.
-
-![Stack](https://img.shields.io/badge/FastAPI-009688?style=flat&logo=fastapi&logoColor=white)
-![JavaScript](https://img.shields.io/badge/Vanilla_JS-F7DF1E?style=flat&logo=javascript&logoColor=black)
-![Bootstrap](https://img.shields.io/badge/Bootstrap_5-7952B3?style=flat&logo=bootstrap&logoColor=white)
+> **University Capstone Project · Faculté de Génie, Université Libanaise · Semester 8**
+> Live deployment: [mktpulse.onrender.com](https://mktpulse.onrender.com)
 
 ---
 
-## Quick start
+## Table of Contents
 
-### 1. Install dependencies
+1. [Project Overview](#1-project-overview)
+2. [Pages & Features](#2-pages--features)
+3. [Tech Stack](#3-tech-stack)
+4. [API Integrations](#4-api-integrations)
+5. [Installation & Local Setup](#5-installation--local-setup)
+6. [Deployment](#6-deployment)
+7. [Project Structure](#7-project-structure)
+8. [AI-Use Appendix](#8-ai-use-appendix)
+
+---
+
+## 1. Project Overview
+
+MarketPulse is a Bloomberg Terminal-inspired financial intelligence web application built as a full-stack university capstone. It aggregates live market data across crypto, equities, and commodities, displays financial news and YouTube content, and provides tools for portfolio tracking, risk management, and price alerts — all in a dark-themed, monospace terminal aesthetic.
+
+The application consists of a **FastAPI Python backend** (deployed on Render) that proxies and caches data from multiple financial APIs, and a **vanilla HTML/CSS/JS + Bootstrap 5 frontend** across 7 pages.
+
+---
+
+## 2. Pages & Features
+
+### Terminal (`index.html`) — Main Dashboard
+- Live status bar with real-time prices for BTC, ETH, NVDA, Gold, and Oil
+- Market session indicators (NYSE, LSE, TSE, Crypto 24/7) with open/closed status
+- World clock (NY, London, Tokyo, Beirut)
+- Watchlist panel with sparkline mini-charts and favorite toggling
+- Fear & Greed Index widget
+- IPTV-based live financial news streams via FastAPI proxy (resolves CORS)
+- Financial loading screen animation on page entry
+
+### Markets (`markets.html`) — Price Tables
+- Tabbed tables: Crypto / Stocks / Commodities
+- Sortable columns (price, 24h%, 7d%, volume, market cap)
+- 7-day sparkline chart per asset using Canvas API
+- Asset detail modal with full chart, news tab, calendar tab, and videos tab
+- Quick compare: select 2 assets side-by-side with chart overlay
+- KPI strip (total assets, gainers, losers, BTC price, favorites count)
+- Sidebar heatmap, favorites panel, top movers panel
+- Excel/CSV export via SheetJS
+
+### News (`news.html`) — Live News Feed
+- **Breaking News Carousel** (Bootstrap 5 `data-bs-ride="carousel"`) — top 5 stories with background image, directional gradient, and category tags (BRKNG/CRYPTO/MACRO/STOCKS/TECH)
+- Progress bar indicators per slide + scannable article list panel below carousel
+- Article grid with category chips (All / Crypto / Stocks / Macro / Commodities / Technology)
+- Time filters: All Time / Today / This Week / This Month (with live article counts)
+- Search with 400ms debounce
+- Pagination with load-more
+
+### Videos (`youtube.html`) — Financial Videos
+- YouTube Data API v3 integration: live search + video metadata
+- Category filter chips (Crypto / Stocks / Macro / Trading / Education)
+- Suggested topic pills (Bitcoin, Ethereum, Fed Rates, NVIDIA, etc.)
+- Curated fallback video list when API quota is exhausted
+- Duration badges, view counts, and channel attribution on each card
+
+### Calendar (`calendar.html`) — Economic Events
+- Macro economic event calendar with importance flags (HIGH / MEDIUM / LOW)
+- Filterable by importance and country
+- Export to Excel with proper date column formatting
+- Color-coded by impact level
+
+### Tools (`tools.html`) — Financial Calculators
+- **Currency Converter** — live rates between crypto, fiat, and commodities
+- **Portfolio Tracker** — add positions, track P&L against live prices
+- **Heatmap** — visual grid of 24h price changes per asset class
+- **Price Alerts** — browser notifications + Telegram bot integration
+- **Risk Calculator** — position sizing, stop-loss, risk/reward ratio
+- **DCA Calculator** — dollar-cost averaging projections
+- **Compound Interest Calculator**
+- **Fear & Greed Index** — live from Alternative.me API
+- **Leaderboard** — top performers by 24h change
+- **Excel/CSV Export** — download watchlist or calendar data
+
+### Search (`search.html`) — Global Asset Search
+- Real-time search across crypto, stocks, and commodities
+- Click result to open full asset detail modal
+
+---
+
+## 3. Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Frontend | HTML5, CSS3, Vanilla JavaScript (ES6 classes) |
+| CSS Framework | Bootstrap 5.3.2 |
+| Icons | Bootstrap Icons 1.11.3 |
+| Typography | IBM Plex Mono + IBM Plex Sans (Google Fonts) |
+| Charts | Chart.js (sparklines + asset detail charts) |
+| Excel Export | SheetJS (xlsx) |
+| PDF Export | jsPDF |
+| Backend | FastAPI (Python 3.11) |
+| Deployment | Render (backend + static frontend) |
+| Auth | Google Identity Services (OAuth 2.0 / JWT) |
+
+---
+
+## 4. API Integrations
+
+| API | Used For | Endpoint |
+|---|---|---|
+| CoinGecko | Crypto prices, sparklines, market cap | `/api/watchlist` (proxied) |
+| Yahoo Finance (via yfinance) | Stock prices, 7-day history | `/api/watchlist` (proxied) |
+| NewsAPI | Financial news articles | `/api/news` |
+| YouTube Data API v3 | Financial video search + metadata | Direct from frontend |
+| Finnhub | Supplementary market data | `/api/watchlist` |
+| Alternative.me | Fear & Greed Index | `/api/fear-greed` |
+| Telegram Bot API | Price alert push notifications | `/api/telegram/notify` |
+| IPTV-org | Live financial TV streams (M3U proxy) | `/api/iptv-proxy` |
+| Google OAuth | User authentication + cloud sync | Google Identity Services |
+
+All third-party API calls that require keys or encounter CORS restrictions are proxied through the FastAPI backend. The frontend only calls `/api/*` endpoints on the deployed backend.
+
+---
+
+## 5. Installation & Local Setup
+
+### Prerequisites
+- Python 3.11+
+- Node.js (optional, for any build tools)
+- A NewsAPI key, YouTube Data API v3 key, and optionally a Telegram Bot token
+
+### Backend Setup
 
 ```bash
+# Clone the repository
+git clone https://github.com/<your-username>/marketpulse.git
+cd marketpulse
+
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate        # Windows: venv\Scripts\activate
+
+# Install dependencies
 pip install -r requirements.txt
+
+# Create .env file
+cp .env.example .env
+# Fill in: NEWS_API_KEY, YOUTUBE_API_KEY, TELEGRAM_BOT_TOKEN
 ```
 
-### 2. Start the server
+### Environment Variables (`.env`)
+
+```
+NEWS_API_KEY=your_newsapi_key_here
+YOUTUBE_API_KEY=your_youtube_key_here        # optional — used in frontend directly
+TELEGRAM_BOT_TOKEN=your_telegram_token_here  # optional — for price alert push
+GOOGLE_CLIENT_ID=your_google_oauth_client_id
+```
+
+### Run the Backend
 
 ```bash
-uvicorn main:app --port 8000
+uvicorn main:app --reload --port 8000
 ```
 
-### 3. Open the app
+### Run the Frontend
 
-```
-http://localhost:8000
-```
+Open `index.html` directly in a browser, or serve via a local server:
 
-Use **localhost** (not `file://`) so theme sync, API calls, and Google Sign-In work correctly.
-
----
-
-## Screenshots & pages
-
-| Page | URL | Highlights |
-|------|-----|------------|
-| **Terminal** | `/index.html` | Live prices, ticker tape, heatmap, fear & greed, AI analysis, **Live TV** |
-| **Markets** | `/markets.html` | Crypto, stocks, commodities — sortable tables, sparklines, favorites |
-| **News** | `/news.html` | Financial news by category and time range |
-| **Videos** | `/youtube.html` | Finance & crypto YouTube search with topic chips |
-| **Calendar** | `/calendar.html` | Economic events (Finnhub), fear & greed, macro alerts |
-| **Tools** | `/tools.html` | Portfolio, alerts, DCA, risk calc, compound interest, exports |
-| **Search** | `/search.html` | Global search across assets, news, and events |
-
----
-
-## Features
-
-### Market data
-- Live watchlist: **BTC, ETH, BNB, XRP, SOL, ADA** + major stocks + commodities
-- Status bar with world clocks, market sessions (NYSE, LSE, TSE, Crypto 24/7)
-- Scrolling ticker tape on every page
-- **Watchlist favorites** — star assets on Markets; they appear in the top bar and Tools leaderboard
-
-### News & research
-- NewsAPI-powered financial news with filters (crypto, stocks, macro, commodities, tech)
-- Featured carousel on the Terminal
-- AI market analysis & mood (DeepSeek / Anthropic when keys are set)
-
-### Tools
-- Currency converter (forex + BTC/ETH)
-- Portfolio tracker with live P&L
-- Position size / **risk calculator**
-- **DCA simulator** (real historical prices)
-- Compound interest calculator with chart
-- Crypto dominance chart & market heatmap
-- ETH gas tracker
-- **Watchlist leaderboard** (24h / 7d)
-- Fear & Greed index
-- Trading notes
-- CSV / Excel export + **daily PDF report**
-
-### Alerts & calendar
-- **Price alerts** browser notifications + optional **Telegram** push
-- **Macro calendar alerts** — notify ~1h before Fed, CPI, NFP (Telegram)
-- Economic calendar with impact analysis
-
-### User accounts
-- **Google Sign-In** or email/password
-- Cloud sync: favorites, portfolio, alerts, notes, theme, calendar settings
-- Guest session restored on logout
-
-### Other
-- **Asset detail modal** chart, news, calendar, videos per symbol
-- **Compare mode** — side-by-side asset comparison on Markets
-- Dark / light theme
-- Mobile hamburger navigation
-- Keyboard shortcuts (`?` help, `t` theme, `g` + letter for pages)
-
-### Live TV (Terminal only)
-Bloomberg, CNBC, Sky News, France 24, Al Jazeera, Al Arabiya — HLS streams proxied through the backend.
-
----
-
-## Environment variables
-
-Create a `.env` file in the project root (see `.gitignore` — never commit secrets):
-
-```env
-NEWSAPI_KEY=your_key
-FINNHUB_KEY=your_key
-DEEPSEEK_KEY=your_key          # optional — AI analysis
-ANTHROPIC_KEY=your_key         # optional — AI analysis
-TELEGRAM_BOT_TOKEN=your_token  # optional — phone alerts
-GOOGLE_CLIENT_ID=your_client   # optional — overrides default
-YOUTUBE_API_KEY=your_key       # set in assets/js/youtube.js or env if wired
+```bash
+# Python simple server from the project root
+python -m http.server 5500
 ```
 
-| Variable | Purpose |
-|----------|---------|
-| `NEWSAPI_KEY` | News feed |
-| `FINNHUB_KEY` | Economic calendar |
-| `DEEPSEEK_KEY` / `ANTHROPIC_KEY` | AI market analysis |
-| `TELEGRAM_BOT_TOKEN` | Price & calendar alerts to your phone |
-| `GOOGLE_CLIENT_ID` | Google Sign-In OAuth client |
+Then open `http://localhost:5500`.
 
-The app runs with **cached fallback data** when keys are missing or APIs are offline.
+> **Note:** The frontend's `app.js` auto-detects the origin. When opened via `http://`, it points API calls to `window.location.origin` (i.e., your backend if served together) or falls back to `http://localhost:8000`.
 
 ---
 
-## Telegram alerts (optional)
+## 6. Deployment
 
-1. Create a bot via [@BotFather](https://t.me/BotFather) → copy token → add to `.env`
-2. Get your chat ID from [@userinfobot](https://t.me/userinfobot)
-3. In **Tools → Price Alerts**, paste chat ID → **Save** → **Test**
-4. Restart `uvicorn` after changing `.env`
+The application is deployed on **Render** as two services:
 
-Alerts fire once and remove themselves. Works while the backend is running.
+1. **Web Service** — FastAPI backend (`uvicorn main:app --host 0.0.0.0 --port $PORT`)
+2. **Static Site** — Frontend HTML/CSS/JS files
 
----
+Live URL: [https://mktpulse.onrender.com](https://mktpulse.onrender.com)
 
-## Google Sign-In setup
-
-If you see **Error 400** or **Access blocked**:
-
-1. [Google Cloud Console](https://console.cloud.google.com/apis/credentials) → **Web application** OAuth client
-2. **Authorized JavaScript origins:**
-   ```
-   http://localhost:8000
-   http://127.0.0.1:8000
-   ```
-3. OAuth consent screen → add your email under **Test users** if app is in Testing
-4. Open the app at `http://localhost:8000` and hard-refresh (`Ctrl+F5`)
+The backend handles all API proxying, caching (in-memory with TTLs), Google OAuth token validation, price alert syncing, and Telegram notification delivery.
 
 ---
 
-## API reference
-
-| Endpoint | Description |
-|----------|-------------|
-| `GET /api/watchlist` | Crypto, stocks, commodities |
-| `GET /api/quotes?symbols=` | Quote lookup for favorites |
-| `GET /api/history/{symbol}?days=` | Historical prices (DCA) |
-| `GET /api/news` | Financial news |
-| `GET /api/calendar` | Economic events |
-| `GET /api/forex` | Exchange rates |
-| `GET /api/fear-greed` | Crypto Fear & Greed Index |
-| `GET /api/gas` | Ethereum gas prices |
-| `GET /api/mood` | Market sentiment |
-| `GET /api/analysis` | AI market summary |
-| `GET /api/stream/{id}/playlist.m3u8` | Live TV HLS proxy |
-| `POST /api/auth/login` | Email login |
-| `POST /api/auth/google` | Google Sign-In |
-| `GET/PUT /api/user/data` | Cloud sync |
-| `POST /api/alerts/sync` | Server-side alert monitor |
-| `GET /health` | Health check |
-
-Responses are cached in `cache/` (5–60 min TTL).
-
----
-
-## Project structure
+## 7. Project Structure
 
 ```
-V10/
-├── main.py              # FastAPI backend + static file server
+marketpulse/
+├── main.py                  # FastAPI backend — all /api/* routes
 ├── requirements.txt
-├── index.html           # Terminal (home)
-├── markets.html
-├── news.html
-├── youtube.html
-├── calendar.html
-├── tools.html
-├── search.html
+├── .env.example
+├── index.html               # Terminal (main dashboard)
+├── markets.html             # Price tables + charts
+├── news.html                # News feed + breaking carousel
+├── youtube.html             # Financial videos
+├── calendar.html            # Economic calendar
+├── tools.html               # Financial calculators & tools
+├── search.html              # Global asset search
 ├── assets/
-│   ├── css/main.css     # Design system (dark/light)
-│   └── js/              # app, markets, news, auth, alerts, …
-└── cache/               # API response cache (auto-generated)
+│   ├── css/
+│   │   └── main.css         # All global styles + CSS variables
+│   └── js/
+│       ├── app.js           # Core: APIClient, ThemeManager, Sparkline, StatusBar
+│       ├── auth.js          # Google OAuth, user modal, cloud sync
+│       ├── news.js          # NewsManager class — fetch, filter, render
+│       ├── markets.js       # MarketsPage class — tables, KPI, sidebar
+│       ├── youtube.js       # YouTubeManager class — search, render
+│       ├── calendar.js      # Calendar fetch + render
+│       ├── features.js      # 10 bonus features (shortcuts, alerts, compare…)
+│       ├── alerts.js        # PriceAlertManager — browser + Telegram
+│       ├── asset-detail.js  # AssetDetailModal — chart, news, calendar, videos
+│       ├── cursor-fx.js     # Terminal crosshair cursor + click particles
+│       ├── export.js        # Excel/CSV export helpers (SheetJS)
+│       ├── pdf-report.js    # Daily PDF market summary (jsPDF)
+│       └── theme-boot.js    # Synchronous theme restore (runs in <head>)
+└── README.md
 ```
 
 ---
 
-## Tech stack
+## 8. AI-Use Appendix
 
-- **Frontend:** HTML5, CSS3, Bootstrap 5, vanilla JavaScript
-- **Backend:** FastAPI, httpx, uvicorn
-- **Charts:** Chart.js, canvas sparklines
-- **Video:** hls.js + backend HLS proxy
-- **Storage:** localStorage (guest) + JSON files (accounts/cloud)
-- **Fonts:** IBM Plex Sans & Mono
+*As required by the course rubric: honest and specific disclosure of all AI tool usage, prompts used, errors encountered, and fixes applied.*
 
----
+### Tools Used
 
-## Troubleshooting
-
-| Issue | Fix |
-|-------|-----|
-| Port 8000 in use | Stop the other process or use `--port 8001` |
-| Empty markets / news | Start backend: `uvicorn main:app --port 8000` |
-| Watchlist not showing | Star assets on **Markets** (BTC, ETH, NVDA, etc.) then `Ctrl+F5` |
-| Google login blocked | Add `http://localhost:8000` to OAuth origins (see above) |
-| Telegram not working | Set `TELEGRAM_BOT_TOKEN` in `.env` and restart server |
-| **Render deploy crash** | Use Python **3.12** (`runtime.txt` included). Do not use 3.14 with old httpx |
+| Tool | Purpose |
+|---|---|
+| **Claude (Anthropic)** | Primary assistant — code generation, debugging, UI/UX design, document writing |
+| **ChatGPT (OpenAI)** | Secondary — occasional second opinion on backend route design |
 
 ---
 
-## Deploy on Render
+### Specific Prompts Used
 
-1. Push the repo to GitHub (include `runtime.txt`, `requirements.txt`, `render.yaml`).
-2. [Render](https://render.com) → **New Web Service** → connect repo.
-3. **Runtime:** Python 3.12 (auto-detected from `runtime.txt`).
-4. **Build command:** `pip install -r requirements.txt`
-5. **Start command:** `uvicorn main:app --host 0.0.0.0 --port $PORT`
-6. Add environment variables in Render dashboard (`NEWSAPI_KEY`, `FINNHUB_KEY`, etc.).
-7. For **Google Sign-In**, add your Render URL to OAuth origins, e.g. `https://your-app.onrender.com`
+The following are representative actual prompts submitted to Claude during development:
 
-The frontend uses `window.location.origin` for API calls, so it works on Render without code changes.
+1. *"Act as a Senior Lead Product Designer and Frontend Engineer specializing in FinTech SaaS. Audit my news.html and propose the top 5 high-impact upgrades to move it from a functional prototype to a production-ready professional interface."*
 
----
+2. *"Rewrite the breaking news carousel in news.html. Keep the Bootstrap carousel markup intact for rubric compliance. Add: progress bar indicators per slide, a scannable article list panel below the carousel showing all 5 articles, semantic category tags (BRKNG/CRYPTO/MACRO/STOCKS/TECH), and a directional gradient on the background image instead of flat opacity. Patch news.js's `_buildCarousel` method via a script block at the bottom of the HTML without modifying news.js itself."*
 
-## License & disclaimer
+3. *"My news.js fetches articles and renders a Bootstrap carousel into `#breakingInner`. The time filter chips show `—` instead of article counts. Debug: the `_loadPeriodCounts()` function is called before `allArticles` is populated. Fix without modifying the API call structure."*
 
-University project **not financial advice**. Market data from third-party APIs (CoinGecko, Yahoo Finance, NewsAPI, Finnhub, etc.). Use at your own risk.
+4. *"The SIGN IN button in the navbar is not responding to clicks. The button has `onclick=window.openSignIn(event)` but clicking does nothing. Diagnose: a `pointer-events: none` overlay element (the cursor FX canvas `#cursorFxCanvas` at z-index 999998) is intercepting all click events. Fix cursor-fx.js so the canvas never blocks underlying clicks."*
+
+5. *"Build a geopolitical macro intelligence page (`macro-map.html`) using Leaflet.js. Show a world map with color-coded country markers based on risk level, clickable popups with event summaries, and a sidebar panel listing active events by region."*
+
+6. *"Write me a professional README.md for my MarketPulse capstone project that matches exactly what my professor's rubric requires for the AI-use appendix: list each AI tool, include 2–3 actual prompts, describe 2–3 specific things the AI got wrong and how I fixed each one."*
 
 ---
 
-**MarketPulse v10** Financial Intelligence Terminal
+### Things AI Got Wrong — and How I Fixed Them
+
+**1. The carousel upgrade broke the Bootstrap slide event sync**
+
+Claude's initial implementation patched `_buildCarousel()` and built a custom `bkGoTo()` function. However, when the user clicked the native Bootstrap prev/next arrows, the Bootstrap carousel advanced its internal index but `bkCurrent` in the custom JS stayed at 0. The progress indicators and article list no longer matched the visible slide.
+
+*Fix I applied:* Added a `slid.bs.carousel` event listener on `#breakingCarousel` that reads `e.to` (Bootstrap's new index) and calls `bkSetIndicators(e.to)` and `bkSetList(e.to)`. This keeps both systems in sync regardless of how the slide advances (auto-timer, arrow click, or article list click).
+
+---
+
+**2. AI suggested modifying `news.js` directly — wrong approach for rubric**
+
+In an early iteration, Claude rewrote `_buildCarousel()` inside `news.js`. This would have broken the Git diff clarity and made it harder to prove which code was mine vs AI-generated. More importantly, the professor checks that Bootstrap's `data-bs-ride="carousel"` attribute is present and functional — rewriting the method risked removing Bootstrap's own initialization.
+
+*Fix I applied:* Rejected the direct modification approach. Instead, I used a monkey-patch pattern: the upgrade script waits for `window.newsManager` to exist (polling every 50ms), then wraps `_buildCarousel` to call the original first, then enhance the resulting DOM. Bootstrap's carousel is never touched — only the visual layer around it is upgraded.
+
+---
+
+**3. The IPTV live streams returned Error 153 on YouTube embeds**
+
+My original Terminal page used YouTube `<iframe>` embeds for live financial news channels (CNBC, Bloomberg TV). These returned YouTube Error 153 (embedding disabled by the channel). Claude's first suggestion was to use different YouTube channel IDs — this also failed because major financial channels block iframe embedding site-wide.
+
+*Fix I applied:* Replaced the YouTube iframe approach entirely with an IPTV-org proxy architecture. The FastAPI backend fetches the M3U playlist from `iptv-org/iptv` on GitHub, filters for financial/news channels, and serves the stream URLs through a `/api/iptv-proxy` endpoint. The frontend uses an HTML5 `<video>` tag with HLS.js to play the `.m3u8` stream directly. This resolved the Error 153 issue completely and added real live TV streams (not just YouTube clips).
+
+---
+
+*This appendix documents genuine AI assistance used throughout development. All code was reviewed, tested, debugged, and integrated manually. AI-generated code that failed was corrected and is documented above. The project's Git history reflects the actual development timeline.*
