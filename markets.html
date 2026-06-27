@@ -2,13 +2,13 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="assets/js/theme-boot.js?v=12"></script>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<script src="assets/js/theme-boot.js"></script>
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Markets — MarketPulse</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-<link href="assets/css/main.css?v=12" rel="stylesheet">
+<link href="assets/css/main.css" rel="stylesheet">
 <style>
 /* ── MARKETS LAYOUT ── */
 .mkts-layout { display:grid; grid-template-columns:1fr 240px; gap:1px; background:var(--border-dim); }
@@ -102,6 +102,7 @@
   padding:9px 14px; background:var(--bg-surface);
   border-bottom:1px solid var(--border-soft);
   display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  position:sticky; top:calc(var(--nav-h) + 36px); z-index:9;
 }
 
 /* ── SIDEBAR PANELS ── */
@@ -140,120 +141,22 @@
 .cstat-lbl { font-family:var(--font-mono); font-size:.58rem; letter-spacing:.1em; text-transform:uppercase; color:var(--text-muted); margin-bottom:3px; }
 .cstat-val { font-family:var(--font-mono); font-size:.9rem; font-weight:500; }
 
-@media (max-width:1000px){
-  .mkts-layout{ grid-template-columns:1fr; }
-  .mkts-side{
-    position:static; max-height:none; overflow:visible;
-    border-left:none; border-top:1px solid var(--border-dim);
-  }
+@media(max-width:1100px){ .mkts-layout{grid-template-columns:1fr}; .mkts-side{display:none} }
+@media(max-width:768px) {
+  .kpi-strip{grid-template-columns:repeat(3,1fr)}
+  /* Hide vol/mktcap/7d chart, keep rank(1) asset(2) price(3) 24h%(4) 7d%(5) fav(9) */
+  .mkts-table th:nth-child(6),.mkts-table td:nth-child(6),
+  .mkts-table th:nth-child(7),.mkts-table td:nth-child(7),
+  .mkts-table th:nth-child(8),.mkts-table td:nth-child(8){display:none}
+  .mkts-table th:nth-child(9),.mkts-table td:nth-child(9){display:table-cell!important}
 }
-
-@media (min-width:769px){
-  .side-section > summary{ cursor:default; }
-  .side-section > summary::-webkit-details-marker{ display:none; }
-  .side-section:not([open]) > div{ display:block !important; }
-}
-
-@media (max-width:768px){
-  body{ -webkit-tap-highlight-color:transparent; }
-
-  /* KPI strip → 2x2 hero grid, each metric gets breathing room + an accent */
-  .kpi-strip{
-    display:grid!important; grid-template-columns:1fr 1fr!important;
-    gap:8px!important; background:transparent!important;
-    padding:10px 10px 4px;
-  }
-  .kpi-cell{
-    position:relative; min-width:0; padding:12px 14px 11px;
-    background:var(--bg-surface); border:1px solid var(--border-soft);
-    border-radius:var(--radius-lg); overflow:hidden;
-  }
-  .kpi-cell::before{
-    content:''; position:absolute; left:0; top:0; bottom:0; width:3px;
-    background:var(--amber); opacity:.7;
-  }
-  .kpi-cell:nth-child(2)::before{ background:var(--green); }
-  .kpi-cell:nth-child(3)::before{ background:var(--red); }
-  .kpi-cell:nth-child(4)::before{ background:var(--amber); }
-  .kpi-cell:nth-child(5)::before{ background:var(--text-secondary); }
-  .kc-label{ font-size:.56rem; }
-  .kc-value{ font-size:1.15rem; margin-top:1px; }
-
-  /* Toolbar: search full width on its own row, buttons share a row */
-  .mkts-toolbar{padding:10px 10px 8px; gap:8px}
-  .mkts-toolbar .chip-row{overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch;flex:1 1 100%;order:1;scrollbar-width:none}
-  .mkts-toolbar .chip-row::-webkit-scrollbar{display:none}
-  .mkts-toolbar .chip{flex:0 0 auto;border-radius:20px}
-  .mkts-toolbar .search-bar{width:100%!important;flex:1 1 100%;order:2;border-radius:20px}
-  .mkts-toolbar > .btn{flex:1 1 auto;order:3;min-height:40px;border-radius:10px}
-  .mkts-toolbar > span{display:none}
-
-  /* Table → tappable cards with direction accent + bigger touch targets */
-  .mkts-table-wrap{overflow-x:visible;padding:6px 10px 10px}
-  .mkts-table{min-width:0;width:100%;display:block;border-collapse:separate}
-  .mkts-table thead{display:none}
-  .mkts-table tbody{display:flex;flex-direction:column;gap:8px}
-  .mkts-table tr.mrow{
-    display:grid;
-    grid-template-columns:1fr auto;
-    grid-template-areas:"asset fav" "price chg";
-    column-gap:10px; row-gap:8px;
-    padding:13px 13px 13px 16px;
-    background:var(--bg-surface);
-    border:1px solid var(--border-soft);
-    border-left:3px solid var(--border-mid);
-    border-radius:var(--radius-lg);
-    transition:transform .12s ease, border-color .15s ease, background .15s ease;
-  }
-  .mkts-table tr.mrow:active{ transform:scale(.98); background:var(--bg-raised); }
-  .mkts-table tr.mrow:has(.chg-up){ border-left-color:var(--green); }
-  .mkts-table tr.mrow:has(.chg-down){ border-left-color:var(--red); }
-  .mkts-table tr.mrow:hover td{background:transparent}
-  .mkts-table td{padding:0;border:none;white-space:normal;overflow:visible;font-size:.8rem}
-  .mkts-table td:nth-child(1){display:none}
-  .mkts-table td:nth-child(2){grid-area:asset;text-align:left}
-  .mkts-table td:nth-child(2) .asset-name{max-width:none;font-size:.85rem}
-  .mkts-table td:nth-child(2) .asset-ico{width:34px;height:34px}
-  .mkts-table td:nth-child(3){grid-area:price;text-align:left;align-self:end}
-  .mkts-table td:nth-child(3) .price-val{font-size:1.02rem}
-  .mkts-table td:nth-child(4){grid-area:chg;text-align:right;align-self:center}
-  .mkts-table td:nth-child(4) .chg-up,
-  .mkts-table td:nth-child(4) .chg-down,
-  .mkts-table td:nth-child(4) .chg-neu{ font-size:.78rem; padding:4px 9px; border-radius:20px; }
-  .mkts-table td:nth-child(5),
-  .mkts-table td:nth-child(6),
-  .mkts-table td:nth-child(7),
-  .mkts-table td:nth-child(8){display:none}
-  .mkts-table td:nth-child(9){grid-area:fav;justify-self:end;align-self:start}
-  .fav-btn,.compare-col-btn{min-width:36px;min-height:36px;padding:6px;font-size:1.05rem}
-
-  /* Sidebar → collapsible accordions, only Fear & Greed open by default */
-  .mkts-side{
-    position:static!important;max-height:none!important;overflow:visible!important;
-    border-left:none!important;border-top:1px solid var(--border-dim);
-    display:flex!important;flex-direction:column!important;gap:8px;padding:10px
-  }
-  .side-section{
-    border:1px solid var(--border-soft); border-bottom:1px solid var(--border-soft)!important;
-    border-radius:var(--radius-lg); overflow:hidden; background:var(--bg-surface);
-  }
-  .side-section > summary{
-    list-style:none; cursor:pointer; display:flex; align-items:center;
-    justify-content:space-between;
-  }
-  .side-section > summary::-webkit-details-marker{ display:none; }
-  .side-section .side-head{ margin:0; border:none; flex:1; }
-  .side-section > summary::after{
-    content:'\f282'; font-family:'bootstrap-icons'; font-size:.65rem;
-    color:var(--text-muted); padding-right:12px; transition:transform .2s ease;
-  }
-  .side-section[open] > summary::after{ transform:rotate(180deg); }
-  .hm-sm{grid-template-columns:repeat(4,1fr)!important}
-}
-
-@media (max-width:420px){
-  .hm-sm{grid-template-columns:repeat(3,1fr)!important}
-  .kpi-strip{grid-template-columns:1fr 1fr!important}
+@media(max-width:480px){
+  .kpi-strip{grid-template-columns:1fr 1fr}
+  /* On very small: also hide 7d% (5), keep rank asset price 24h fav */
+  .mkts-table th:nth-child(5),.mkts-table td:nth-child(5){display:none}
+  .mkts-table th:nth-child(9),.mkts-table td:nth-child(9){display:table-cell!important}
+  .mkts-toolbar{flex-wrap:wrap;gap:6px}
+  .mkts-toolbar .search-bar{width:100%!important}
 }
 </style>
 </head>
@@ -297,12 +200,6 @@
   </ul>
   <div class="nav-clock d-none d-lg-block" id="navClock"></div>
   <div class="nav-actions">
-    <div id="authSlot" class="auth-slot">
-      <button type="button" class="auth-google-custom auth-nav-btn" id="authNavBtn" aria-label="Sign in" onclick="window.openSignIn(event)">
-        <span class="auth-g-logo"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg></span>
-        <span class="auth-nav-label">SIGN IN</span>
-      </button>
-    </div>
     <button class="theme-btn" id="themeToggle">☀</button>
     <button class="hamburger" id="hamburgerBtn"><i class="bi bi-list"></i></button>
   </div>
@@ -369,8 +266,8 @@
   <!-- SIDEBAR -->
   <div class="mkts-side">
     <!-- Fear & Greed -->
-    <details class="side-section" open>
-      <summary><div class="side-head">FEAR & GREED INDEX</div></summary>
+    <div class="side-section">
+      <div class="side-head">FEAR & GREED INDEX</div>
       <div class="side-body">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
           <div style="font-family:var(--font-mono);font-size:1.8rem;font-weight:700" id="fgVal">—</div>
@@ -382,33 +279,33 @@
         <div class="fg-bar"><div class="fg-indicator" id="fgInd" style="left:50%"></div></div>
         <div class="fg-scale"><span>EXTREME FEAR</span><span>NEUTRAL</span><span>EXTREME GREED</span></div>
       </div>
-    </details>
+    </div>
 
     <!-- Heatmap -->
-    <details class="side-section">
-      <summary><div class="side-head">CRYPTO HEATMAP</div></summary>
+    <div class="side-section">
+      <div class="side-head">CRYPTO HEATMAP</div>
       <div class="side-body">
         <div class="hm-sm" id="sideHeatmap"></div>
       </div>
-    </details>
+    </div>
 
     <!-- Favorites -->
-    <details class="side-section">
-      <summary><div class="side-head">MY WATCHLIST ⭐</div></summary>
+    <div class="side-section">
+      <div class="side-head">MY WATCHLIST ⭐</div>
       <div class="side-body" id="sideFavorites">
         <div style="color:var(--text-muted);font-family:var(--font-mono);font-size:.65rem;text-align:center;padding:12px 0">
           CLICK ☆ TO ADD
         </div>
       </div>
-    </details>
+    </div>
 
     <!-- Top movers -->
-    <details class="side-section">
-      <summary><div class="side-head">TOP MOVERS</div></summary>
+    <div class="side-section">
+      <div class="side-head">TOP MOVERS</div>
       <div class="side-body" id="sideMovers">
         <div style="color:var(--text-muted);font-family:var(--font-mono);font-size:.65rem">LOADING...</div>
       </div>
-    </details>
+    </div>
   </div>
 </div>
 
@@ -440,11 +337,49 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+// Fix Chart.js axis label colors for dark/light mode
+(function applyChartDefaults() {
+  function setChartDefaults() {
+    if (!window.Chart) return;
+    const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+    const tickColor  = isDark ? '#7a8fa6' : '#4a5568';
+    const gridColor  = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)';
+    const legendColor = isDark ? '#7a8fa6' : '#4a5568';
+    Chart.defaults.color = tickColor;
+    Chart.defaults.borderColor = gridColor;
+    if (Chart.defaults.plugins?.legend?.labels)
+      Chart.defaults.plugins.legend.labels.color = legendColor;
+    if (Chart.defaults.scales?.linear) {
+      Chart.defaults.scales.linear.ticks = { color: tickColor };
+      Chart.defaults.scales.linear.grid  = { color: gridColor };
+    }
+    // Re-render any existing charts
+    Object.values(Chart.instances || {}).forEach(c => {
+      try {
+        if (c.options?.scales) {
+          Object.values(c.options.scales).forEach(s => {
+            if (s.ticks) s.ticks.color = tickColor;
+            if (s.grid)  s.grid.color  = gridColor;
+          });
+        }
+        c.update('none');
+      } catch(e) {}
+    });
+  }
+  // Run once Chart.js is ready and on theme toggle
+  document.addEventListener('DOMContentLoaded', setChartDefaults);
+  new MutationObserver(setChartDefaults).observe(
+    document.documentElement, { attributes: true, attributeFilter: ['data-theme'] }
+  );
+})();
+</script>
 <script src="assets/js/alerts.js"></script>
-<script src="assets/js/app.js?v=12"></script>
-<script src="assets/js/auth.js?v=12"></script>
+<script src="assets/js/app.js"></script>
+<script src="assets/js/auth.js"></script>
 <script src="assets/js/asset-detail.js"></script>
 <script src="assets/js/markets.js"></script>
 <script src="assets/js/features.js"></script>
+<script src="assets/js/cursor-fx.js"></script>
 </body>
 </html>
