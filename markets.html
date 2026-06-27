@@ -2,13 +2,13 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="assets/js/theme-boot.js?v=12"></script>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<script src="assets/js/theme-boot.js"></script>
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Markets — MarketPulse</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-<link href="assets/css/main.css?v=12" rel="stylesheet">
+<link href="assets/css/main.css" rel="stylesheet">
 <style>
 /* ── MARKETS LAYOUT ── */
 .mkts-layout { display:grid; grid-template-columns:1fr 240px; gap:1px; background:var(--border-dim); }
@@ -102,6 +102,7 @@
   padding:9px 14px; background:var(--bg-surface);
   border-bottom:1px solid var(--border-soft);
   display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  position:sticky; top:calc(var(--nav-h) + 36px); z-index:9;
 }
 
 /* ── SIDEBAR PANELS ── */
@@ -140,160 +141,22 @@
 .cstat-lbl { font-family:var(--font-mono); font-size:.58rem; letter-spacing:.1em; text-transform:uppercase; color:var(--text-muted); margin-bottom:3px; }
 .cstat-val { font-family:var(--font-mono); font-size:.9rem; font-weight:500; }
 
-@media (max-width:768px){
-
-  /* ── LAYOUT: single column, sidebar goes below table ── */
-  .mkts-layout{
-    display:flex!important;
-    flex-direction:column!important;
-    gap:0;
-    background:transparent;
-  }
-  .mkts-main  { width:100%; min-width:0; }
-  .mkts-side  {
-    position:static!important;
-    max-height:none!important;
-    overflow:visible!important;
-    border-left:none!important;
-    border-top:1px solid var(--border-dim);
-    width:100%;
-  }
-
-  /* ── KPI STRIP: horizontal scroll row ── */
-  .kpi-strip{
-    display:flex!important;
-    grid-template-columns:none!important;
-    overflow-x:auto;
-    -webkit-overflow-scrolling:touch;
-    scrollbar-width:none;
-    gap:1px;
-    background:var(--border-dim);
-  }
-  .kpi-strip::-webkit-scrollbar{ display:none; }
-  .kpi-cell{ flex:0 0 auto; min-width:120px; padding:9px 12px; }
-
-  /* ── TOOLBAR: stack into 3 rows ── */
-  .mkts-toolbar{
-    display:flex;
-    flex-wrap:wrap;
-    padding:8px 10px;
-    gap:8px;
-  }
-  /* row 1: tab chips, full width */
-  .mkts-toolbar .chip-row{
-    order:1; flex:0 0 100%;
-    overflow-x:auto; flex-wrap:nowrap;
-    -webkit-overflow-scrolling:touch;
-    scrollbar-width:none;
-    margin:0;
-  }
-  .mkts-toolbar .chip-row::-webkit-scrollbar{ display:none; }
-  /* row 2: search bar, full width */
-  .mkts-toolbar .search-bar{
-    order:2; flex:0 0 100%; width:100%!important;
-    margin-left:0!important; /* override ms-auto */
-  }
-  /* row 3: action buttons side by side */
-  .mkts-toolbar > .btn{
-    order:3; flex:1 1 auto; min-height:38px;
-  }
-  /* hide hint text on mobile */
-  .mkts-toolbar > span{ display:none; }
-
-  /* ── TABLE → CARDS ── */
-  .mkts-table-wrap{ overflow-x:visible; padding:8px; }
-  .mkts-table{
-    min-width:0; width:100%;
-    display:block;
-    border-collapse:separate;
-    table-layout:auto;
-  }
-  .mkts-table thead{ display:none; }
-  .mkts-table tbody{ display:block; }
-
-  .mkts-table tr.mrow{
-    display:grid;
-    grid-template-columns:1fr auto;
-    grid-template-areas:
-      "asset fav"
-      "price chg";
-    column-gap:10px;
-    row-gap:5px;
-    padding:12px;
-    margin-bottom:8px;
-    background:var(--bg-surface);
-    border:1px solid var(--border-soft);
-    border-radius:var(--radius);
-    cursor:pointer;
-  }
-  .mkts-table tr.mrow:hover td{ background:transparent; }
-
-  /* reset all td defaults */
-  .mkts-table td{
-    padding:0; border:none;
-    white-space:normal; overflow:visible;
-    text-overflow:unset; font-size:.8rem;
-    display:none; /* hide all by default, show only needed */
-  }
-
-  /* col 1: rank — hidden */
-  .mkts-table td:nth-child(1){ display:none; }
-
-  /* col 2: asset name+icon */
-  .mkts-table td:nth-child(2){
-    display:block;
-    grid-area:asset;
-    text-align:left;
-  }
-  .mkts-table td:nth-child(2) .asset-name{ max-width:none; }
-
-  /* col 3: price */
-  .mkts-table td:nth-child(3){
-    display:block;
-    grid-area:price;
-    text-align:left;
-    align-self:center;
-  }
-  .mkts-table td:nth-child(3) .price-val{ font-size:.95rem; }
-
-  /* col 4: 24h change */
-  .mkts-table td:nth-child(4){
-    display:flex;
-    grid-area:chg;
-    text-align:right;
-    justify-content:flex-end;
-    align-self:center;
-  }
-
-  /* cols 5-8: hidden on mobile */
-  .mkts-table td:nth-child(5),
-  .mkts-table td:nth-child(6),
-  .mkts-table td:nth-child(7),
-  .mkts-table td:nth-child(8){ display:none; }
-
-  /* col 9: fav + compare buttons */
-  .mkts-table td:nth-child(9){
-    display:flex;
-    grid-area:fav;
-    justify-content:flex-end;
-    align-items:flex-start;
-    gap:4px;
-  }
-  .fav-btn,
-  .compare-col-btn{
-    min-width:36px; min-height:36px;
-    padding:6px; font-size:1.05rem;
-  }
-
-  /* ── SIDEBAR: stacked panels ── */
-  .side-section{ border-bottom:1px solid var(--border-dim); }
-  .hm-sm{ grid-template-columns:repeat(4,1fr)!important; }
+@media(max-width:1100px){ .mkts-layout{grid-template-columns:1fr}; .mkts-side{display:none} }
+@media(max-width:768px) {
+  .kpi-strip{grid-template-columns:repeat(3,1fr)}
+  /* Hide vol/mktcap/7d chart, keep rank(1) asset(2) price(3) 24h%(4) 7d%(5) fav(9) */
+  .mkts-table th:nth-child(6),.mkts-table td:nth-child(6),
+  .mkts-table th:nth-child(7),.mkts-table td:nth-child(7),
+  .mkts-table th:nth-child(8),.mkts-table td:nth-child(8){display:none}
+  .mkts-table th:nth-child(9),.mkts-table td:nth-child(9){display:table-cell!important}
 }
-
-@media (max-width:420px){
-  .hm-sm{ grid-template-columns:repeat(3,1fr)!important; }
-  .kpi-cell{ min-width:105px; }
-  .mkts-table tr.mrow{ padding:10px; }
+@media(max-width:480px){
+  .kpi-strip{grid-template-columns:1fr 1fr}
+  /* On very small: also hide 7d% (5), keep rank asset price 24h fav */
+  .mkts-table th:nth-child(5),.mkts-table td:nth-child(5){display:none}
+  .mkts-table th:nth-child(9),.mkts-table td:nth-child(9){display:table-cell!important}
+  .mkts-toolbar{flex-wrap:wrap;gap:6px}
+  .mkts-toolbar .search-bar{width:100%!important}
 }
 </style>
 </head>
@@ -337,12 +200,6 @@
   </ul>
   <div class="nav-clock d-none d-lg-block" id="navClock"></div>
   <div class="nav-actions">
-    <div id="authSlot" class="auth-slot">
-      <button type="button" class="auth-google-custom auth-nav-btn" id="authNavBtn" aria-label="Sign in" onclick="window.openSignIn(event)">
-        <span class="auth-g-logo"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg></span>
-        <span class="auth-nav-label">SIGN IN</span>
-      </button>
-    </div>
     <button class="theme-btn" id="themeToggle">☀</button>
     <button class="hamburger" id="hamburgerBtn"><i class="bi bi-list"></i></button>
   </div>
@@ -480,9 +337,46 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+// Fix Chart.js axis label colors for dark/light mode
+(function applyChartDefaults() {
+  function setChartDefaults() {
+    if (!window.Chart) return;
+    const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+    const tickColor  = isDark ? '#7a8fa6' : '#4a5568';
+    const gridColor  = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)';
+    const legendColor = isDark ? '#7a8fa6' : '#4a5568';
+    Chart.defaults.color = tickColor;
+    Chart.defaults.borderColor = gridColor;
+    if (Chart.defaults.plugins?.legend?.labels)
+      Chart.defaults.plugins.legend.labels.color = legendColor;
+    if (Chart.defaults.scales?.linear) {
+      Chart.defaults.scales.linear.ticks = { color: tickColor };
+      Chart.defaults.scales.linear.grid  = { color: gridColor };
+    }
+    // Re-render any existing charts
+    Object.values(Chart.instances || {}).forEach(c => {
+      try {
+        if (c.options?.scales) {
+          Object.values(c.options.scales).forEach(s => {
+            if (s.ticks) s.ticks.color = tickColor;
+            if (s.grid)  s.grid.color  = gridColor;
+          });
+        }
+        c.update('none');
+      } catch(e) {}
+    });
+  }
+  // Run once Chart.js is ready and on theme toggle
+  document.addEventListener('DOMContentLoaded', setChartDefaults);
+  new MutationObserver(setChartDefaults).observe(
+    document.documentElement, { attributes: true, attributeFilter: ['data-theme'] }
+  );
+})();
+</script>
 <script src="assets/js/alerts.js"></script>
-<script src="assets/js/app.js?v=12"></script>
-<script src="assets/js/auth.js?v=12"></script>
+<script src="assets/js/app.js"></script>
+<script src="assets/js/auth.js"></script>
 <script src="assets/js/asset-detail.js"></script>
 <script src="assets/js/markets.js"></script>
 <script src="assets/js/features.js"></script>
