@@ -628,6 +628,18 @@
     }
   }
 
+  /* ── deep link from the homepage carousel: ?open=<article url> ── */
+  document.addEventListener('DOMContentLoaded', () => {
+    const openUrl = new URLSearchParams(window.location.search).get('open');
+    if (openUrl) {
+      // Articles link out to their original publisher (no internal detail page),
+      // so open it in a new tab and leave the user on the News page.
+      window.open(openUrl, '_blank', 'noopener');
+      const clean = window.location.pathname;
+      window.history.replaceState({}, '', clean);
+    }
+  });
+
   /* ── hook into news.js: patch _buildCarousel after DOMContentLoaded ── */
   document.addEventListener('DOMContentLoaded', () => {
     // Wait for newsManager to exist, then wrap _buildCarousel
