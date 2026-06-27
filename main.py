@@ -77,6 +77,7 @@ async def get_watchlist():
     path = f"{CACHE_DIR}/watchlist.json"
     if cache_valid(path, 5): return read_cache(path)
     result = {"crypto": [], "stocks": [], "commodities": []}
+    crypto_ok = False
     async with httpx.AsyncClient(timeout=15) as client:
         try:
             r = await client.get("https://api.coingecko.com/api/v3/coins/markets", params={
@@ -93,7 +94,30 @@ async def get_watchlist():
                     "volume": c["total_volume"], "image": c["image"],
                     "sparkline": (c.get("sparkline_in_7d") or {}).get("price", [])
                 })
+            if result["crypto"]:
+                crypto_ok = True
         except Exception as e: print(f"Crypto error: {e}")
+
+        if not crypto_ok:
+            # Live fetch failed (or returned nothing) — fall back to the last
+            # successfully fetched crypto snapshot instead of showing blanks.
+            last_good_path = f"{CACHE_DIR}/watchlist_crypto_last_good.json"
+            if os.path.exists(last_good_path):
+                try:
+                    stale = read_cache(last_good_path)
+                    for item in stale:
+                        item["stale"] = True   # flag so frontend can show "last known" badge
+                    result["crypto"] = stale
+                    print("Crypto: using last known good data (live fetch failed)")
+                except Exception as e:
+                    print(f"Crypto fallback read error: {e}")
+        else:
+            # Successful fetch — update the last-known-good snapshot
+            try:
+                write_cache(f"{CACHE_DIR}/watchlist_crypto_last_good.json", result["crypto"])
+            except Exception as e:
+                print(f"Crypto fallback write error: {e}")
+
         for sym in ["AAPL","TSLA","MSFT","NVDA","AMZN","GOOGL"]:
             try:
                 r = await client.get(f"https://query1.finance.yahoo.com/v8/finance/chart/{sym}",
