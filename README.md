@@ -5,6 +5,15 @@
 
 ---
 
+- **Author:** Pierre EL Kassis 
+- **Student ID:** 7469
+- **Supervisor:** Elias Al Zaghrini
+- **Course:** Full Stack · Electrical Engineering, Year 4
+- **Submitted:** July 2026
+
+---
+---
+
 ## Table of Contents
 
 1. [Project Overview](#1-project-overview)
