@@ -535,6 +535,9 @@ class HomePage {
     await Promise.all([this.loadWatchlist(), this.loadNews(), this.loadFG(), this.loadCalendar()]);
     this.loadAnalysis();
     this.loadCarousel();
+    // Keep the mini news feed fresh — news.js polls/refetches on every
+    // visit to news.html, but this widget otherwise only loads once.
+    setInterval(() => this.loadNews(), 10 * 60 * 1000);
   }
 
   async loadWatchlist() {
@@ -752,7 +755,7 @@ class HomePage {
     };
 
     try {
-      const articles = await window.apiClient.get('/api/news?category=all&period=all', 30*60*1000);
+      const articles = await window.apiClient.get('/api/news?category=all&period=all', 10*60*1000);
       const el = document.getElementById('newsMini');
       if (!el) return;
 
