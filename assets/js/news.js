@@ -55,10 +55,12 @@ class NewsManager {
     const p = period || this.timeFilter || 'all';
     this.timeFilter = p;
     this._showSkeletons();
-    let endpoint = `/api/news?category=${category}&period=${p}`;
-    if (q) endpoint += `&q=${encodeURIComponent(q)}`;
     try {
-      const articles = await window.apiClient.get(endpoint, 30 * 60 * 1000);
+      let url = `${window.apiClient.base}/api/news?category=${category}&period=${p}`;
+      if (q) url += `&q=${encodeURIComponent(q)}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const articles = await res.json();
       if (!Array.isArray(articles)) throw new Error('Bad response');
       this.allArticles = articles;
       this._buildCarousel();
@@ -73,17 +75,17 @@ class NewsManager {
         this._refreshBaseCounts(category, q);
       }
     } catch(e) {
-      // apiClient.get() already tries its own last-good fallback before
-      // throwing, so if we're here there's truly nothing cached yet.
       this._showError(e.message);
     }
   }
 
   async _refreshBaseCounts(category, q) {
-    let endpoint = `/api/news?category=${category}&period=all`;
-    if (q) endpoint += `&q=${encodeURIComponent(q)}`;
     try {
-      const articles = await window.apiClient.get(endpoint, 30 * 60 * 1000);
+      let url = `${window.apiClient.base}/api/news?category=${category}&period=all`;
+      if (q) url += `&q=${encodeURIComponent(q)}`;
+      const res = await fetch(url);
+      if (!res.ok) return;
+      const articles = await res.json();
       if (Array.isArray(articles)) {
         this._baseArticles = articles;
         this._loadPeriodCounts();

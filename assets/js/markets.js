@@ -47,7 +47,7 @@ class MarketsPage {
     if (body) {
       body.innerHTML = `
         <tr>
-          <td colspan="9" style="padding:0">
+          <td colspan="10" style="padding:0">
             <div id="mp-trivia-root" style="
               padding: 36px 24px 28px;
               display: flex;
@@ -365,7 +365,7 @@ class MarketsPage {
     this._displayAssets = assets;
 
     if (!assets.length) {
-      body.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--text-muted);font-family:var(--font-mono);font-size:.72rem">NO ASSETS FOUND</td></tr>`;
+      body.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:40px;color:var(--text-muted);font-family:var(--font-mono);font-size:.72rem">NO ASSETS FOUND</td></tr>`;
       return;
     }
 
@@ -401,6 +401,8 @@ class MarketsPage {
             onclick="event.stopPropagation();mktPage.toggleFav('${a.symbol}',this,'${a.name.replace(/'/g,"\\'")}')">
             ${isFav ? '⭐' : '☆'}
           </button>
+        </td>
+        <td>
           <button class="compare-col-btn ${window.quickCompare?.selected?.some(x=>x.symbol===a.symbol)?'on':''}" title="Add to compare"
             onclick="event.stopPropagation();mktPage.addCompare(${i})">⇄</button>
         </td>
