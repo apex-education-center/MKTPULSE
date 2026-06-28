@@ -401,6 +401,8 @@ class MarketsPage {
             onclick="event.stopPropagation();mktPage.toggleFav('${a.symbol}',this,'${a.name.replace(/'/g,"\\'")}')">
             ${isFav ? '⭐' : '☆'}
           </button>
+        </td>
+        <td>
           <button class="compare-col-btn ${window.quickCompare?.selected?.some(x=>x.symbol===a.symbol)?'on':''}" title="Add to compare"
             onclick="event.stopPropagation();mktPage.addCompare(${i})">⇄</button>
         </td>

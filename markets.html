@@ -53,6 +53,21 @@
 .mkts-table th:nth-child(7){ width:100px; text-align:right; }
 .mkts-table th:nth-child(8){ width:90px;  text-align:center; }
 .mkts-table th:nth-child(9){ width:36px; }
+.mkts-table th:nth-child(10){ width:36px; }
+.mkts-table td:nth-child(10){ text-align:center; }
+
+.compare-col-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: .9rem;
+  transition: all .15s;
+  padding: 2px 4px;
+  line-height: 1;
+}
+.compare-col-btn:hover { color: var(--amber); transform: scale(1.2); }
+.compare-col-btn.on { color: var(--amber); }
 
 .mkts-table tr.mrow {
   border-bottom:1px solid var(--border-dim);
@@ -225,6 +240,7 @@
   .mkts-table td:nth-child(7),
   .mkts-table td:nth-child(8){display:none}
   .mkts-table td:nth-child(9){grid-area:fav;justify-self:end;align-self:start}
+  .mkts-table td:nth-child(10){display:none}
   .fav-btn,.compare-col-btn{min-width:36px;min-height:36px;padding:6px;font-size:1.05rem}
 
   /* Sidebar → collapsible accordions, only Fear & Greed open by default */
@@ -333,7 +349,6 @@
   </div>
   <button class="btn" onclick="mktPage.exportCSV()" style="padding:5px 12px"><i class="bi bi-download me-1"></i>CSV</button>
   <button class="btn" onclick="mktPage.reload()" style="padding:5px 12px" id="refreshBtn"><i class="bi bi-arrow-clockwise me-1"></i>REFRESH</button>
-<button class="btn" onclick="mktPage.openCompare && mktPage.openCompare()" style="padding:5px 12px" id="compareBtn"><i class="bi bi-arrow-left-right me-1"></i>COMPARE</button>
   <span style="font-family:var(--font-mono);font-size:.58rem;color:var(--text-muted)">CLICK ROW = DETAIL · ⇄ = COMPARE</span>
   <span style="font-family:var(--font-mono);font-size:.6rem;color:var(--text-muted)" id="lastUpdate">—</span>
 </div>
@@ -353,6 +368,7 @@
             <th onclick="mktPage.sort('volume')">VOLUME</th>
             <th onclick="mktPage.sort('market_cap')">MKT CAP</th>
             <th>7D CHART</th>
+            <th></th>
             <th></th>
           </tr>
         </thead>
