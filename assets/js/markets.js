@@ -368,6 +368,25 @@ class MarketsPage {
     this._displayAssets = assets;
 
     if (!assets.length) {
+      // If this tab has no data at all (not just a filtered-out search),
+      // show the trivia game instead of a flat "no results" message.
+      const hasDataForTab = (this.data[this.tab] || []).length > 0;
+      if (!hasDataForTab && !this.query) {
+        body.innerHTML = `
+          <tr>
+            <td colspan="9" style="padding:0">
+              <div id="mp-trivia-root" style="
+                padding: 36px 24px 28px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 0;
+              "></div>
+            </td>
+          </tr>`;
+        this._triviaInit();
+        return;
+      }
       body.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--text-muted);font-family:var(--font-mono);font-size:.72rem">NO ASSETS FOUND</td></tr>`;
       return;
     }
