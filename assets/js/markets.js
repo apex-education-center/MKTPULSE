@@ -25,6 +25,9 @@ class MarketsPage {
     if (btn) btn.innerHTML = '<div class="spinner-border spinner-border-sm" style="color:var(--amber);width:.8rem;height:.8rem"></div>';
     try {
       this.data = await window.apiClient.get('/api/watchlist', 0);
+      // Treat empty response same as failure — triggers trivia game
+      const totalAssets = (this.data.crypto?.length || 0) + (this.data.stocks?.length || 0) + (this.data.commodities?.length || 0);
+      if (totalAssets === 0) throw new Error('No data returned');
       window.cacheWatchlistData?.(this.data);
       this.renderKPI();
       this.renderTable();
