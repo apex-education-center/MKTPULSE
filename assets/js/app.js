@@ -504,6 +504,22 @@ window.loadFearGreed = async function () {
   }
 };
 
+// ── Persistent last-good-response cache (survives reloads, rate limits) ──
+const LSCache = {
+  key: ep => 'mp-lastgood:' + ep,
+  save(endpoint, data) {
+    try { localStorage.setItem(this.key(endpoint), JSON.stringify({ data, ts: Date.now() })); } catch (e) {}
+  },
+  load(endpoint) {
+    try {
+      const raw = localStorage.getItem(this.key(endpoint));
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      return parsed && parsed.data ? parsed.data : null;
+    } catch (e) { return null; }
+  }
+};
+
 // ── APIClient ─────────────────────────────────────────────
 class APIClient {
   constructor(base = API) { this.base = base; this._cache = new Map(); }
@@ -513,12 +529,25 @@ class APIClient {
       if (endpoint === '/api/watchlist') window.cacheWatchlistData?.(c.data);
       return c.data;
     }
-    const res = await fetch(`${this.base}${endpoint}`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    this._cache.set(endpoint, { data, ts: Date.now() });
-    if (endpoint === '/api/watchlist') window.cacheWatchlistData?.(data);
-    return data;
+    try {
+      const res = await fetch(`${this.base}${endpoint}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      this._cache.set(endpoint, { data, ts: Date.now() });
+      LSCache.save(endpoint, data);
+      if (endpoint === '/api/watchlist') window.cacheWatchlistData?.(data);
+      return data;
+    } catch (err) {
+      // Live fetch failed (e.g. upstream rate limit) — fall back to the
+      // last successfully fetched response for this endpoint, if any.
+      const fallback = LSCache.load(endpoint);
+      if (fallback) {
+        this._cache.set(endpoint, { data: fallback, ts: Date.now() });
+        if (endpoint === '/api/watchlist') window.cacheWatchlistData?.(fallback);
+        return fallback;
+      }
+      throw err;
+    }
   }
   invalidate(endpoint) { this._cache.delete(endpoint); }
 }
