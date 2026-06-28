@@ -3,22 +3,6 @@
 // Real NewsAPI + time filters (Today/Week/Month/All)
 // ═══════════════════════════════════════════════════════
 
-// ── Persistent last-good news cache (survives reloads, rate limits) ──
-const NewsLSCache = {
-  key: url => 'mp-lastgood-news:' + url,
-  save(url, data) {
-    try { localStorage.setItem(this.key(url), JSON.stringify({ data, ts: Date.now() })); } catch (e) {}
-  },
-  load(url) {
-    try {
-      const raw = localStorage.getItem(this.key(url));
-      if (!raw) return null;
-      const parsed = JSON.parse(raw);
-      return parsed && Array.isArray(parsed.data) ? parsed.data : null;
-    } catch (e) { return null; }
-  }
-};
-
 class NewsManager {
   constructor() {
     this.allArticles = [];
@@ -71,14 +55,11 @@ class NewsManager {
     const p = period || this.timeFilter || 'all';
     this.timeFilter = p;
     this._showSkeletons();
-    let url = `${window.apiClient.base}/api/news?category=${category}&period=${p}`;
-    if (q) url += `&q=${encodeURIComponent(q)}`;
+    let endpoint = `/api/news?category=${category}&period=${p}`;
+    if (q) endpoint += `&q=${encodeURIComponent(q)}`;
     try {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const articles = await res.json();
+      const articles = await window.apiClient.get(endpoint, 30 * 60 * 1000);
       if (!Array.isArray(articles)) throw new Error('Bad response');
-      NewsLSCache.save(url, articles);
       this.allArticles = articles;
       this._buildCarousel();
       this.render();
@@ -92,45 +73,23 @@ class NewsManager {
         this._refreshBaseCounts(category, q);
       }
     } catch(e) {
-      // Live fetch failed (e.g. NewsAPI rate limit) — fall back to the
-      // last successfully fetched articles for this exact query, if any.
-      const fallback = NewsLSCache.load(url);
-      if (fallback) {
-        this.allArticles = fallback;
-        this._buildCarousel();
-        this.render();
-        if (p === 'all') {
-          this._baseArticles = fallback;
-          this._loadPeriodCounts();
-        } else {
-          this._refreshBaseCounts(category, q);
-        }
-      } else {
-        this._showError(e.message);
-      }
+      // apiClient.get() already tries its own last-good fallback before
+      // throwing, so if we're here there's truly nothing cached yet.
+      this._showError(e.message);
     }
   }
 
   async _refreshBaseCounts(category, q) {
-    let url = `${window.apiClient.base}/api/news?category=${category}&period=all`;
-    if (q) url += `&q=${encodeURIComponent(q)}`;
+    let endpoint = `/api/news?category=${category}&period=all`;
+    if (q) endpoint += `&q=${encodeURIComponent(q)}`;
     try {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const articles = await res.json();
+      const articles = await window.apiClient.get(endpoint, 30 * 60 * 1000);
       if (Array.isArray(articles)) {
-        NewsLSCache.save(url, articles);
         this._baseArticles = articles;
         this._loadPeriodCounts();
       }
     } catch (e) {
-      const fallback = NewsLSCache.load(url);
-      if (fallback) {
-        this._baseArticles = fallback;
-        this._loadPeriodCounts();
-      } else {
-        console.warn('[NewsCount] failed to refresh base counts', e);
-      }
+      console.warn('[NewsCount] failed to refresh base counts', e);
     }
   }
 

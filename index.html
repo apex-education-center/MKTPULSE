@@ -752,7 +752,7 @@ class HomePage {
     };
 
     try {
-      const articles = await window.apiClient.get('/api/news', 30*60*1000);
+      const articles = await window.apiClient.get('/api/news?category=all&period=all', 30*60*1000);
       const el = document.getElementById('newsMini');
       if (!el) return;
 
