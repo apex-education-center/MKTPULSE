@@ -211,7 +211,7 @@
   .mkts-table tr.mrow{
     display:grid;
     grid-template-columns:1fr auto;
-    grid-template-areas:"asset fav" "price chg";
+    grid-template-areas:"asset actions" "price chg";
     column-gap:10px; row-gap:8px;
     padding:13px 13px 13px 16px;
     background:var(--bg-surface);
@@ -239,8 +239,8 @@
   .mkts-table td:nth-child(6),
   .mkts-table td:nth-child(7),
   .mkts-table td:nth-child(8){display:none}
-  .mkts-table td:nth-child(9){grid-area:fav;justify-self:end;align-self:start}
-  .mkts-table td:nth-child(10){display:none}
+  .mkts-table td:nth-child(9){grid-area:actions;justify-self:end;align-self:start;display:flex;gap:4px}
+  .mkts-table td:nth-child(10){grid-area:actions;justify-self:end;align-self:start;display:flex;gap:4px}
   .fav-btn,.compare-col-btn{min-width:36px;min-height:36px;padding:6px;font-size:1.05rem}
 
   /* Sidebar → collapsible accordions, only Fear & Greed open by default */
