@@ -570,10 +570,41 @@
           </div>
           <div style="font-family:var(--font-mono);font-size:.9rem;color:var(--text-primary);line-height:1.65;margin-bottom:24px;min-height:48px" id="quizQuestion">—</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px" id="quizOpts"></div>
-          <div style="font-family:var(--font-mono);font-size:.65rem;min-height:20px;text-align:center;margin-bottom:16px" id="quizFeedback"></div>
-          <div style="display:flex;gap:10px;justify-content:center">
-            <button id="quizNextBtn" class="btn-mp btn-mp-primary" style="display:none;letter-spacing:.08em" onclick="quiz.next()">NEXT →</button>
-            <button id="quizRestartBtn" class="btn-mp btn-mp-ghost" style="display:none;letter-spacing:.08em" onclick="quiz.restart()">↻ RESTART</button>
+          <div style="font-family:var(--font-mono);font-size:.65rem;min-height:20px;text-align:center;margin-bottom:20px" id="quizFeedback"></div>
+          <div style="display:flex;gap:12px;justify-content:center;align-items:center">
+            <button id="quizNextBtn" onclick="quiz.next()" style="
+              display:none;
+              align-items:center; gap:10px;
+              background:var(--amber);
+              color:#000;
+              border:none;
+              font-family:var(--font-mono);
+              font-size:.72rem;
+              font-weight:700;
+              letter-spacing:.12em;
+              padding:12px 28px;
+              border-radius:3px;
+              cursor:pointer;
+              transition:opacity .15s, transform .15s;
+            " onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+              NEXT QUESTION &nbsp;→
+            </button>
+            <button id="quizRestartBtn" onclick="quiz.restart()" style="
+              display:none;
+              align-items:center; gap:8px;
+              background:transparent;
+              color:var(--text-secondary);
+              border:1px solid var(--border-mid);
+              font-family:var(--font-mono);
+              font-size:.68rem;
+              letter-spacing:.1em;
+              padding:11px 22px;
+              border-radius:3px;
+              cursor:pointer;
+              transition:border-color .15s, color .15s;
+            " onmouseover="this.style.borderColor='var(--amber)';this.style.color='var(--amber)'" onmouseout="this.style.borderColor='var(--border-mid)';this.style.color='var(--text-secondary)'">
+              ↻ &nbsp;RESTART
+            </button>
           </div>
         </div>
 
@@ -1668,8 +1699,8 @@ const quiz = (() => {
     if (isLast) {
       nb.style.display = 'none';
       rb.style.display = 'inline-flex';
-      rb.textContent = `↻ RESTART (${state.score}/${state.total} CORRECT)`;
-      fb.innerHTML += `<br><span style="color:var(--amber);display:block;margin-top:8px;font-size:.68rem">QUIZ COMPLETE! ${state.score}/${state.total} (${Math.round(state.score/state.total*100)}%)</span>`;
+      rb.innerHTML = `↻ &nbsp;PLAY AGAIN`;
+      fb.innerHTML += `<br><span style="color:var(--amber);display:block;margin-top:10px;font-size:.72rem;letter-spacing:.06em">🏁 QUIZ COMPLETE — ${state.score}/${state.total} CORRECT (${Math.round(state.score/state.total*100)}%)</span>`;
     } else {
       nb.style.display = 'inline-flex';
       rb.style.display = 'none';
