@@ -533,8 +533,14 @@ class APIClient {
       const res = await fetch(`${this.base}${endpoint}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      this._cache.set(endpoint, { data, ts: Date.now() });
-      LSCache.save(endpoint, data);
+      // Don't overwrite cache with an empty watchlist — that's a rate-limit response,
+      // not real data, and it would poison any previously good cached value.
+      const isEmptyWatchlist = endpoint === '/api/watchlist' &&
+        !(data.crypto?.length || data.stocks?.length || data.commodities?.length);
+      if (!isEmptyWatchlist) {
+        this._cache.set(endpoint, { data, ts: Date.now() });
+        LSCache.save(endpoint, data);
+      }
       if (endpoint === '/api/watchlist') window.cacheWatchlistData?.(data);
       return data;
     } catch (err) {
@@ -786,30 +792,62 @@ window.initStatusBar = async function() {
 
   // Live prices + watchlist favorites
   const SB_LABELS = { 'sb-btc': 'BTC', 'sb-eth': 'ETH', 'sb-nvda': 'NVDA', 'sb-gold': 'XAU', 'sb-oil': 'OIL' };
+  // Fake sidebar prices shown when API is rate-limited
+  const SB_FAKE = {
+    crypto:      [{ symbol:'BTC', price:67420.00, change_24h:+1.82 }, { symbol:'ETH', price:3512.50, change_24h:-0.64 }],
+    stocks:      [{ symbol:'NVDA', price:875.40, change_24h:+2.88 }],
+    commodities: [{ name:'Gold', price:2324.50, change_24h:+0.61 }, { name:'Crude Oil', price:82.75, change_24h:-0.48 }],
+  };
+
+  function _sbSetItem(id, asset) {
+    const el = document.getElementById(id);
+    if (!el || !asset) return;
+    const up = (asset.change_24h || 0) >= 0;
+    el.className = 'sb-item ' + (up ? 'up' : 'down');
+    el.innerHTML = `<span class="sb-label">${SB_LABELS[id] || ''}</span>`
+      + `<span class="sb-value">${Fmt.price(asset.price)}</span>`
+      + `<span style="font-size:.55rem;color:${up ? 'var(--green)' : 'var(--red)'}">`
+      + `${up ? '▲' : '▼'}${Math.abs(asset.change_24h || 0).toFixed(2)}%</span>`;
+  }
+
+  function _sbShowDemoNote() {
+    if (document.getElementById('sb-demo-note')) return;
+    const note = document.createElement('div');
+    note.id = 'sb-demo-note';
+    note.style.cssText = 'font-family:var(--font-mono);font-size:.52rem;letter-spacing:.08em;color:#f62459;background:rgba(246,36,89,.08);border:1px solid rgba(246,36,89,.30);border-radius:2px;padding:4px 8px;margin:6px 8px 2px;line-height:1.5';
+    note.innerHTML = '⚠ DEMO PRICES &nbsp;—&nbsp; <span style="color:var(--text-muted)">Live data unavailable (API limit)</span>';
+    const anchor = document.getElementById('sb-watchlist') || document.querySelector('.sb-item')?.parentNode;
+    if (anchor?.parentNode) anchor.parentNode.insertBefore(note, anchor);
+    else document.querySelector('.sidebar-section')?.appendChild(note);
+  }
+
+  function _sbRemoveDemoNote() { document.getElementById('sb-demo-note')?.remove(); }
+
+  function _sbRenderFake() {
+    _sbSetItem('sb-btc',  SB_FAKE.crypto.find(c => c.symbol === 'BTC'));
+    _sbSetItem('sb-eth',  SB_FAKE.crypto.find(c => c.symbol === 'ETH'));
+    _sbSetItem('sb-nvda', SB_FAKE.stocks.find(s => s.symbol === 'NVDA'));
+    _sbSetItem('sb-gold', SB_FAKE.commodities.find(c => c.name === 'Gold'));
+    _sbSetItem('sb-oil',  SB_FAKE.commodities.find(c => c.name === 'Crude Oil'));
+    _sbShowDemoNote();
+  }
+
   async function prices() {
     try {
       const data = await window.apiClient.get('/api/watchlist', 5 * 60 * 1000);
       window.cacheWatchlistData(data);
-      const set = (id, asset) => {
-        const el = document.getElementById(id);
-        if (!el || !asset) return;
-        const up = (asset.change_24h || 0) >= 0;
-        el.className = 'sb-item ' + (up ? 'up' : 'down');
-        el.innerHTML = `<span class="sb-label">${SB_LABELS[id] || ''}</span>`
-          + `<span class="sb-value">${Fmt.price(asset.price)}</span>`
-          + `<span style="font-size:.55rem;color:${up ? 'var(--green)' : 'var(--red)'}">`
-          + `${up ? '▲' : '▼'}${Math.abs(asset.change_24h || 0).toFixed(2)}%</span>`;
-      };
-      set('sb-btc', data.crypto?.find(c => c.symbol === 'BTC'));
-      set('sb-eth', data.crypto?.find(c => c.symbol === 'ETH'));
-      set('sb-nvda', data.stocks?.find(s => s.symbol === 'NVDA'));
-      set('sb-gold', data.commodities?.find(c => c.name === 'Gold'));
-      set('sb-oil', data.commodities?.find(c => c.name === 'Crude Oil'));
-
+      const isEmpty = !(data.crypto?.length || data.stocks?.length || data.commodities?.length);
+      if (isEmpty) { _sbRenderFake(); return; }
+      _sbRemoveDemoNote();
+      _sbSetItem('sb-btc',  data.crypto?.find(c => c.symbol === 'BTC'));
+      _sbSetItem('sb-eth',  data.crypto?.find(c => c.symbol === 'ETH'));
+      _sbSetItem('sb-nvda', data.stocks?.find(s => s.symbol === 'NVDA'));
+      _sbSetItem('sb-gold', data.commodities?.find(c => c.name === 'Gold'));
+      _sbSetItem('sb-oil',  data.commodities?.find(c => c.name === 'Crude Oil'));
       const wlEl = document.getElementById('sb-watchlist');
       if (wlEl) window.paintSbWatchlist(wlEl, window.matchFavoritesToWatchlist(data));
       window.refreshFavoritesUI?.(data);
-    } catch (e) { /* offline */ }
+    } catch (e) { _sbRenderFake(); }
   }
   prices(); setInterval(prices, 5*60*1000);
 
@@ -821,22 +859,56 @@ window.initStatusBar = async function() {
 window.initTickerTape = async function() {
   const t = document.getElementById('tickerInner');
   if (!t || t.dataset.loaded) return;
+
+  const TICKER_FAKE = [
+    { symbol:'BTC',  price:67420.00, change_24h:+1.82 },
+    { symbol:'ETH',  price:3512.50,  change_24h:-0.64 },
+    { symbol:'BNB',  price:594.30,   change_24h:+0.91 },
+    { symbol:'SOL',  price:178.40,   change_24h:+3.21 },
+    { symbol:'XRP',  price:0.6210,   change_24h:-1.10 },
+    { symbol:'NVDA', price:875.40,   change_24h:+2.88 },
+    { symbol:'AAPL', price:189.30,   change_24h:+0.72 },
+    { symbol:'MSFT', price:415.80,   change_24h:+1.14 },
+    { symbol:'XAU',  price:2324.50,  change_24h:+0.61 },
+    { symbol:'CL',   price:82.75,    change_24h:-0.48 },
+  ];
+
+  function buildTicker(assets, isDemo) {
+    const demoTag = isDemo
+      ? `<div class="ticker-item"><span style="font-family:var(--font-mono);font-size:.52rem;letter-spacing:.1em;color:#f62459;font-weight:700">⚠ DEMO — LIVE FEED UNAVAILABLE &nbsp;·&nbsp;</span></div>`
+      : '';
+    const items = assets.map(a => {
+      const up = (a.change_24h || 0) >= 0;
+      return `<div class="ticker-item"><span class="ti-sym">${a.symbol}</span><span class="ti-price">${Fmt.price(a.price)}</span><span class="ti-chg ${up ? 'up' : 'down'}">${up ? '▲' : '▼'}${Math.abs(a.change_24h || 0).toFixed(2)}%</span></div>`;
+    }).join('');
+    const row = demoTag + items;
+    return row + row;
+  }
+
+  function renderFakeTicker() {
+    t.innerHTML = buildTicker(TICKER_FAKE, true);
+    t.dataset.loaded = '1';
+    // Retry every 3 min; swap to live data silently when feed recovers
+    const retryId = setInterval(async () => {
+      try {
+        window.apiClient.invalidate('/api/watchlist');
+        const fresh = await window.apiClient.get('/api/watchlist', 0);
+        const all = [...(fresh.crypto||[]), ...(fresh.stocks||[]), ...(fresh.commodities||[])];
+        if (!all.length) return;
+        t.innerHTML = buildTicker(all, false);
+        clearInterval(retryId);
+      } catch (_) {}
+    }, 3 * 60 * 1000);
+  }
+
   try {
     const data = await window.apiClient.get('/api/watchlist', 5 * 60 * 1000);
     window.cacheWatchlistData(data);
     const all = [...(data.crypto || []), ...(data.stocks || []), ...(data.commodities || [])];
-    if (!all.length) return;
-    const html = all.map(a => {
-      const up = (a.change_24h || 0) >= 0;
-      return `<div class="ticker-item">
-        <span class="ti-sym">${a.symbol}</span>
-        <span class="ti-price">${Fmt.price(a.price)}</span>
-        <span class="ti-chg ${up ? 'up' : 'down'}">${up ? '▲' : '▼'}${Math.abs(a.change_24h || 0).toFixed(2)}%</span>
-      </div>`;
-    }).join('');
-    t.innerHTML = html + html;
+    if (!all.length) { renderFakeTicker(); return; }
+    t.innerHTML = buildTicker(all, false);
     t.dataset.loaded = '1';
-  } catch (e) {}
+  } catch (e) { renderFakeTicker(); }
 };
 
 document.addEventListener('DOMContentLoaded', () => {
