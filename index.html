@@ -607,36 +607,31 @@ class HomePage {
   async loadWatchlist() {
     try {
       const raw = await window.apiClient.get('/api/watchlist', 5*60*1000);
-      const isEmpty = !(raw.crypto?.length || raw.stocks?.length || raw.commodities?.length);
-      if (isEmpty) {
-        this.data = this._getFakeData();
-        this._injectDemoBanner();
-        this._renderWithData(this.data, true);
-        // Retry every 3 min to swap in real data
-        const retryId = setInterval(async () => {
+      const fake = this._getFakeData();
+      // Per-category fallback: fill any empty category with fake data independently
+      const merged = {
+        crypto:      raw.crypto?.length      ? raw.crypto      : fake.crypto,
+        stocks:      raw.stocks?.length      ? raw.stocks      : fake.stocks,
+        commodities: raw.commodities?.length ? raw.commodities : fake.commodities,
+      };
+      const isDemo = !raw.crypto?.length || !raw.stocks?.length || !raw.commodities?.length;
+      this.data = merged;
+      if (isDemo) { this._injectDemoBanner(); } else { this._removeDemoBanner(); }
+      this._renderWithData(merged, isDemo);
+      if (isDemo && !this._demoRetryTimer) {
+        this._demoRetryTimer = setInterval(async () => {
           try {
             window.apiClient.invalidate('/api/watchlist');
             const fresh = await window.apiClient.get('/api/watchlist', 0);
-            if (!(fresh.crypto?.length || fresh.stocks?.length || fresh.commodities?.length)) return;
-            clearInterval(retryId);
-            this.data = fresh;
-            this._isFakeData = false;
-            this._removeDemoBanner();
-            this._renderWithData(fresh, false);
+            if (!fresh.crypto?.length || !fresh.stocks?.length || !fresh.commodities?.length) return;
+            clearInterval(this._demoRetryTimer); this._demoRetryTimer = null;
+            this.data = fresh; this._removeDemoBanner(); this._renderWithData(fresh, false);
           } catch(_) {}
         }, 3 * 60 * 1000);
-      } else {
-        this.data = raw;
-        this._isFakeData = false;
-        this._removeDemoBanner();
-        this._renderWithData(raw, false);
       }
     } catch(e) {
-      // Network error — show fake data
-      this.data = this._getFakeData();
-      this._isFakeData = true;
-      this._injectDemoBanner();
-      this._renderWithData(this.data, true);
+      this.data = this._getFakeData(); this._isFakeData = true;
+      this._injectDemoBanner(); this._renderWithData(this.data, true);
     }
   }
 

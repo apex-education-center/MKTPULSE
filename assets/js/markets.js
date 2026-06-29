@@ -24,22 +24,49 @@ class MarketsPage {
     const btn = document.getElementById('refreshBtn');
     if (btn) btn.innerHTML = '<div class="spinner-border spinner-border-sm" style="color:var(--amber);width:.8rem;height:.8rem"></div>';
     try {
-      this.data = await window.apiClient.get('/api/watchlist', 0);
-      // Treat empty response same as failure — shows demo data instead
-      const totalAssets = (this.data.crypto?.length || 0) + (this.data.stocks?.length || 0) + (this.data.commodities?.length || 0);
-      if (totalAssets === 0) throw new Error('No data returned');
-      this._isFakeData = false;
-      this._removeDemoBanner();
-      if (this._demoRetryTimer) { clearInterval(this._demoRetryTimer); this._demoRetryTimer = null; }
-      window.cacheWatchlistData?.(this.data);
+      const raw = await window.apiClient.get('/api/watchlist', 0);
+      const fake = this._getFakeData();
+      // Per-category fallback: fill any empty category with fake data independently
+      this.data = {
+        crypto:      raw.crypto?.length      ? raw.crypto      : fake.crypto,
+        stocks:      raw.stocks?.length      ? raw.stocks      : fake.stocks,
+        commodities: raw.commodities?.length ? raw.commodities : fake.commodities,
+      };
+      const isDemo = !raw.crypto?.length || !raw.stocks?.length || !raw.commodities?.length;
+      this._isFakeData = isDemo;
+      if (isDemo) {
+        this._injectDemoBanner();
+      } else {
+        this._removeDemoBanner();
+        if (this._demoRetryTimer) { clearInterval(this._demoRetryTimer); this._demoRetryTimer = null; }
+      }
+      window.cacheWatchlistData?.(raw);
       this.renderKPI();
       this.renderTable();
       this.renderSideHeatmap();
       this.renderSideFavorites();
       this.renderSideMovers();
       const el = document.getElementById('lastUpdate');
-      if (el) el.textContent = 'UPD ' + new Date().toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit', hour12:false });
-      window.refreshFavoritesUI?.(this.data);
+      if (el) el.textContent = isDemo ? 'DEMO MODE' : 'UPD ' + new Date().toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit', hour12:false });
+      if (!isDemo) window.refreshFavoritesUI?.(this.data);
+      // If any category was fake, start retry timer
+      if (isDemo && !this._demoRetryTimer) {
+        this._demoRetryTimer = setInterval(async () => {
+          try {
+            window.apiClient.invalidate('/api/watchlist');
+            const fresh = await window.apiClient.get('/api/watchlist', 0);
+            if (!fresh.crypto?.length || !fresh.stocks?.length || !fresh.commodities?.length) return;
+            clearInterval(this._demoRetryTimer); this._demoRetryTimer = null;
+            this.data = fresh; this._isFakeData = false; this._removeDemoBanner();
+            window.cacheWatchlistData?.(fresh);
+            this.renderKPI(); this.renderTable(); this.renderSideHeatmap();
+            this.renderSideFavorites(); this.renderSideMovers();
+            const upEl = document.getElementById('lastUpdate');
+            if (upEl) upEl.textContent = 'UPD ' + new Date().toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit', hour12:false });
+            window.refreshFavoritesUI?.(fresh);
+          } catch(_) {}
+        }, 15000);
+      }
     } catch(e) {
       this._renderUnavailable();
     }
@@ -181,6 +208,182 @@ class MarketsPage {
       }, 15000);
     }
   }
+
+  // ── TRIVIA GAME ────────────────────────────────────────
+  _triviaInit() {
+    this._trivia = {
+      score: 0,
+      streak: 0,
+      total: 0,
+      answered: false,
+      pool: this._triviaShuffled(),
+      idx: 0,
+      retryTimer: null,
+    };
+    this._triviaRender();
+    // Keep retrying the API every 15s in background
+    this._trivia.retryTimer = setInterval(async () => {
+      try {
+        this.data = await window.apiClient.get('/api/watchlist', 0);
+        clearInterval(this._trivia.retryTimer);
+        window.cacheWatchlistData?.(this.data);
+        this._triviaSuccess();
+      } catch(e) {}
+    }, 15000);
+  }
+
+  _triviaSuccess() {
+    const root = document.getElementById('mp-trivia-root');
+    if (root) root.innerHTML = `
+      <div style="text-align:center;font-family:var(--font-mono)">
+        <div style="color:var(--green);font-size:.7rem;letter-spacing:.12em;margin-bottom:6px">● FEED RESTORED</div>
+        <div style="color:var(--text-muted);font-size:.65rem;margin-bottom:16px">Live prices loading…</div>
+        <div style="color:var(--amber);font-size:.85rem">FINAL SCORE: ${this._trivia?.score ?? 0} / ${this._trivia?.total ?? 0}</div>
+      </div>`;
+    setTimeout(() => {
+      this.renderKPI();
+      this.renderTable();
+      this.renderSideHeatmap();
+      this.renderSideFavorites();
+      this.renderSideMovers();
+      const el = document.getElementById('lastUpdate');
+      if (el) el.textContent = 'UPD ' + new Date().toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit', hour12:false });
+      window.refreshFavoritesUI?.(this.data);
+    }, 1800);
+  }
+
+  _triviaShuffled() {
+    const qs = [
+      { q: 'What does "BTC" stand for?', opts: ['Bitcoin','Bitcash','Blockchain Token Coin','Binary Trade Coin'], a: 0 },
+      { q: 'In what year was Bitcoin created?', opts: ['2007','2008','2009','2011'], a: 2 },
+      { q: 'What is the maximum supply of Bitcoin?', opts: ['18 million','21 million','100 million','Unlimited'], a: 1 },
+      { q: 'What is a "bull market"?', opts: ['Prices falling rapidly','Prices rising over time','A sideways market','High volatility period'], a: 1 },
+      { q: 'What does "DeFi" stand for?', opts: ['Defined Finance','Decentralized Finance','Digital Finance','Derivative Finance'], a: 1 },
+      { q: 'What is the S&P 500?', opts: ['A bond index','A commodities index','An index of 500 large US stocks','A crypto index'], a: 2 },
+      { q: 'What is a "short" position?', opts: ['Buying an asset expecting it to rise','Betting an asset will fall in price','Holding for under a week','A small trade'], a: 1 },
+      { q: 'What does ETH stand for?', opts: ['Ethereum','Ethanol','Electronic Trade Hub','None of these'], a: 0 },
+      { q: 'What is "market cap"?', opts: ['Daily trading volume','Maximum price of an asset','Total value of all shares/coins','The cap on daily trades'], a: 2 },
+      { q: 'What does P/E ratio stand for?', opts: ['Profit/Equity','Price/Earnings','Portfolio/Expense','Price/Exchange'], a: 1 },
+      { q: 'What is a "halving" in Bitcoin?', opts: ['BTC price drops 50%','Mining reward is cut in half','Half the network goes offline','A 50% trading fee'], a: 1 },
+      { q: 'What is "liquidity" in finance?', opts: ['How fast you can buy/sell without affecting price','The amount of debt a company holds','A company\'s cash on hand','Interest earned on deposits'], a: 0 },
+      { q: 'What does "HODL" mean in crypto culture?', opts: ['A trading strategy','Hold On for Dear Life','A type of wallet','High Order Distributed Ledger'], a: 1 },
+      { q: 'What is a "bear market"?', opts: ['A market for commodities','Prices rising 10% or more','A prolonged price decline of 20%+','A sideways-moving market'], a: 2 },
+      { q: 'What is Ethereum\'s native token called?', opts: ['ETH','GAS','ETHER','Both ETH and ETHER'], a: 3 },
+      { q: 'What does "ROI" stand for?', opts: ['Rate of Investment','Return on Investment','Risk of Inflation','Revenue over Income'], a: 1 },
+      { q: 'What is a "smart contract"?', opts: ['A legal document signed digitally','Self-executing code on a blockchain','A contract between two brokers','An AI-written agreement'], a: 1 },
+      { q: 'What is "inflation"?', opts: ['Increase in asset prices only','A rise in the general price level over time','A fall in interest rates','Increase in money supply only'], a: 1 },
+      { q: 'What does "FOMO" mean in trading?', opts: ['Fear of Missing Out','Future Order Market Operation','Fixed Open Market Offering','Fast Order Management Option'], a: 0 },
+      { q: 'What is a "stablecoin"?', opts: ['A coin that never changes','A crypto pegged to a stable asset like USD','A government-issued digital currency','A coin with low volatility by algorithm'], a: 1 },
+      { q: 'What is the "Fear & Greed Index"?', opts: ['A measure of market volatility','A sentiment indicator (0=Fear, 100=Greed)','An index of risky assets','A bond yield tracker'], a: 1 },
+      { q: 'What is "market order"?', opts: ['A buy/sell at best available current price','A scheduled trade','A trade at a specific price','An order to hold'], a: 0 },
+      { q: 'What does "ATH" stand for?', opts: ['Annual Trading High','All Time High','Average Trading History','Asset To Hold'], a: 1 },
+      { q: 'What is "gas" in Ethereum?', opts: ['The ETH token itself','A fee paid to execute transactions','A type of validator node','A layer-2 solution'], a: 1 },
+      { q: 'What is a "blockchain"?', opts: ['A type of encryption','A distributed, immutable ledger of transactions','A centralized database','A digital wallet'], a: 1 },
+    ];
+    // Fisher-Yates shuffle
+    for (let i = qs.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [qs[i], qs[j]] = [qs[j], qs[i]];
+    }
+    return qs;
+  }
+
+  _triviaRender() {
+    const root = document.getElementById('mp-trivia-root');
+    if (!root) return;
+    const t = this._trivia;
+    const q = t.pool[t.idx % t.pool.length];
+    const streakLabel = t.streak >= 3 ? ` 🔥 ${t.streak} STREAK` : '';
+
+    root.innerHTML = `
+      <style>
+        .tv-badge { display:inline-block; background:rgba(246,36,89,.12); border:1px solid rgba(246,36,89,.35); color:#f62459; font-family:var(--font-mono); font-size:.58rem; letter-spacing:.12em; padding:3px 10px; border-radius:2px; margin-bottom:18px; }
+        .tv-meta { font-family:var(--font-mono); font-size:.6rem; color:var(--text-muted); margin-bottom:4px; letter-spacing:.08em; }
+        .tv-score { font-family:var(--font-mono); font-size:.62rem; color:var(--amber); letter-spacing:.1em; margin-bottom:20px; }
+        .tv-q { font-family:var(--font-mono); font-size:.82rem; color:var(--text-primary); text-align:center; max-width:540px; line-height:1.6; margin-bottom:24px; letter-spacing:.01em; }
+        .tv-opts { display:grid; grid-template-columns:1fr 1fr; gap:10px; width:100%; max-width:540px; margin-bottom:20px; }
+        .tv-opt { background:transparent; border:1px solid var(--border-mid); color:var(--text-secondary); font-family:var(--font-mono); font-size:.68rem; padding:10px 14px; cursor:pointer; border-radius:3px; text-align:left; transition:border-color .15s, color .15s, background .15s; letter-spacing:.02em; }
+        .tv-opt:hover:not(:disabled) { border-color:var(--amber); color:var(--amber); }
+        .tv-opt.correct { border-color:var(--green) !important; color:var(--green) !important; background:rgba(0,200,83,.08) !important; }
+        .tv-opt.wrong   { border-color:var(--red)   !important; color:var(--red)   !important; background:rgba(246,36,89,.08) !important; }
+        .tv-opt:disabled { cursor:default; }
+        .tv-explain { font-family:var(--font-mono); font-size:.64rem; color:var(--text-muted); text-align:center; max-width:480px; min-height:18px; margin-bottom:18px; line-height:1.5; }
+        .tv-next { background:transparent; border:1px solid var(--amber); color:var(--amber); font-family:var(--font-mono); font-size:.62rem; letter-spacing:.1em; padding:7px 22px; cursor:pointer; border-radius:2px; opacity:0; pointer-events:none; transition:opacity .2s; }
+        .tv-next.show { opacity:1; pointer-events:all; }
+        .tv-retry { background:transparent; border:1px solid var(--border-mid); color:var(--text-muted); font-family:var(--font-mono); font-size:.58rem; letter-spacing:.08em; padding:5px 14px; cursor:pointer; border-radius:2px; margin-top:6px; }
+        .tv-progress { width:100%; max-width:540px; height:2px; background:var(--border-mid); border-radius:1px; margin-bottom:20px; }
+        .tv-progress-fill { height:100%; background:var(--amber); border-radius:1px; transition:width .4s ease; }
+      </style>
+
+      <div class="tv-badge">● LIVE DATA UNAVAILABLE — FEED RECONNECTING</div>
+      <div class="tv-meta">MARKETPULSE TERMINAL QUIZ · Q${t.idx + 1} OF ${t.pool.length}</div>
+      <div class="tv-score">SCORE: ${t.score} / ${t.total}${streakLabel}</div>
+
+      <div class="tv-progress">
+        <div class="tv-progress-fill" style="width:${(t.idx / t.pool.length) * 100}%"></div>
+      </div>
+
+      <div class="tv-q">${q.q}</div>
+
+      <div class="tv-opts">
+        ${q.opts.map((opt, i) => `
+          <button class="tv-opt" id="tv-opt-${i}" onclick="mktPage._triviaAnswer(${i})">
+            <span style="color:var(--amber);margin-right:6px">${['A','B','C','D'][i]}.</span>${opt}
+          </button>`).join('')}
+      </div>
+
+      <div class="tv-explain" id="tv-explain"></div>
+
+      <button class="tv-next" id="tv-next" onclick="mktPage._triviaNext()">NEXT QUESTION →</button>
+      <button class="tv-retry" onclick="mktPage.reload()">↻ RETRY FEED NOW</button>
+    `;
+  }
+
+  _triviaAnswer(chosen) {
+    const t = this._trivia;
+    if (t.answered) return;
+    t.answered = true;
+    t.total++;
+
+    const q = t.pool[t.idx % t.pool.length];
+    const correct = q.a;
+
+    document.querySelectorAll('.tv-opt').forEach((btn, i) => {
+      btn.disabled = true;
+      if (i === correct) btn.classList.add('correct');
+      else if (i === chosen) btn.classList.add('wrong');
+    });
+
+    const explainEl = document.getElementById('tv-explain');
+    if (chosen === correct) {
+      t.score++;
+      t.streak++;
+      if (explainEl) explainEl.innerHTML = `<span style="color:var(--green)">✓ CORRECT${t.streak >= 3 ? ` — ${t.streak} IN A ROW 🔥` : ''}</span>`;
+    } else {
+      t.streak = 0;
+      const correctText = q.opts[correct];
+      if (explainEl) explainEl.innerHTML = `<span style="color:var(--red)">✗ INCORRECT</span> <span style="color:var(--text-muted)">— Answer: <span style="color:var(--text-primary)">${correctText}</span></span>`;
+    }
+
+    const nextBtn = document.getElementById('tv-next');
+    if (nextBtn) {
+      const isLast = (t.idx + 1) >= t.pool.length;
+      nextBtn.textContent = isLast ? 'RESTART QUIZ →' : 'NEXT QUESTION →';
+      nextBtn.classList.add('show');
+    }
+  }
+
+  _triviaNext() {
+    const t = this._trivia;
+    t.idx++;
+    if (t.idx >= t.pool.length) {
+      t.idx = 0;
+      t.pool = this._triviaShuffled(); // re-shuffle on loop
+    }
+    t.answered = false;
+    this._triviaRender();
+  }
+
   // ── KPI STRIP ──────────────────────────────────────────
   renderKPI() {
     const all = [...(this.data.crypto||[]), ...(this.data.stocks||[]), ...(this.data.commodities||[])];
@@ -264,6 +467,25 @@ class MarketsPage {
     this._displayAssets = assets;
 
     if (!assets.length) {
+      // If this tab has no data at all (not just a filtered-out search),
+      // show the trivia game instead of a flat "no results" message.
+      const hasDataForTab = (this.data[this.tab] || []).length > 0;
+      if (!hasDataForTab && !this.query) {
+        body.innerHTML = `
+          <tr>
+            <td colspan="9" style="padding:0">
+              <div id="mp-trivia-root" style="
+                padding: 36px 24px 28px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 0;
+              "></div>
+            </td>
+          </tr>`;
+        this._triviaInit();
+        return;
+      }
       body.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--text-muted);font-family:var(--font-mono);font-size:.72rem">NO ASSETS FOUND</td></tr>`;
       return;
     }
