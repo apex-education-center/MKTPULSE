@@ -28,6 +28,9 @@ class MarketsPage {
       // Treat empty response same as failure — triggers trivia game
       const totalAssets = (this.data.crypto?.length || 0) + (this.data.stocks?.length || 0) + (this.data.commodities?.length || 0);
       if (totalAssets === 0) throw new Error('No data returned');
+      this._isFakeData = false;
+      this._removeDemoBanner();
+      if (this._demoRetryTimer) { clearInterval(this._demoRetryTimer); this._demoRetryTimer = null; }
       window.cacheWatchlistData?.(this.data);
       this.renderKPI();
       this.renderTable();
@@ -43,71 +46,140 @@ class MarketsPage {
     if (btn) btn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>REFRESH';
   }
 
+  // ── FAKE / DEMO DATA (shown when API is rate-limited) ──
+  _getFakeData() {
+    return {
+      crypto: [
+        { symbol:'BTC',  name:'Bitcoin',       price:67420.00, change_24h:+1.82, change_7d:+5.41,  volume:28400000000, market_cap:1320000000000, rank:1,  image:'https://assets.coingecko.com/coins/images/1/thumb/bitcoin.png',    sparkline:[] },
+        { symbol:'ETH',  name:'Ethereum',      price:3512.50,  change_24h:-0.64, change_7d:+3.17,  volume:12100000000, market_cap:421000000000,  rank:2,  image:'https://assets.coingecko.com/coins/images/279/thumb/ethereum.png', sparkline:[] },
+        { symbol:'BNB',  name:'BNB',           price:594.30,   change_24h:+0.91, change_7d:+2.05,  volume:1800000000,  market_cap:86000000000,   rank:3,  image:'https://assets.coingecko.com/coins/images/825/thumb/bnb-icon2_2x.png', sparkline:[] },
+        { symbol:'SOL',  name:'Solana',        price:178.40,   change_24h:+3.21, change_7d:+9.88,  volume:3200000000,  market_cap:82000000000,   rank:4,  image:'https://assets.coingecko.com/coins/images/4128/thumb/solana.png', sparkline:[] },
+        { symbol:'XRP',  name:'XRP',           price:0.6210,   change_24h:-1.10, change_7d:-2.30,  volume:1500000000,  market_cap:34000000000,   rank:5,  image:'https://assets.coingecko.com/coins/images/44/thumb/xrp-symbol-white-128.png', sparkline:[] },
+        { symbol:'USDT', name:'Tether',        price:1.0000,   change_24h:+0.01, change_7d:+0.00,  volume:55000000000, market_cap:110000000000,  rank:6,  image:'', sparkline:[] },
+        { symbol:'ADA',  name:'Cardano',       price:0.4510,   change_24h:-0.82, change_7d:+1.44,  volume:480000000,   market_cap:16000000000,   rank:7,  image:'', sparkline:[] },
+        { symbol:'AVAX', name:'Avalanche',     price:38.20,    change_24h:+2.15, change_7d:+6.70,  volume:640000000,   market_cap:15700000000,   rank:8,  image:'', sparkline:[] },
+        { symbol:'DOGE', name:'Dogecoin',      price:0.1620,   change_24h:+4.50, change_7d:+12.10, volume:1900000000,  market_cap:23000000000,   rank:9,  image:'', sparkline:[] },
+        { symbol:'DOT',  name:'Polkadot',      price:7.840,    change_24h:-1.34, change_7d:-3.20,  volume:280000000,   market_cap:11000000000,   rank:10, image:'', sparkline:[] },
+      ],
+      stocks: [
+        { symbol:'AAPL',  name:'Apple Inc.',         price:189.30, change_24h:+0.72, change_7d:+2.10,  volume:54000000,  market_cap:2940000000000, rank:1, image:'', sparkline:[] },
+        { symbol:'MSFT',  name:'Microsoft Corp.',    price:415.80, change_24h:+1.14, change_7d:+3.40,  volume:22000000,  market_cap:3090000000000, rank:2, image:'', sparkline:[] },
+        { symbol:'NVDA',  name:'NVIDIA Corp.',       price:875.40, change_24h:+2.88, change_7d:+8.60,  volume:41000000,  market_cap:2160000000000, rank:3, image:'', sparkline:[] },
+        { symbol:'GOOGL', name:'Alphabet Inc.',      price:175.60, change_24h:-0.31, change_7d:+1.20,  volume:24000000,  market_cap:2190000000000, rank:4, image:'', sparkline:[] },
+        { symbol:'AMZN',  name:'Amazon.com Inc.',    price:192.40, change_24h:+0.55, change_7d:+2.80,  volume:31000000,  market_cap:2010000000000, rank:5, image:'', sparkline:[] },
+        { symbol:'TSLA',  name:'Tesla Inc.',         price:248.50, change_24h:-1.22, change_7d:-4.30,  volume:98000000,  market_cap:792000000000,  rank:6, image:'', sparkline:[] },
+        { symbol:'META',  name:'Meta Platforms',     price:521.30, change_24h:+1.60, change_7d:+4.10,  volume:15000000,  market_cap:1340000000000, rank:7, image:'', sparkline:[] },
+        { symbol:'JPM',   name:'JPMorgan Chase',     price:201.70, change_24h:+0.40, change_7d:+1.60,  volume:9500000,   market_cap:581000000000,  rank:8, image:'', sparkline:[] },
+        { symbol:'V',     name:'Visa Inc.',           price:278.90, change_24h:+0.28, change_7d:+0.90,  volume:7200000,   market_cap:564000000000,  rank:9, image:'', sparkline:[] },
+        { symbol:'WMT',   name:'Walmart Inc.',        price:68.40,  change_24h:+0.15, change_7d:+0.50,  volume:22000000,  market_cap:549000000000,  rank:10, image:'', sparkline:[] },
+      ],
+      commodities: [
+        { symbol:'XAU',  name:'Gold',          price:2324.50, change_24h:+0.61, change_7d:+1.80,  volume:0, market_cap:0, rank:1, image:'', sparkline:[] },
+        { symbol:'XAG',  name:'Silver',        price:29.14,   change_24h:+1.02, change_7d:+2.40,  volume:0, market_cap:0, rank:2, image:'', sparkline:[] },
+        { symbol:'CL',   name:'Crude Oil WTI', price:82.75,   change_24h:-0.48, change_7d:-1.20,  volume:0, market_cap:0, rank:3, image:'', sparkline:[] },
+        { symbol:'NG',   name:'Natural Gas',   price:2.184,   change_24h:-1.10, change_7d:-3.50,  volume:0, market_cap:0, rank:4, image:'', sparkline:[] },
+        { symbol:'ZW',   name:'Wheat',         price:568.00,  change_24h:+0.35, change_7d:+0.80,  volume:0, market_cap:0, rank:5, image:'', sparkline:[] },
+        { symbol:'ZC',   name:'Corn',          price:452.75,  change_24h:-0.22, change_7d:-0.60,  volume:0, market_cap:0, rank:6, image:'', sparkline:[] },
+        { symbol:'HG',   name:'Copper',        price:4.562,   change_24h:+0.80, change_7d:+2.10,  volume:0, market_cap:0, rank:7, image:'', sparkline:[] },
+        { symbol:'PL',   name:'Platinum',      price:984.20,  change_24h:-0.30, change_7d:-0.90,  volume:0, market_cap:0, rank:8, image:'', sparkline:[] },
+      ],
+    };
+  }
+
+  _injectDemoBanner() {
+    // Avoid duplicate banners
+    if (document.getElementById('mp-demo-banner')) return;
+    const banner = document.createElement('div');
+    banner.id = 'mp-demo-banner';
+    banner.style.cssText = `
+      position:sticky; top:0; z-index:50;
+      background:rgba(246,36,89,.10);
+      border-bottom:1px solid rgba(246,36,89,.40);
+      padding:7px 16px;
+      display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    `;
+    banner.innerHTML = `
+      <span style="font-family:var(--font-mono);font-size:.58rem;letter-spacing:.12em;color:#f62459;font-weight:700">
+        ⚠ DEMO DATA
+      </span>
+      <span style="font-family:var(--font-mono);font-size:.6rem;color:var(--text-muted);flex:1">
+        Live prices unavailable — API rate limit reached. Prices below are <strong style="color:var(--text-secondary)">illustrative only</strong> and do not reflect real market values.
+      </span>
+      <button onclick="mktPage.reload()" style="
+        background:transparent;border:1px solid rgba(246,36,89,.5);color:#f62459;
+        font-family:var(--font-mono);font-size:.58rem;letter-spacing:.08em;
+        padding:4px 12px;cursor:pointer;border-radius:2px;white-space:nowrap;
+      ">↻ RETRY LIVE FEED</button>
+    `;
+    // Insert before the main market table wrapper
+    const tableWrap = document.querySelector('.mkts-wrap') || document.querySelector('.markets-layout') || document.getElementById('mktsBody')?.closest('table');
+    if (tableWrap?.parentNode) {
+      tableWrap.parentNode.insertBefore(banner, tableWrap);
+    } else {
+      // fallback: prepend to main
+      const main = document.querySelector('main') || document.body;
+      main.prepend(banner);
+    }
+  }
+
+  _removeDemoBanner() {
+    document.getElementById('mp-demo-banner')?.remove();
+  }
+
   // ── DATA UNAVAILABLE STATE ─────────────────────────────
   _renderUnavailable() {
-    // Table body — trivia game
-    const body = document.getElementById('mktsBody');
-    if (body) {
-      body.innerHTML = `
-        <tr>
-          <td colspan="9" style="padding:0">
-            <div id="mp-trivia-root" style="
-              padding: 36px 24px 28px;
-              display: flex;
-              flex-direction: column;
-              align-items: center;
-              gap: 0;
-            "></div>
-          </td>
-        </tr>`;
-      this._triviaInit();
-    }
+    // Inject fake data so the page still shows content
+    this.data = this._getFakeData();
+    this._isFakeData = true;
 
-    // KPI strip — gray out all values
-    const strip = document.getElementById('kpiStrip');
-    if (strip) strip.innerHTML = `
-      <div class="kpi-cell">
-        <div class="kc-label">TOTAL ASSETS</div>
-        <div class="kc-value" style="color:var(--text-muted)">—</div>
-        <div class="kc-sub" style="color:var(--text-muted)">3 CATEGORIES</div>
-      </div>
-      <div class="kpi-cell">
-        <div class="kc-label">GAINERS 24H</div>
-        <div class="kc-value" style="color:var(--text-muted)">—</div>
-        <div class="kc-sub" style="color:var(--text-muted)">N/A</div>
-      </div>
-      <div class="kpi-cell">
-        <div class="kc-label">LOSERS 24H</div>
-        <div class="kc-value" style="color:var(--text-muted)">—</div>
-        <div class="kc-sub" style="color:var(--text-muted)">N/A</div>
-      </div>
-      <div class="kpi-cell">
-        <div class="kc-label">BTC PRICE</div>
-        <div class="kc-value" style="color:var(--text-muted)">—</div>
-        <div class="kc-sub" style="color:var(--text-muted)">FEED DOWN</div>
-      </div>
-      <div class="kpi-cell">
-        <div class="kc-label">FAVORITES</div>
-        <div class="kc-value" style="color:var(--amber)">${window.favoritesManager?.count() ?? '—'}</div>
-        <div class="kc-sub" style="color:var(--amber)">⭐ SAVED</div>
-      </div>`;
+    // Show the sticky warning banner
+    this._injectDemoBanner();
 
-    // Side panels
-    const sideHeatmap = document.getElementById('sideHeatmap');
-    if (sideHeatmap) sideHeatmap.innerHTML = `
-      <div style="color:var(--text-muted);font-family:var(--font-mono);font-size:.62rem;text-align:center;padding:12px 0">
-        NO DATA
-      </div>`;
-
-    const sideMovers = document.getElementById('sideMovers');
-    if (sideMovers) sideMovers.innerHTML = `
-      <div style="color:var(--text-muted);font-family:var(--font-mono);font-size:.62rem;text-align:center;padding:12px 0">
-        NO DATA
-      </div>`;
+    // Render everything normally with fake data
+    this.renderKPI();
+    this.renderTable();
+    this.renderSideHeatmap();
+    this.renderSideFavorites();
+    this.renderSideMovers();
 
     // Status bar timestamp
     const el = document.getElementById('lastUpdate');
-    if (el) el.textContent = 'FEED OFFLINE';
+    if (el) el.textContent = 'DEMO MODE';
+
+    // Side panels — add demo note
+    const sideHeatmap = document.getElementById('sideHeatmap');
+    if (sideHeatmap) {
+      const note = document.createElement('div');
+      note.style.cssText = 'font-family:var(--font-mono);font-size:.55rem;color:rgba(246,36,89,.7);text-align:center;padding:4px 0 0;letter-spacing:.06em';
+      note.textContent = '⚠ DEMO PRICES';
+      sideHeatmap.appendChild(note);
+    }
+
+    // Keep retrying the live feed every 15s
+    if (!this._demoRetryTimer) {
+      this._demoRetryTimer = setInterval(async () => {
+        try {
+          const fresh = await window.apiClient.get('/api/watchlist', 0);
+          const total = (fresh.crypto?.length || 0) + (fresh.stocks?.length || 0) + (fresh.commodities?.length || 0);
+          if (total === 0) throw new Error('still empty');
+          clearInterval(this._demoRetryTimer);
+          this._demoRetryTimer = null;
+          this._isFakeData = false;
+          this.data = fresh;
+          this._removeDemoBanner();
+          window.cacheWatchlistData?.(fresh);
+          this.renderKPI();
+          this.renderTable();
+          this.renderSideHeatmap();
+          this.renderSideFavorites();
+          this.renderSideMovers();
+          const el = document.getElementById('lastUpdate');
+          if (el) el.textContent = 'UPD ' + new Date().toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit', hour12:false });
+          window.refreshFavoritesUI?.(fresh);
+          Toast.show('Live feed restored', 'success');
+        } catch(e) {}
+      }, 15000);
+    }
   }
 
   // ── TRIVIA GAME ────────────────────────────────────────

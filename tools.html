@@ -239,6 +239,7 @@
       <span class="chip" data-target="tool-compound">Compound</span>
       <span class="chip" data-target="tool-converter">Convert</span>
       <span class="chip" data-target="tool-export">Export</span>
+      <span class="chip" data-target="tool-quiz">🧠 Test Knowledge</span>
     </div>
   </nav>
 
@@ -542,6 +543,95 @@
       </div>
     </div>
 
+
+    <!-- 16. KNOWLEDGE QUIZ -->
+    <div class="tool-card fade-up" id="tool-quiz" style="grid-column:1/-1">
+      <div class="tc-title"><span class="tc-icon">🧠</span> Test Your Market Knowledge</div>
+      <p style="font-size:.82rem;color:var(--text-secondary);margin-bottom:20px">
+        Multi-category finance quiz — Crypto, Stocks &amp; Equities, and Commodities. Track your score across all topics.
+      </p>
+
+      <!-- Category selector -->
+      <div class="chip-row mb-4" id="quizCatRow">
+        <span class="chip active" onclick="quiz.setCategory('all',this)">ALL TOPICS</span>
+        <span class="chip" onclick="quiz.setCategory('crypto',this)">₿ CRYPTO</span>
+        <span class="chip" onclick="quiz.setCategory('stocks',this)">📈 STOCKS</span>
+        <span class="chip" onclick="quiz.setCategory('commodities',this)">🛢️ COMMODITIES</span>
+      </div>
+
+      <!-- Quiz layout -->
+      <div style="display:grid;grid-template-columns:1fr 280px;gap:20px;align-items:start" id="quizLayout">
+
+        <!-- Question panel -->
+        <div style="background:var(--bg-raised);border:1px solid var(--border-dim);border-radius:var(--radius);padding:24px" id="quizPanel">
+          <div style="font-family:var(--font-mono);font-size:.6rem;color:var(--text-muted);letter-spacing:.1em;margin-bottom:14px" id="quizMeta">LOADING...</div>
+          <div style="width:100%;height:2px;background:var(--border-dim);border-radius:1px;margin-bottom:20px">
+            <div id="quizProgressBar" style="height:100%;background:var(--amber);border-radius:1px;transition:width .4s ease;width:0%"></div>
+          </div>
+          <div style="font-family:var(--font-mono);font-size:.9rem;color:var(--text-primary);line-height:1.65;margin-bottom:24px;min-height:48px" id="quizQuestion">—</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px" id="quizOpts"></div>
+          <div style="font-family:var(--font-mono);font-size:.65rem;min-height:20px;text-align:center;margin-bottom:16px" id="quizFeedback"></div>
+          <div style="display:flex;gap:10px;justify-content:center">
+            <button id="quizNextBtn" class="btn-mp btn-mp-primary" style="display:none;letter-spacing:.08em" onclick="quiz.next()">NEXT →</button>
+            <button id="quizRestartBtn" class="btn-mp btn-mp-ghost" style="display:none;letter-spacing:.08em" onclick="quiz.restart()">↻ RESTART</button>
+          </div>
+        </div>
+
+        <!-- Scoreboard sidebar -->
+        <div>
+          <!-- Current session -->
+          <div style="background:var(--bg-raised);border:1px solid var(--border-dim);border-radius:var(--radius);padding:16px;margin-bottom:12px">
+            <div style="font-family:var(--font-mono);font-size:.6rem;color:var(--text-muted);letter-spacing:.1em;margin-bottom:12px">SESSION STATS</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <div style="background:var(--bg-overlay);border-radius:var(--radius-sm);padding:10px;text-align:center">
+                <div style="font-family:var(--font-mono);font-size:.55rem;color:var(--text-muted);letter-spacing:.08em;margin-bottom:4px">SCORE</div>
+                <div style="font-family:var(--font-mono);font-size:1.3rem;font-weight:700;color:var(--amber)" id="quizScore">0</div>
+              </div>
+              <div style="background:var(--bg-overlay);border-radius:var(--radius-sm);padding:10px;text-align:center">
+                <div style="font-family:var(--font-mono);font-size:.55rem;color:var(--text-muted);letter-spacing:.08em;margin-bottom:4px">ACCURACY</div>
+                <div style="font-family:var(--font-mono);font-size:1.3rem;font-weight:700;color:var(--blue)" id="quizAccuracy">—</div>
+              </div>
+              <div style="background:var(--bg-overlay);border-radius:var(--radius-sm);padding:10px;text-align:center">
+                <div style="font-family:var(--font-mono);font-size:.55rem;color:var(--text-muted);letter-spacing:.08em;margin-bottom:4px">STREAK 🔥</div>
+                <div style="font-family:var(--font-mono);font-size:1.3rem;font-weight:700;color:var(--green)" id="quizStreak">0</div>
+              </div>
+              <div style="background:var(--bg-overlay);border-radius:var(--radius-sm);padding:10px;text-align:center">
+                <div style="font-family:var(--font-mono);font-size:.55rem;color:var(--text-muted);letter-spacing:.08em;margin-bottom:4px">BEST STREAK</div>
+                <div style="font-family:var(--font-mono);font-size:1.3rem;font-weight:700;color:var(--text-secondary)" id="quizBestStreak">0</div>
+              </div>
+            </div>
+          </div>
+          <!-- Category breakdown -->
+          <div style="background:var(--bg-raised);border:1px solid var(--border-dim);border-radius:var(--radius);padding:16px">
+            <div style="font-family:var(--font-mono);font-size:.6rem;color:var(--text-muted);letter-spacing:.1em;margin-bottom:12px">BY CATEGORY</div>
+            <div id="quizCatStats">
+              <div style="font-size:.75rem;color:var(--text-muted);text-align:center;padding:8px 0">Start answering to see breakdown</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <style>
+        .qz-opt {
+          background:transparent; border:1px solid var(--border-mid); color:var(--text-secondary);
+          font-family:var(--font-mono); font-size:.7rem; padding:11px 14px; cursor:pointer;
+          border-radius:3px; text-align:left; transition:border-color .15s, color .15s, background .15s;
+          letter-spacing:.02em; line-height:1.4;
+        }
+        .qz-opt:hover:not(:disabled) { border-color:var(--amber); color:var(--amber); }
+        .qz-opt.correct { border-color:var(--green) !important; color:var(--green) !important; background:rgba(0,200,83,.08) !important; }
+        .qz-opt.wrong   { border-color:var(--red)   !important; color:var(--red)   !important; background:rgba(246,36,89,.08) !important; }
+        .qz-opt:disabled { cursor:default; }
+        .qz-cat-badge { display:inline-block; font-family:var(--font-mono); font-size:.52rem; letter-spacing:.1em; padding:2px 7px; border-radius:2px; margin-bottom:10px; }
+        .qz-cat-badge.crypto      { background:rgba(247,147,26,.12); color:#f7931a; border:1px solid rgba(247,147,26,.3); }
+        .qz-cat-badge.stocks      { background:rgba(45,124,246,.12); color:#2d7cf6; border:1px solid rgba(45,124,246,.3); }
+        .qz-cat-badge.commodities { background:rgba(0,200,83,.10);   color:#00c853; border:1px solid rgba(0,200,83,.3); }
+        @media(max-width:768px) {
+          #quizLayout { grid-template-columns:1fr !important; }
+          #quizOpts   { grid-template-columns:1fr !important; }
+        }
+      </style>
+    </div>
 
   </div>
 </div>
@@ -1392,5 +1482,246 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 <script src="assets/js/features.js"></script>
 <script src="assets/js/cursor-fx.js?v=13"></script>
+<script>
+// ── MARKETPULSE KNOWLEDGE QUIZ ───────────────────────────
+const quiz = (() => {
+  const ALL_QUESTIONS = [
+    // ── CRYPTO ──────────────────────────────────────────────
+    { cat:'crypto', q:'What does "BTC" stand for?', opts:['Bitcoin','Bitcash','Blockchain Token Coin','Binary Trade Coin'], a:0 },
+    { cat:'crypto', q:'In what year was Bitcoin created?', opts:['2007','2008','2009','2011'], a:2 },
+    { cat:'crypto', q:'What is the maximum supply of Bitcoin?', opts:['18 million','21 million','100 million','Unlimited'], a:1 },
+    { cat:'crypto', q:'What does "DeFi" stand for?', opts:['Defined Finance','Decentralized Finance','Digital Finance','Derivative Finance'], a:1 },
+    { cat:'crypto', q:'What does ETH stand for?', opts:['Ethereum','Ethanol','Electronic Trade Hub','None of these'], a:0 },
+    { cat:'crypto', q:'What is a "halving" in Bitcoin?', opts:['BTC price drops 50%','Mining reward is cut in half','Half the network goes offline','A 50% trading fee'], a:1 },
+    { cat:'crypto', q:'What does "HODL" mean in crypto culture?', opts:['A trading strategy','Hold On for Dear Life','A type of wallet','High Order Distributed Ledger'], a:1 },
+    { cat:'crypto', q:'What is Ethereum\'s native token called?', opts:['ETH','GAS','ETHER','Both ETH and ETHER are correct'], a:3 },
+    { cat:'crypto', q:'What is a "smart contract"?', opts:['A legal document signed digitally','Self-executing code on a blockchain','A contract between two brokers','An AI-written agreement'], a:1 },
+    { cat:'crypto', q:'What is a "stablecoin"?', opts:['A coin that never changes','A crypto pegged to a stable asset like USD','A government-issued digital currency','A coin with low volatility by algorithm'], a:1 },
+    { cat:'crypto', q:'What is "gas" in Ethereum?', opts:['The ETH token itself','A fee paid to execute transactions','A type of validator node','A layer-2 solution'], a:1 },
+    { cat:'crypto', q:'What is a "blockchain"?', opts:['A type of encryption','A distributed, immutable ledger of transactions','A centralized database','A digital wallet'], a:1 },
+    { cat:'crypto', q:'Which consensus mechanism does Ethereum currently use after "The Merge"?', opts:['Proof of Work','Proof of Stake','Delegated Proof of Stake','Proof of Authority'], a:1 },
+    { cat:'crypto', q:'What does "NFT" stand for?', opts:['New Finance Token','Non-Fungible Token','Network Fee Token','Non-Fixed Trade'], a:1 },
+    { cat:'crypto', q:'Who is the pseudonymous creator of Bitcoin?', opts:['Vitalik Buterin','Elon Musk','Satoshi Nakamoto','Nick Szabo'], a:2 },
+    { cat:'crypto', q:'What is a "cold wallet" in crypto?', opts:['A wallet with low balances','An offline hardware wallet','A wallet that has been hacked','A wallet with no transactions'], a:1 },
+    { cat:'crypto', q:'What does "Layer 2" mean in blockchain?', opts:['The second blockchain in a series','A scaling solution built on top of a base blockchain','A smart contract layer','The second generation of crypto'], a:1 },
+    { cat:'crypto', q:'What is the "Fear & Greed Index" in crypto?', opts:['A measure of market volatility','A sentiment indicator (0=Extreme Fear, 100=Extreme Greed)','An index of risky assets','A bond yield tracker'], a:1 },
+
+    // ── STOCKS ──────────────────────────────────────────────
+    { cat:'stocks', q:'What does "P/E ratio" stand for?', opts:['Profit/Equity','Price/Earnings','Portfolio/Expense','Price/Exchange'], a:1 },
+    { cat:'stocks', q:'What is the S&P 500?', opts:['A bond index','A commodities index','An index of 500 large US stocks','A crypto index'], a:2 },
+    { cat:'stocks', q:'What is a "bull market"?', opts:['Prices falling rapidly','Prices rising over time','A sideways market','High volatility period'], a:1 },
+    { cat:'stocks', q:'What is a "bear market"?', opts:['A market for commodities','Prices rising 10% or more','A prolonged price decline of 20%+','A sideways-moving market'], a:2 },
+    { cat:'stocks', q:'What is a "short" position?', opts:['Buying an asset expecting it to rise','Betting an asset will fall in price','Holding for under a week','A small trade'], a:1 },
+    { cat:'stocks', q:'What is "market cap"?', opts:['Daily trading volume','Maximum price of an asset','Total value of all shares/coins outstanding','The cap on daily trades'], a:2 },
+    { cat:'stocks', q:'What does "ROI" stand for?', opts:['Rate of Investment','Return on Investment','Risk of Inflation','Revenue over Income'], a:1 },
+    { cat:'stocks', q:'What does "EPS" stand for?', opts:['Equity Price Share','Earnings Per Share','Exchange Per Session','Effective Price Spread'], a:1 },
+    { cat:'stocks', q:'What is "dividend yield"?', opts:['Annual dividend per share divided by stock price','Total dividends paid this year','Dividend growth over 5 years','Dividend as % of earnings'], a:0 },
+    { cat:'stocks', q:'What is a "market order"?', opts:['A buy/sell at the best available current price','A scheduled trade','A trade at a specific price','An order to hold indefinitely'], a:0 },
+    { cat:'stocks', q:'What does "ATH" stand for?', opts:['Annual Trading High','All Time High','Average Trading History','Asset To Hold'], a:1 },
+    { cat:'stocks', q:'What is a "limit order"?', opts:['An order capped at 100 shares','An order to buy/sell at a specific price or better','An order that expires at market close','An order placed only in pre-market'], a:1 },
+    { cat:'stocks', q:'What is "liquidity" in finance?', opts:['How quickly you can buy/sell without affecting price','The amount of debt a company holds','A company\'s cash on hand','Interest earned on deposits'], a:0 },
+    { cat:'stocks', q:'What does "IPO" stand for?', opts:['International Public Order','Initial Public Offering','Index Price Output','Internal Portfolio Option'], a:1 },
+    { cat:'stocks', q:'What is "dollar-cost averaging" (DCA)?', opts:['Averaging your portfolio in USD','Buying a fixed dollar amount at regular intervals regardless of price','Converting assets to USD periodically','Hedging with currency derivatives'], a:1 },
+    { cat:'stocks', q:'What is the Dow Jones Industrial Average (DJIA)?', opts:['An index of 500 US stocks','An index of 30 major US blue-chip companies','A global stock index','A bond market index'], a:1 },
+    { cat:'stocks', q:'What is "short selling"?', opts:['Selling stocks you own for a short-term gain','Borrowing shares to sell, hoping to repurchase at a lower price','Selling only small quantities of stock','A trade completed within seconds'], a:1 },
+    { cat:'stocks', q:'What is a "stop-loss order"?', opts:['An order to buy when price rises above a level','An order to sell when price falls to a set level to limit losses','An order that cannot be cancelled','An order pausing all trades'], a:1 },
+    { cat:'stocks', q:'What does "FOMO" mean in trading?', opts:['Fear of Missing Out','Future Order Market Operation','Fixed Open Market Offering','Fast Order Management Option'], a:0 },
+    { cat:'stocks', q:'What is "portfolio diversification"?', opts:['Putting all money in one best-performing stock','Spreading investments across different assets to reduce risk','Converting a portfolio to cash','Rebalancing monthly'], a:1 },
+    { cat:'stocks', q:'What does "blue chip" mean in stocks?', opts:['Any cheap penny stock','Shares with a blue stock ticker','Large, established, financially stable companies','Stocks listed on the NYSE only'], a:2 },
+
+    // ── COMMODITIES ──────────────────────────────────────────
+    { cat:'commodities', q:'What does "XAU" represent in financial markets?', opts:['Silver','Gold','Platinum','Copper'], a:1 },
+    { cat:'commodities', q:'What is "WTI" in oil markets?', opts:['World Trade Index','West Texas Intermediate crude oil','Worldwide Tariff Index','Western Trade Initiative'], a:1 },
+    { cat:'commodities', q:'What is the ticker symbol for Silver in forex markets?', opts:['XAG','XSI','SLV','AG'], a:0 },
+    { cat:'commodities', q:'What is a "futures contract"?', opts:['A contract to deliver goods in the past','An agreement to buy/sell an asset at a predetermined future price','A spot transaction settled immediately','A derivative with no expiry'], a:1 },
+    { cat:'commodities', q:'Which organization is the primary cartel controlling global oil production?', opts:['WTO','IMF','OPEC','World Bank'], a:2 },
+    { cat:'commodities', q:'What does "Brent crude" refer to?', opts:['A US oil benchmark from Texas','A North Sea oil benchmark used globally','A synthetic crude oil blend','A refinery grade of crude'], a:1 },
+    { cat:'commodities', q:'Gold is traditionally considered what type of asset?', opts:['A growth asset','A risky asset','A safe-haven asset','A speculative asset'], a:2 },
+    { cat:'commodities', q:'What does "spot price" mean for a commodity?', opts:['Price for future delivery in 3 months','Current market price for immediate delivery','Price averaged over the last week','Price set by a central authority'], a:1 },
+    { cat:'commodities', q:'What is "backwardation" in commodity markets?', opts:['When futures price is higher than spot price','When futures price is lower than spot price','When supply exceeds demand','When a commodity is delisted'], a:1 },
+    { cat:'commodities', q:'Natural gas prices are primarily quoted in what unit?', opts:['Barrels per day','Million British Thermal Units (MMBtu)','Metric tonnes','Gallons per second'], a:1 },
+    { cat:'commodities', q:'What commodity is measured in "troy ounces"?', opts:['Crude Oil','Wheat','Precious metals like gold and silver','Natural Gas'], a:2 },
+    { cat:'commodities', q:'Which commodities index is considered the broadest benchmark for raw materials?', opts:['S&P GSCI','VIX','MSCI World','Bloomberg Commodity Index'], a:0 },
+    { cat:'commodities', q:'What is "contango" in commodity markets?', opts:['When futures price is lower than spot price','When futures price is higher than spot price','When a commodity market halts trading','A trading fee for commodity brokers'], a:1 },
+  ];
+
+  const CAT_LABELS = { all:'ALL TOPICS', crypto:'₿ CRYPTO', stocks:'📈 STOCKS', commodities:'🛢️ COMMODITIES' };
+  const CAT_COLORS = { crypto:'#f7931a', stocks:'#2d7cf6', commodities:'#00c853' };
+
+  let state = {
+    category: 'all',
+    pool: [],
+    idx: 0,
+    answered: false,
+    score: 0,
+    total: 0,
+    streak: 0,
+    bestStreak: 0,
+    catStats: { crypto:{c:0,t:0}, stocks:{c:0,t:0}, commodities:{c:0,t:0} },
+  };
+
+  function shuffle(arr) {
+    const a = [...arr];
+    for (let i = a.length-1; i > 0; i--) {
+      const j = Math.floor(Math.random()*(i+1));
+      [a[i],a[j]] = [a[j],a[i]];
+    }
+    return a;
+  }
+
+  function buildPool(cat) {
+    const filtered = cat === 'all' ? ALL_QUESTIONS : ALL_QUESTIONS.filter(q => q.cat === cat);
+    return shuffle(filtered);
+  }
+
+  function setCategory(cat, el) {
+    document.querySelectorAll('#quizCatRow .chip').forEach(c => c.classList.remove('active'));
+    if (el) el.classList.add('active');
+    state.category = cat;
+    restart();
+  }
+
+  function restart() {
+    state.pool = buildPool(state.category);
+    state.idx = 0;
+    state.answered = false;
+    state.score = 0;
+    state.total = 0;
+    state.streak = 0;
+    state.bestStreak = 0;
+    state.catStats = { crypto:{c:0,t:0}, stocks:{c:0,t:0}, commodities:{c:0,t:0} };
+    render();
+    updateSidebar();
+  }
+
+  function render() {
+    if (!state.pool.length) return;
+    const q = state.pool[state.idx];
+    const total = state.pool.length;
+    const pct = (state.idx / total) * 100;
+
+    const catColor = CAT_COLORS[q.cat] || 'var(--amber)';
+
+    document.getElementById('quizMeta').textContent =
+      `Q${state.idx+1} OF ${total} · ${CAT_LABELS[q.cat] || q.cat.toUpperCase()}`;
+    document.getElementById('quizProgressBar').style.width = pct + '%';
+
+    // Category badge
+    const panel = document.getElementById('quizPanel');
+    let badge = panel.querySelector('.qz-cat-badge');
+    if (!badge) {
+      badge = document.createElement('div');
+      badge.className = `qz-cat-badge ${q.cat}`;
+      panel.insertBefore(badge, panel.firstChild);
+    }
+    badge.className = `qz-cat-badge ${q.cat}`;
+    badge.textContent = CAT_LABELS[q.cat] || q.cat.toUpperCase();
+
+    document.getElementById('quizQuestion').textContent = q.q;
+    document.getElementById('quizFeedback').innerHTML = '';
+    document.getElementById('quizOpts').innerHTML = q.opts.map((opt, i) => `
+      <button class="qz-opt" id="qz-opt-${i}" onclick="quiz.answer(${i})">
+        <span style="color:${catColor};margin-right:8px;font-weight:700">${['A','B','C','D'][i]}.</span>${opt}
+      </button>`).join('');
+
+    const nb = document.getElementById('quizNextBtn');
+    const rb = document.getElementById('quizRestartBtn');
+    nb.style.display = 'none';
+    rb.style.display = 'none';
+    state.answered = false;
+  }
+
+  function answer(chosen) {
+    if (state.answered) return;
+    state.answered = true;
+    const q = state.pool[state.idx];
+    const correct = q.a;
+
+    state.total++;
+    state.catStats[q.cat] = state.catStats[q.cat] || {c:0,t:0};
+    state.catStats[q.cat].t++;
+
+    document.querySelectorAll('.qz-opt').forEach((btn, i) => {
+      btn.disabled = true;
+      if (i === correct) btn.classList.add('correct');
+      else if (i === chosen) btn.classList.add('wrong');
+    });
+
+    const fb = document.getElementById('quizFeedback');
+    if (chosen === correct) {
+      state.score++;
+      state.streak++;
+      state.catStats[q.cat].c++;
+      if (state.streak > state.bestStreak) state.bestStreak = state.streak;
+      const streakMsg = state.streak >= 3 ? ` — ${state.streak} IN A ROW 🔥` : '';
+      fb.innerHTML = `<span style="color:var(--green)">✓ CORRECT${streakMsg}</span>`;
+    } else {
+      state.streak = 0;
+      fb.innerHTML = `<span style="color:var(--red)">✗ INCORRECT</span> <span style="color:var(--text-muted)">· Answer: <span style="color:var(--text-primary)">${q.opts[correct]}</span></span>`;
+    }
+
+    updateSidebar();
+
+    const nb = document.getElementById('quizNextBtn');
+    const rb = document.getElementById('quizRestartBtn');
+    const isLast = (state.idx + 1) >= state.pool.length;
+    if (isLast) {
+      nb.style.display = 'none';
+      rb.style.display = 'inline-flex';
+      rb.textContent = `↻ RESTART (${state.score}/${state.total} CORRECT)`;
+      fb.innerHTML += `<br><span style="color:var(--amber);display:block;margin-top:8px;font-size:.68rem">QUIZ COMPLETE! ${state.score}/${state.total} (${Math.round(state.score/state.total*100)}%)</span>`;
+    } else {
+      nb.style.display = 'inline-flex';
+      rb.style.display = 'none';
+    }
+  }
+
+  function next() {
+    state.idx++;
+    if (state.idx >= state.pool.length) {
+      state.idx = 0;
+      state.pool = buildPool(state.category);
+    }
+    render();
+  }
+
+  function updateSidebar() {
+    document.getElementById('quizScore').textContent = `${state.score}/${state.total}`;
+    const acc = state.total > 0 ? Math.round(state.score/state.total*100)+'%' : '—';
+    document.getElementById('quizAccuracy').textContent = acc;
+    document.getElementById('quizStreak').textContent = state.streak;
+    document.getElementById('quizBestStreak').textContent = state.bestStreak;
+
+    const cats = ['crypto','stocks','commodities'];
+    const catNames = { crypto:'₿ Crypto', stocks:'📈 Stocks', commodities:'🛢️ Commodities' };
+    const catStatsEl = document.getElementById('quizCatStats');
+    const rows = cats.map(cat => {
+      const s = state.catStats[cat] || {c:0,t:0};
+      if (s.t === 0) return '';
+      const pct = Math.round(s.c/s.t*100);
+      const barColor = CAT_COLORS[cat];
+      return `<div style="margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+          <span style="font-family:var(--font-mono);font-size:.62rem;color:var(--text-secondary)">${catNames[cat]}</span>
+          <span style="font-family:var(--font-mono);font-size:.62rem;color:${barColor}">${s.c}/${s.t}</span>
+        </div>
+        <div style="height:4px;background:var(--border-dim);border-radius:2px">
+          <div style="height:100%;width:${pct}%;background:${barColor};border-radius:2px;transition:width .4s ease"></div>
+        </div>
+      </div>`;
+    }).filter(Boolean).join('');
+
+    catStatsEl.innerHTML = rows || '<div style="font-size:.75rem;color:var(--text-muted);text-align:center;padding:8px 0">Start answering to see breakdown</div>';
+  }
+
+  // Auto-start on DOM ready
+  document.addEventListener('DOMContentLoaded', () => {
+    state.pool = buildPool('all');
+    render();
+  });
+
+  return { setCategory, restart, answer, next };
+})();
+</script>
 </body>
 </html>
