@@ -540,24 +540,103 @@ class HomePage {
     setInterval(() => this.loadNews(), 10 * 60 * 1000);
   }
 
+  // Fake data shown when API is rate-limited
+  _getFakeData() {
+    return {
+      crypto: [
+        { symbol:'BTC',  name:'Bitcoin',    price:67420.00, change_24h:+1.82, change_7d:+5.41,  volume:28400000000, market_cap:1320000000000, image:'https://assets.coingecko.com/coins/images/1/thumb/bitcoin.png',    sparkline:[] },
+        { symbol:'ETH',  name:'Ethereum',   price:3512.50,  change_24h:-0.64, change_7d:+3.17,  volume:12100000000, market_cap:421000000000,  image:'https://assets.coingecko.com/coins/images/279/thumb/ethereum.png', sparkline:[] },
+        { symbol:'BNB',  name:'BNB',        price:594.30,   change_24h:+0.91, change_7d:+2.05,  volume:1800000000,  market_cap:86000000000,   image:'https://assets.coingecko.com/coins/images/825/thumb/bnb-icon2_2x.png', sparkline:[] },
+        { symbol:'XRP',  name:'XRP',        price:0.621,    change_24h:-1.10, change_7d:-2.30,  volume:1500000000,  market_cap:34000000000,   image:'https://assets.coingecko.com/coins/images/44/thumb/xrp-symbol-white-128.png', sparkline:[] },
+        { symbol:'SOL',  name:'Solana',     price:178.40,   change_24h:+3.21, change_7d:+9.88,  volume:3200000000,  market_cap:82000000000,   image:'https://assets.coingecko.com/coins/images/4128/thumb/solana.png', sparkline:[] },
+        { symbol:'ADA',  name:'Cardano',    price:0.451,    change_24h:-0.82, change_7d:+1.44,  volume:480000000,   market_cap:16000000000,   image:'', sparkline:[] },
+      ],
+      stocks: [
+        { symbol:'AAPL',  name:'Apple Inc.',      price:189.30, change_24h:+0.72, change_7d:+2.10, volume:54000000,  market_cap:2940000000000, image:'', sparkline:[] },
+        { symbol:'MSFT',  name:'Microsoft Corp.', price:415.80, change_24h:+1.14, change_7d:+3.40, volume:22000000,  market_cap:3090000000000, image:'', sparkline:[] },
+        { symbol:'NVDA',  name:'NVIDIA Corp.',    price:875.40, change_24h:+2.88, change_7d:+8.60, volume:41000000,  market_cap:2160000000000, image:'', sparkline:[] },
+        { symbol:'GOOGL', name:'Alphabet Inc.',   price:175.60, change_24h:-0.31, change_7d:+1.20, volume:24000000,  market_cap:2190000000000, image:'', sparkline:[] },
+        { symbol:'TSLA',  name:'Tesla Inc.',      price:248.50, change_24h:-1.22, change_7d:-4.30, volume:98000000,  market_cap:792000000000,  image:'', sparkline:[] },
+        { symbol:'META',  name:'Meta Platforms',  price:521.30, change_24h:+1.60, change_7d:+4.10, volume:15000000,  market_cap:1340000000000, image:'', sparkline:[] },
+      ],
+      commodities: [
+        { symbol:'XAU', name:'Gold',          price:2324.50, change_24h:+0.61, change_7d:+1.80, volume:0, market_cap:0, image:'', sparkline:[] },
+        { symbol:'XAG', name:'Silver',        price:29.14,   change_24h:+1.02, change_7d:+2.40, volume:0, market_cap:0, image:'', sparkline:[] },
+        { symbol:'CL',  name:'Crude Oil WTI', price:82.75,   change_24h:-0.48, change_7d:-1.20, volume:0, market_cap:0, image:'', sparkline:[] },
+        { symbol:'NG',  name:'Natural Gas',   price:2.184,   change_24h:-1.10, change_7d:-3.50, volume:0, market_cap:0, image:'', sparkline:[] },
+      ],
+    };
+  }
+
+  _injectDemoBanner() {
+    if (document.getElementById('home-demo-banner')) return;
+    const banner = document.createElement('div');
+    banner.id = 'home-demo-banner';
+    banner.style.cssText = [
+      'position:sticky', 'top:0', 'z-index:60',
+      'background:rgba(246,36,89,.10)',
+      'border-bottom:1px solid rgba(246,36,89,.35)',
+      'padding:6px 16px',
+      'display:flex', 'align-items:center', 'gap:10px', 'flex-wrap:wrap',
+    ].join(';');
+    banner.innerHTML = `
+      <span style="font-family:var(--font-mono);font-size:.58rem;letter-spacing:.12em;color:#f62459;font-weight:700">⚠ DEMO DATA</span>
+      <span style="font-family:var(--font-mono);font-size:.6rem;color:var(--text-muted);flex:1">
+        Live prices unavailable — API rate limit reached. Values shown are <strong style="color:var(--text-secondary)">illustrative only</strong>.
+      </span>`;
+    const main = document.querySelector('main') || document.body;
+    main.prepend(banner);
+  }
+
+  _removeDemoBanner() { document.getElementById('home-demo-banner')?.remove(); }
+
+  _renderWithData(data, isDemo) {
+    this._isFakeData = isDemo;
+    window.cacheWatchlistData?.(data);
+    this.renderHeroPrices();
+    this.renderMiniTable('cryptoMiniBody', data.crypto||[], ['symbol','price','change_24h','change_7d']);
+    this.renderMiniTable('stocksMiniBody', data.stocks||[], ['symbol','price','change_24h','volume']);
+    this.renderMiniTable('commodMiniBody', data.commodities||[], ['symbol','price','change_24h','change_7d']);
+    this.renderHeatmap();
+    this.buildTicker();
+    const el = document.getElementById('lastUpdate');
+    if (el) el.textContent = isDemo ? 'DEMO MODE' : `UPD: ${new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:false})}`;
+    if (!isDemo) window.refreshFavoritesUI?.(data);
+  }
+
   async loadWatchlist() {
     try {
-      this.data = await window.apiClient.get('/api/watchlist', 5*60*1000);
-      window.cacheWatchlistData?.(this.data);
-      this.renderHeroPrices();
-      this.renderMiniTable('cryptoMiniBody', this.data.crypto||[], ['symbol','price','change_24h','change_7d']);
-      this.renderMiniTable('stocksMiniBody', this.data.stocks||[], ['symbol','price','change_24h','volume']);
-      this.renderMiniTable('commodMiniBody', this.data.commodities||[], ['symbol','price','change_24h','change_7d']);
-      this.renderHeatmap();
-      this.buildTicker();
-      const el = document.getElementById('lastUpdate');
-      if (el) el.textContent = `UPD: ${new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:false})}`;
-      window.refreshFavoritesUI?.(this.data);
+      const raw = await window.apiClient.get('/api/watchlist', 5*60*1000);
+      const isEmpty = !(raw.crypto?.length || raw.stocks?.length || raw.commodities?.length);
+      if (isEmpty) {
+        this.data = this._getFakeData();
+        this._injectDemoBanner();
+        this._renderWithData(this.data, true);
+        // Retry every 3 min to swap in real data
+        const retryId = setInterval(async () => {
+          try {
+            window.apiClient.invalidate('/api/watchlist');
+            const fresh = await window.apiClient.get('/api/watchlist', 0);
+            if (!(fresh.crypto?.length || fresh.stocks?.length || fresh.commodities?.length)) return;
+            clearInterval(retryId);
+            this.data = fresh;
+            this._isFakeData = false;
+            this._removeDemoBanner();
+            this._renderWithData(fresh, false);
+          } catch(_) {}
+        }, 3 * 60 * 1000);
+      } else {
+        this.data = raw;
+        this._isFakeData = false;
+        this._removeDemoBanner();
+        this._renderWithData(raw, false);
+      }
     } catch(e) {
-      ['cryptoMiniBody','stocksMiniBody','commodMiniBody'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.innerHTML = `<tr><td colspan="4" style="padding:16px;text-align:center;color:var(--text-muted);font-family:var(--font-mono);font-size:.68rem">⚠ START BACKEND: uvicorn main:app --port 8000</td></tr>`;
-      });
+      // Network error — show fake data
+      this.data = this._getFakeData();
+      this._isFakeData = true;
+      this._injectDemoBanner();
+      this._renderWithData(this.data, true);
     }
   }
 
@@ -626,6 +705,7 @@ class HomePage {
         <!-- PRICE -->
         <td style="text-align:right;padding:8px 10px;font-family:var(--font-mono);font-size:.82rem;font-weight:600;color:var(--text-primary);white-space:nowrap;vertical-align:middle">
           ${Fmt.price(a.price)}
+          ${this._isFakeData ? '<span style=\"display:inline-block;margin-left:5px;font-family:var(--font-mono);font-size:.46rem;letter-spacing:.08em;color:#f62459;background:rgba(246,36,89,.12);border:1px solid rgba(246,36,89,.35);border-radius:2px;padding:1px 4px;vertical-align:middle;font-weight:700\">DEMO</span>' : ''}
         </td>
         <!-- 24H -->
         <td style="text-align:right;padding:8px 10px;vertical-align:middle;white-space:nowrap">
