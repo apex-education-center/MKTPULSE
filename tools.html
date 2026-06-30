@@ -837,17 +837,57 @@ class ToolsPage {
   }
 
   // ── 2. PORTFOLIO TRACKER ─────────────────────────────
+  _getFakeWatchlist() {
+    return {
+      crypto: [
+        { symbol:'BTC',  name:'Bitcoin',  price:67420,  change_24h: 1.82,  change_7d:  4.1,  volume:38e9,  market_cap:1.32e12 },
+        { symbol:'ETH',  name:'Ethereum', price:3540,   change_24h:-0.94,  change_7d:  2.3,  volume:18e9,  market_cap:425e9   },
+        { symbol:'BNB',  name:'BNB',      price:598,    change_24h: 0.61,  change_7d:  1.8,  volume:1.8e9, market_cap:87e9    },
+        { symbol:'XRP',  name:'XRP',      price:0.512,  change_24h:-1.23,  change_7d: -2.1,  volume:1.5e9, market_cap:55e9    },
+        { symbol:'SOL',  name:'Solana',   price:171,    change_24h: 2.35,  change_7d:  6.4,  volume:3.2e9, market_cap:76e9    },
+        { symbol:'ADA',  name:'Cardano',  price:0.445,  change_24h:-0.72,  change_7d: -1.2,  volume:480e6, market_cap:15.7e9  },
+      ],
+      stocks: [
+        { symbol:'AAPL',  name:'Apple',     price:213.40, change_24h: 0.72,  change_7d:  1.4,  volume:58e6  },
+        { symbol:'MSFT',  name:'Microsoft', price:421.60, change_24h: 1.14,  change_7d:  2.9,  volume:22e6  },
+        { symbol:'NVDA',  name:'NVIDIA',    price:875.20, change_24h: 2.81,  change_7d:  8.3,  volume:41e6  },
+        { symbol:'GOOGL', name:'Alphabet',  price:171.80, change_24h:-0.45,  change_7d:  0.9,  volume:24e6  },
+        { symbol:'AMZN',  name:'Amazon',    price:185.90, change_24h: 0.33,  change_7d:  1.7,  volume:31e6  },
+        { symbol:'TSLA',  name:'Tesla',     price:178.20, change_24h:-1.62,  change_7d: -4.1,  volume:98e6  },
+      ],
+      commodities: [
+        { symbol:'GC',  name:'Gold',        price:2345.0, change_24h: 0.41,  change_7d:  1.2,  volume:180e3 },
+        { symbol:'SI',  name:'Silver',      price:28.42,  change_24h:-0.18,  change_7d: -0.6,  volume:72e3  },
+        { symbol:'CL',  name:'Crude Oil',   price:78.65,  change_24h:-0.93,  change_7d: -2.1,  volume:420e3 },
+        { symbol:'NG',  name:'Natural Gas', price:2.18,   change_24h: 1.22,  change_7d:  3.4,  volume:85e3  },
+      ],
+    };
+  }
+
   async loadWatchlist() {
     try {
-      this.watchlist = await window.apiClient.get('/api/watchlist', 5*60*1000);
+      const raw = await window.apiClient.get('/api/watchlist', 5*60*1000);
+      const fake = this._getFakeWatchlist();
+      this._isCryptoFake  = !raw.crypto?.length;
+      this._isStockFake   = !raw.stocks?.length;
+      this._isCommodFake  = !raw.commodities?.length;
+      this.watchlist = {
+        crypto:      raw.crypto?.length      ? raw.crypto      : fake.crypto,
+        stocks:      raw.stocks?.length      ? raw.stocks      : fake.stocks,
+        commodities: raw.commodities?.length ? raw.commodities : fake.commodities,
+      };
       window.cacheWatchlistData?.(this.watchlist);
-      this.renderPortfolio();
-      this.showHeatmap('crypto', document.querySelector('.chip-row .chip.active') || {classList:{add:()=>{}}});
-      this.renderMarketSummary();
-      this.renderDominance();
-      this.loadGas();
-      this._populateDcaSymbols();
-    } catch(e) { console.warn('Watchlist error:', e); }
+    } catch(e) {
+      console.warn('Watchlist error:', e);
+      this._isCryptoFake = this._isStockFake = this._isCommodFake = true;
+      this.watchlist = this._getFakeWatchlist();
+    }
+    this.renderPortfolio();
+    this.showHeatmap('crypto', document.querySelector('.chip-row .chip.active') || {classList:{add:()=>{}}});
+    this.renderMarketSummary();
+    this.renderDominance();
+    this.loadGas();
+    this._populateDcaSymbols();
     this.renderFavoritesLeaderboard();
   }
 
@@ -949,7 +989,29 @@ class ToolsPage {
       return;
     }
 
-    grid.innerHTML = assets.map(a => {
+    const isFake = (tab === 'crypto' && this._isCryptoFake) ||
+                   (tab === 'stocks' && this._isStockFake) ||
+                   (tab === 'commodities' && this._isCommodFake);
+
+    const cryptoFakeNote = isFake && tab === 'crypto'
+      ? `<div style="grid-column:1/-1;display:flex;align-items:center;gap:8px;
+           background:rgba(255,170,0,.08);border:1px solid rgba(255,170,0,.25);
+           border-radius:4px;padding:7px 12px;margin-bottom:6px;
+           font-family:var(--font-mono);font-size:.65rem;color:var(--amber)">
+           ⚠ DEMO DATA — Live crypto API unavailable. Percentages shown are illustrative only.<br>
+           <span style="color:var(--text-muted);margin-top:2px;display:block">
+             For live heatmap data switch to
+             <strong style="color:var(--text-secondary)">STOCKS</strong> or
+             <strong style="color:var(--text-secondary)">COMMOD</strong> tab ↑
+           </span>
+         </div>`
+      : isFake
+        ? `<div style="grid-column:1/-1;padding:4px 0 6px;font-family:var(--font-mono);font-size:.63rem;color:rgba(255,170,0,.6)">
+             ⚠ DEMO DATA — live feed unavailable
+           </div>`
+        : '';
+
+    grid.innerHTML = cryptoFakeNote + assets.map(a => {
       const pct   = a.change_24h || 0;
       const abs   = Math.abs(pct);
       const alpha = Math.min(0.9, 0.15 + abs * 0.05);
@@ -958,7 +1020,7 @@ class ToolsPage {
         : `rgba(255,61,90,${alpha})`;
       const color = pct >= 0 ? 'var(--green)' : 'var(--red)';
       return `
-        <div class="hm-cell" style="background:${bg};border:1px solid ${bg}">
+        <div class="hm-cell" style="background:${bg};border:1px solid ${bg};opacity:${isFake?'0.72':'1'}">
           <div class="hm-sym">${a.symbol}</div>
           <div class="hm-pct" style="color:${color}">${pct>=0?'+':''}${pct.toFixed(2)}%</div>
         </div>`;
@@ -1173,11 +1235,24 @@ class ToolsPage {
 
   // ── 9. CRYPTO DOMINANCE ──────────────────────────────
   renderDominance() {
-    const crypto = this.watchlist.crypto || [];
-    if (!crypto.length) return;
     const canvas = document.getElementById('dominanceChart');
     const legend = document.getElementById('dominanceLegend');
     if (!canvas) return;
+
+    let crypto  = this.watchlist.crypto || [];
+    const isFake = this._isCryptoFake || !crypto.length;
+
+    // Fake market-cap distribution (matches screenshot) when live data unavailable
+    if (isFake || !crypto.some(c => c.market_cap > 0)) {
+      crypto = [
+        { symbol:'BTC', market_cap: 1.32e12 },
+        { symbol:'ETH', market_cap: 425e9   },
+        { symbol:'BNB', market_cap: 87e9    },
+        { symbol:'XRP', market_cap: 55e9    },
+        { symbol:'SOL', market_cap: 76e9    },
+        { symbol:'ADA', market_cap: 15.7e9  },
+      ];
+    }
 
     const labels = crypto.map(c => c.symbol);
     const data   = crypto.map(c => c.market_cap || 0);
@@ -1212,6 +1287,12 @@ class ToolsPage {
           ${l} ${pct}%
         </div>`;
       }).join('');
+      if (isFake) {
+        legend.innerHTML += `<div style="width:100%;text-align:center;margin-top:8px;
+          font-family:var(--font-mono);font-size:.6rem;color:rgba(255,170,0,.55)">
+          ⚠ DEMO — live crypto API unavailable · proportions are illustrative
+        </div>`;
+      }
     }
   }
 
