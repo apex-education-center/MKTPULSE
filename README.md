@@ -1,8 +1,10 @@
-# MarketPulse — Financial Intelligence Terminal
+# MarketPulse: Financial Intelligence Terminal
 
 **University Capstone Project · Faculté de Génie, Université Libanaise · Semester 8**
-Live deployment: [mktpulse.onrender.com](https://mktpulse.onrender.com)
-
+- Live deployment: [mktpulse.onrender.com](https://mktpulse.onrender.com)
+- Website Video Tutorial: https://youtu.be/hmJLQjt-k4M?si=3xU8_oIIoo98qAah
+- Website Screenshots: https://drive.google.com/drive/folders/1LeIzoRSWIhBnN1B0ib0t54s-5aKDYzh-?usp=drive_link
+  
 | | |
 |---|---|
 | **Author** | Pierre EL Kassis |
@@ -28,7 +30,7 @@ Live deployment: [mktpulse.onrender.com](https://mktpulse.onrender.com)
 
 ## 1. Project Overview
 
-MarketPulse is a Bloomberg Terminal-inspired financial intelligence web application built as a full-stack university capstone. It aggregates live market data across crypto, equities, and commodities, displays financial news and YouTube content, and provides tools for portfolio tracking, risk management, and price alerts — all in a dark-themed, monospace terminal aesthetic.
+MarketPulse is a Bloomberg Terminal-inspired financial intelligence web application built as a full-stack university capstone. It aggregates live market data across crypto, equities, and commodities, displays financial news and YouTube content, and provides tools for portfolio tracking, risk management, and price alerts all in a dark-themed, monospace terminal aesthetic.
 
 The application consists of a **FastAPI Python backend** (deployed on Render) that proxies and caches data from multiple financial APIs, and a **vanilla HTML/CSS/JS + Bootstrap 5 frontend** across 7 pages.
 
@@ -36,7 +38,7 @@ The application consists of a **FastAPI Python backend** (deployed on Render) th
 
 ## 2. Pages & Features
 
-### Terminal (`index.html`) — Main Dashboard
+### Terminal (`index.html`): Main Dashboard
 - Live status bar with real-time prices for BTC, ETH, NVDA, Gold, and Oil
 - Market session indicators (NYSE, LSE, TSE, Crypto 24/7) with open/closed status
 - World clock (NY, London, Tokyo, Beirut)
@@ -45,7 +47,7 @@ The application consists of a **FastAPI Python backend** (deployed on Render) th
 - IPTV-based live financial news streams via FastAPI proxy (resolves CORS / YouTube Error 153)
 - Financial loading screen animation on page entry
 
-### Markets (`markets.html`) — Price Tables
+### Markets (`markets.html`) : Price Tables
 - Tabbed tables: Crypto / Stocks / Commodities
 - Sortable columns (price, 24h%, 7d%, volume, market cap)
 - 7-day sparkline chart per asset using Canvas API
@@ -58,7 +60,7 @@ The application consists of a **FastAPI Python backend** (deployed on Render) th
 - Three-tier crypto data fallback chain (live → last-known-good snapshot → trivia placeholder)
 - Excel/CSV export via SheetJS
 
-### News (`news.html`) — Live News Feed
+### News (`news.html`): Live News Feed
 - **Breaking News Carousel** (Bootstrap 5 `data-bs-ride="carousel"`) — top 5 stories with background image, directional gradient overlay, and category tags (BRKNG / CRYPTO / MACRO / STOCKS / TECH)
 - Progress bar indicators per slide + scannable article list panel below carousel
 - Article grid with category chips (All / Crypto / Stocks / Macro / Commodities / Technology)
@@ -66,7 +68,7 @@ The application consists of a **FastAPI Python backend** (deployed on Render) th
 - Search with 400ms debounce
 - Pagination with load-more
 
-### Videos (`youtube.html`) — Financial Videos
+### Videos (`youtube.html`): Financial Videos
 - YouTube Data API v3 integration: live video search + metadata (duration, views, channel)
 - Category filter chips (Crypto / Stocks / Macro / Trading / Education)
 - Suggested topic pills (Bitcoin, Ethereum, Fed Rates, NVIDIA, DeFi, Forex, etc.)
@@ -74,27 +76,27 @@ The application consists of a **FastAPI Python backend** (deployed on Render) th
 - Duration badges, view counts, and channel attribution on each card
 - Infinite scroll via load-more with YouTube `nextPageToken` pagination
 
-### Calendar (`calendar.html`) — Economic Events
+### Calendar (`calendar.html`): Economic Events
 - Macro economic event calendar sourced from Finnhub
 - Filterable by importance (HIGH / MEDIUM / LOW) and country
 - Color-coded rows by impact level
 - Export to Excel with proper date column formatting (SheetJS)
 - Proactive Telegram calendar alerts — backend sends push notifications ~1 hour before major FOMC, CPI, NFP, and GDP events
 
-### Tools (`tools.html`) — Financial Calculators
-- **Currency Converter** — live rates between crypto, fiat, and commodities
-- **Portfolio Tracker** — add positions, track P&L against live prices
-- **Heatmap** — visual grid of 24h price changes per asset class
-- **Price Alerts** — browser push notifications + Telegram bot integration
-- **Risk Calculator** — position sizing, stop-loss, risk/reward ratio
-- **DCA Calculator** — dollar-cost averaging projections
+### Tools (`tools.html`): Financial Calculators
+- **Currency Converter** live rates between crypto, fiat, and commodities
+- **Portfolio Tracker** add positions, track P&L against live prices
+- **Heatmap** visual grid of 24h price changes per asset class
+- **Price Alerts** browser push notifications + Telegram bot integration
+- **Risk Calculator** position sizing, stop-loss, risk/reward ratio
+- **DCA Calculator** dollar-cost averaging projections
 - **Compound Interest Calculator**
-- **Fear & Greed Index** — live widget from Alternative.me API
-- **Leaderboard** — top performers by 24h change
-- **Excel/CSV Export** — download watchlist or calendar data as `.xlsx` or `.csv`
-- **AI Chat tab** — DeepSeek-powered `/api/chat` endpoint for market Q&A
+- **Fear & Greed Index** live widget from Alternative.me API
+- **Leaderboard** top performers by 24h change
+- **Excel/CSV Export** download watchlist or calendar data as `.xlsx` or `.csv`
+- **AI Chat tab** DeepSeek-powered `/api/chat` endpoint for market Q&A
 
-### Search (`search.html`) — Global Asset Search
+### Search (`search.html`): Global Asset Search
 - Real-time search across crypto, stocks, and commodities
 - Click result to open full asset detail modal
 
@@ -272,7 +274,7 @@ The following are representative actual prompts submitted to Claude during devel
 
 > *"Write me a professional `README.md` for my MarketPulse capstone project that matches exactly what my professor's rubric requires for the AI-use appendix: list each AI tool, include representative prompts, describe specific things the AI got wrong and how I fixed each one."*
 
-### Things AI Got Wrong — and How I Fixed Them
+### Things AI Got Wrong and How I Fixed Them
 
 **1. The carousel upgrade broke Bootstrap's slide event sync**
 
