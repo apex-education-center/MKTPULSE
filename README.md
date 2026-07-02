@@ -1,7 +1,7 @@
 # MarketPulse: Financial Intelligence Terminal
 
 **University Capstone Project · Faculté de Génie, Université Libanaise · Semester 8**
-- Live deployment: [mktpulse.onrender.com](https://mktpulse.onrender.com)
+- Live deployment: [mktpulse.onrender.com](https://mktpulse-af14.onrender.com)
 - Website Video Tutorial: https://youtu.be/hmJLQjt-k4M?si=3xU8_oIIoo98qAah
 - Website Screenshots: https://drive.google.com/drive/folders/1LeIzoRSWIhBnN1B0ib0t54s-5aKDYzh-?usp=drive_link
   
